@@ -27,54 +27,25 @@ export function WorkspaceCard({ workspace, onDelete, onEdit }: WorkspaceCardProp
     }
   };
 
-  const iconStyle = getIconColor(workspace.type);
-
   return (
-    <div className="group flex items-center justify-between p-4 rounded-2xl border border-border/60 bg-card hover:border-primary/30 hover:shadow-md transition-all duration-300">
+    <div className="group flex items-center justify-between p-4 rounded-2xl border-[3px] border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
       <div className="flex items-center gap-4">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconStyle} transition-transform group-hover:scale-110 duration-300`}>
-          <Box className="w-6 h-6" />
+        <div className="w-12 h-12 rounded-xl border-[3px] border-black flex items-center justify-center bg-white transition-transform group-hover:scale-105 duration-300">
+          <Box className="w-7 h-7 text-black" />
         </div>
         <div>
-          <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
+          <h3 className="font-bold text-xl text-black">
             {workspace.title}
           </h3>
-          <p className="text-sm text-muted-foreground capitalize">
-            {workspace.type} • Last edited {format(new Date(workspace.createdAt || new Date()), "MMM d, yyyy")}
-          </p>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <Button 
-          variant="ghost" 
-          className="hidden md:flex text-primary opacity-0 group-hover:opacity-100 transition-opacity font-medium hover:bg-primary/5 hover:text-primary"
-        >
-          Open Project
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-black">
+          <MoreHorizontal className="w-5 h-5" />
         </Button>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit?.(workspace.id)}>
-              <Pencil className="w-4 h-4 mr-2" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="text-destructive focus:text-destructive"
-              onClick={() => onDelete?.(workspace.id)}
-            >
-              <Trash className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   );
 }
+

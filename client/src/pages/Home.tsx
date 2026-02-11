@@ -51,108 +51,83 @@ export default function Home() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-10">
+        {/* Search Bar */}
+        <div className="relative max-w-2xl w-full">
+          <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-black" />
+          </div>
+          <input 
+            type="text"
+            placeholder=""
+            className="w-full h-16 pl-14 pr-6 bg-white border-[3px] border-black rounded-full shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] focus:outline-none text-xl font-medium"
+          />
+        </div>
+
         {/* Welcome Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground">
-              Welcome back, <br/>
-              <span className="text-primary">{user?.firstName || "Creator"}</span>
-            </h1>
-            <p className="text-muted-foreground mt-2 text-lg">
-              You have {workspaces?.length || 0} active workspaces today.
-            </p>
-          </motion.div>
-          
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="w-4 h-4 text-yellow-500" />
-            <span>Pro Tip: Press <kbd className="px-2 py-0.5 rounded bg-muted border border-border text-xs">Cmd+K</kbd> to search</span>
-          </div>
+        <div className="flex flex-col gap-2">
+          <h1 className="text-5xl font-sans font-bold text-black border-b-[4px] border-black w-fit pb-1">
+            Welcome back, {user?.firstName || "Andrei"}
+          </h1>
         </div>
 
-        {/* Featured Card */}
-        {mostRecent ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-          >
-            <FeaturedCard 
-              title={mostRecent.title} 
-              type={mostRecent.type}
-              onContinue={() => console.log("Continue", mostRecent.id)}
-            />
-          </motion.div>
-        ) : (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-            className="p-10 rounded-3xl border-2 border-dashed border-border flex flex-col items-center justify-center text-center gap-4 bg-muted/30"
-          >
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
-              <Plus className="w-8 h-8" />
-            </div>
-            <h3 className="text-xl font-bold">No workspaces yet</h3>
-            <p className="text-muted-foreground max-w-sm">Create your first workspace to get started with your next big project.</p>
-            <Button onClick={() => setIsCreateOpen(true)}>Create Workspace</Button>
-          </motion.div>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Left Side: Featured and Actions */}
+          <div className="space-y-8">
+            {mostRecent ? (
+              <FeaturedCard 
+                title={mostRecent.title} 
+                type={mostRecent.type}
+                onContinue={() => console.log("Continue", mostRecent.id)}
+              />
+            ) : (
+              <div className="h-64 rounded-[2rem] border-[3px] border-dashed border-black flex items-center justify-center">
+                <Button onClick={() => setIsCreateOpen(true)}>Create First Workspace</Button>
+              </div>
+            )}
 
-        {/* Action Bar */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center py-4 border-b border-border/40">
-          <Button 
-            onClick={() => setIsCreateOpen(true)}
-            size="lg"
-            className="rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 text-white font-medium px-6"
-          >
-            <Plus className="mr-2 w-5 h-5" />
-            New Workspace
-          </Button>
-
-          <Button 
-            variant="outline"
-            size="lg"
-            className="rounded-full border-primary/20 text-primary hover:bg-primary/5 hover:text-primary font-medium px-6"
-          >
-            <Upload className="mr-2 w-5 h-5" />
-            Import Project
-          </Button>
-
-          <div className="sm:ml-auto">
-            <Button variant="ghost" className="text-muted-foreground hover:text-primary gap-2 group">
-              Search Library
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Workspace List */}
-        <div className="space-y-4 pb-12">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold font-serif">Recent Projects</h2>
-            <Button variant="link" className="text-muted-foreground hover:text-primary">View All</Button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            {workspaces?.map((workspace, index) => (
-              <motion.div
-                key={workspace.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + (index * 0.1), duration: 0.4 }}
+            {/* Action Buttons Row */}
+            <div className="flex flex-wrap items-center gap-4">
+              <Button 
+                onClick={() => setIsCreateOpen(true)}
+                className="h-14 px-8 bg-[#0047FF] text-white border-[3px] border-black rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:bg-[#0047FF] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all font-bold text-lg"
               >
+                + New Workspace
+              </Button>
+
+              <Button 
+                className="h-14 px-8 bg-[#D946EF] text-white border-[3px] border-black rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:bg-[#D946EF] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all font-bold text-lg"
+              >
+                + Import Project
+              </Button>
+
+              <Button variant="ghost" className="text-black font-bold text-lg gap-2 hover:bg-transparent">
+                Search Library
+                <ArrowRight className="w-6 h-6" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Right Side: Workspace List */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-6">
+              <h2 className="text-2xl font-bold border-b-[3px] border-black pb-1">My Workspace</h2>
+              <h2 className="text-2xl font-bold text-black/30">Team</h2>
+            </div>
+
+            <div className="rounded-[2.5rem] border-[3px] border-black p-6 space-y-4">
+              {workspaces?.map((workspace) => (
                 <WorkspaceCard 
+                  key={workspace.id} 
                   workspace={workspace} 
                   onDelete={handleDelete}
                   onEdit={handleEdit}
                 />
-              </motion.div>
-            ))}
+              ))}
+              {!workspaces?.length && (
+                <p className="text-center text-black/40 py-10 font-bold">No projects yet</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -164,3 +139,4 @@ export default function Home() {
     </DashboardLayout>
   );
 }
+

@@ -39,57 +39,58 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   ];
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-background/50 backdrop-blur-sm">
-      <div className="p-6">
-        <h1 className="text-2xl font-serif font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">
-          Nexus
-        </h1>
+    <div className="flex flex-col h-full bg-white dark:bg-black">
+      <div className="p-6 flex justify-center">
+        <div className="w-10 h-10 rounded-full bg-blue-600 border-2 border-black flex items-center justify-center text-white font-bold text-xl">
+          +
+        </div>
       </div>
       
-      <nav className="flex-1 px-4 space-y-2">
+      <nav className="flex-1 px-4 space-y-4 mt-4">
         {navItems.map((item) => {
           const isActive = location === item.href;
           return (
             <Link key={item.href} href={item.href} className={`
-              flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
+              flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 group
               ${isActive 
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" 
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                ? "text-black" 
+                : "text-black/40 hover:text-black"
               }
             `}>
-              <item.icon className={`w-5 h-5 ${isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary transition-colors"}`} />
-              <span className="font-medium">{item.label}</span>
+              <item.icon className="w-6 h-6" />
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-border/50">
-        <div className="bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-xl p-4 border border-primary/10">
-          <p className="text-sm font-medium text-foreground">Pro Plan</p>
-          <p className="text-xs text-muted-foreground mt-1">4/10 workspaces used</p>
-          <div className="h-1.5 w-full bg-background rounded-full mt-3 overflow-hidden">
-            <div className="h-full bg-primary w-[40%] rounded-full" />
-          </div>
-          <Button variant="link" className="text-primary text-xs px-0 h-auto mt-2">
-            Upgrade Now
-          </Button>
+      <div className="p-4 flex flex-col items-center gap-4">
+        <div className="w-6 h-6 text-blue-500">
+          <Sparkles className="w-full h-full" />
         </div>
+        <div className="w-6 h-6 text-black/40">
+          <Settings className="w-full h-full" />
+        </div>
+        <Avatar className="w-10 h-10 border-2 border-black">
+          <AvatarImage src={user?.profileImageUrl} />
+          <AvatarFallback className="bg-primary/10 text-primary">
+            {user?.firstName?.[0] || user?.email?.[0] || "U"}
+          </AvatarFallback>
+        </Avatar>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] dark:bg-background flex">
+    <div className="min-h-screen bg-[#FDFCF8] dark:bg-background flex font-sans">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-64 border-r border-border/50 fixed h-full z-30">
+      <aside className="hidden lg:block w-20 border-r-2 border-black fixed h-full z-30">
         <SidebarContent />
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 lg:ml-20 flex flex-col min-h-screen">
         {/* Topbar */}
-        <header className="h-16 px-4 md:px-8 border-b border-border/40 bg-background/50 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between">
+        <header className="h-16 px-4 md:px-8 border-b-2 border-black bg-white sticky top-0 z-20 flex items-center justify-between">
           <div className="flex items-center gap-4 lg:hidden">
             <Sheet>
               <SheetTrigger asChild>
@@ -97,60 +98,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-64">
+              <SheetContent side="left" className="p-0 w-20">
                 <SidebarContent />
               </SheetContent>
             </Sheet>
-            <h1 className="text-xl font-serif font-bold text-primary">Nexus</h1>
           </div>
 
-          <div className="hidden md:flex items-center w-full max-w-md bg-secondary/50 rounded-full px-4 py-2 border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all">
-            <Search className="w-4 h-4 text-muted-foreground mr-2" />
-            <Input 
-              placeholder="Search workspaces..." 
-              className="border-none bg-transparent h-auto p-0 placeholder:text-muted-foreground focus-visible:ring-0"
-            />
-          </div>
+          <div className="flex-1" />
 
-          <div className="flex items-center gap-4 ml-auto">
-            <Button variant="ghost" size="icon" className="rounded-full relative text-muted-foreground hover:text-foreground">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-background" />
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="rounded-full pl-2 pr-4 gap-3 h-10 border border-border/50 hover:bg-secondary/80">
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage src={user?.profileImageUrl} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                      {user?.firstName?.[0] || user?.email?.[0] || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium hidden sm:inline-block">
-                    {user?.firstName || "User"}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <UserIcon className="w-4 h-4 mr-2" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => logout()}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex items-center gap-6">
+            <Bell className="w-6 h-6 text-black cursor-pointer" />
+            <div className="w-6 h-6 rounded-full border-2 border-black flex items-center justify-center font-bold text-xs cursor-pointer">
+              ?
+            </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-          <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <main className="flex-1 p-6 md:p-12 overflow-y-auto">
+          <div className="max-w-6xl mx-auto space-y-12">
             {children}
           </div>
         </main>
@@ -158,3 +124,4 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     </div>
   );
 }
+

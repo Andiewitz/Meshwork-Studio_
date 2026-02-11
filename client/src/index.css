@@ -8,69 +8,69 @@
   --font-sans: 'DM Sans', sans-serif;
   --font-serif: 'Playfair Display', serif;
 
-  /* Light Theme - Clean, crisp, slightly warm */
-  --background: 210 20% 98%;
-  --foreground: 224 71% 4%;
+  /* Neo-Brutalist Theme - Off-white background, high contrast */
+  --background: 48 30% 96%; /* #FDFCF8-ish */
+  --foreground: 0 0% 0%;
   
   --card: 0 0% 100%;
-  --card-foreground: 224 71% 4%;
+  --card-foreground: 0 0% 0%;
   
   --popover: 0 0% 100%;
-  --popover-foreground: 224 71% 4%;
+  --popover-foreground: 0 0% 0%;
   
-  /* Primary - Deep Purple */
-  --primary: 262 83% 58%;
-  --primary-foreground: 210 20% 98%;
+  /* Primary - Vibrant Purple */
+  --primary: 262 83% 65%;
+  --primary-foreground: 0 0% 100%;
   
-  /* Secondary - Soft Lavender/Gray */
-  --secondary: 260 20% 96%;
-  --secondary-foreground: 262 40% 40%;
+  /* Secondary - Clean White */
+  --secondary: 0 0% 100%;
+  --secondary-foreground: 0 0% 0%;
   
-  --muted: 220 14% 96%;
-  --muted-foreground: 220 8% 46%;
+  --muted: 0 0% 90%;
+  --muted-foreground: 0 0% 40%;
   
-  --accent: 262 83% 58%;
-  --accent-foreground: 210 20% 98%;
+  --accent: 262 83% 65%;
+  --accent-foreground: 0 0% 100%;
   
   --destructive: 0 84% 60%;
-  --destructive-foreground: 210 20% 98%;
+  --destructive-foreground: 0 0% 100%;
 
-  --border: 220 13% 91%;
-  --input: 220 13% 91%;
-  --ring: 262 83% 58%;
+  --border: 0 0% 0%;
+  --input: 0 0% 100%;
+  --ring: 262 83% 65%;
   
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 }
 
 .dark {
-  /* Dark Theme - Deep, rich, slightly purple-tinted */
-  --background: 224 71% 4%;
-  --foreground: 210 20% 98%;
+  /* Dark mode also neo-brutalist but inverted */
+  --background: 0 0% 5%;
+  --foreground: 0 0% 100%;
   
-  --card: 224 71% 6%;
-  --card-foreground: 210 20% 98%;
+  --card: 0 0% 10%;
+  --card-foreground: 0 0% 100%;
   
-  --popover: 224 71% 6%;
-  --popover-foreground: 210 20% 98%;
+  --popover: 0 0% 10%;
+  --popover-foreground: 0 0% 100%;
   
-  --primary: 263 70% 50%;
-  --primary-foreground: 210 20% 98%;
+  --primary: 262 83% 65%;
+  --primary-foreground: 0 0% 100%;
   
-  --secondary: 215 27% 17%;
-  --secondary-foreground: 210 20% 98%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 100%;
   
-  --muted: 215 27% 17%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 0 0% 20%;
+  --muted-foreground: 0 0% 70%;
   
-  --accent: 263 70% 50%;
-  --accent-foreground: 210 20% 98%;
+  --accent: 262 83% 65%;
+  --accent-foreground: 0 0% 100%;
   
   --destructive: 0 62% 30%;
-  --destructive-foreground: 210 20% 98%;
+  --destructive-foreground: 0 0% 100%;
   
-  --border: 215 27% 17%;
-  --input: 215 27% 17%;
-  --ring: 263 70% 50%;
+  --border: 0 0% 100%;
+  --input: 0 0% 15%;
+  --ring: 262 83% 65%;
 }
 
 @layer base {
@@ -81,21 +81,25 @@
   
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-serif);
-    @apply font-semibold tracking-tight;
+    @apply font-bold tracking-tight;
   }
 }
 
 @layer components {
-  /* Custom utility classes for the "premium" feel */
-  .glass-panel {
-    @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-xl shadow-black/5;
-  }
-  
-  .card-hover {
-    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  .neo-border {
+    @apply border-2 border-black dark:border-white;
   }
 
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400;
+  .neo-shadow {
+    @apply shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)];
+  }
+
+  .neo-shadow-lg {
+    @apply shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)];
+  }
+  
+  .neo-card {
+    @apply neo-border neo-shadow bg-card p-4 rounded-xl;
   }
 }
+
