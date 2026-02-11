@@ -1,38 +1,53 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import {
+  workspaces,
+  type InsertWorkspace,
+  type Workspace,
+} from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getWorkspaces(userId?: string): Promise<Workspace[]>;
+  getWorkspace(id: number): Promise<Workspace | undefined>;
+  createWorkspace(workspace: InsertWorkspace): Promise<Workspace>;
+  updateWorkspace(id: number, updates: Partial<InsertWorkspace>): Promise<Workspace>;
+  deleteWorkspace(id: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getWorkspaces(userId?: string): Promise<Workspace[]> {
+    if (!userId) return [];
+    return await db.select()
+      .from(workspaces)
+      .where(eq(workspaces.userId, userId))
+      .orderBy(desc(workspaces.createdAt));
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getWorkspace(id: number): Promise<Workspace | undefined> {
+    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, id));
+    return workspace;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createWorkspace(insertWorkspace: InsertWorkspace): Promise<Workspace> {
+    const [workspace] = await db
+      .insert(workspaces)
+      .values(insertWorkspace)
+      .returning();
+    return workspace;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async updateWorkspace(id: number, updates: Partial<InsertWorkspace>): Promise<Workspace> {
+    const [workspace] = await db
+      .update(workspaces)
+      .set(updates)
+      .where(eq(workspaces.id, id))
+      .returning();
+    return workspace;
+  }
+
+  async deleteWorkspace(id: number): Promise<void> {
+    await db.delete(workspaces).where(eq(workspaces.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
