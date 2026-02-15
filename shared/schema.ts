@@ -5,11 +5,21 @@ import { users } from "./models/auth";
 
 export * from "./models/auth";
 
+export const collections = pgTable("collections", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  userId: text("user_id").references(() => users.id),
+  parentId: integer("parent_id"), // for nested collections
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const workspaces = pgTable("workspaces", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   type: text("type").notNull().default("system"), // system, architecture, app, presentation
   userId: text("user_id").references(() => users.id),
+  collectionId: integer("collection_id").references(() => collections.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -35,10 +45,13 @@ export const edges = pgTable("edges", {
   animated: integer("animated").default(0), // 0 or 1
 });
 
+export const insertCollectionSchema = createInsertSchema(collections).omit({ id: true, createdAt: true });
 export const insertWorkspaceSchema = createInsertSchema(workspaces).omit({ id: true, createdAt: true });
 export const insertNodeSchema = createInsertSchema(nodes);
 export const insertEdgeSchema = createInsertSchema(edges);
 
+export type Collection = typeof collections.$inferSelect;
+export type InsertCollection = z.infer<typeof insertCollectionSchema>;
 export type Workspace = typeof workspaces.$inferSelect;
 export type InsertWorkspace = z.infer<typeof insertWorkspaceSchema>;
 export type Node = typeof nodes.$inferSelect;
