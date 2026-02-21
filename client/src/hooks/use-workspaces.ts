@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type CreateWorkspaceRequest, type UpdateWorkspaceRequest } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
+import { type CreateWorkspaceRequest, type UpdateWorkspaceRequest } from "@shared/schema";
 import { useAuth } from "./use-auth";
 
 // Hook to fetch all workspaces
 export function useWorkspaces() {
   const { isAuthenticated } = useAuth();
-  
+
   return useQuery({
     queryKey: [api.workspaces.list.path],
     queryFn: async () => {
@@ -40,7 +41,7 @@ export function useWorkspace(id: number) {
 // Hook to create a workspace
 export function useCreateWorkspace() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: CreateWorkspaceRequest) => {
       const res = await fetch(api.workspaces.create.path, {
@@ -49,12 +50,12 @@ export function useCreateWorkspace() {
         body: JSON.stringify(data),
         credentials: "include",
       });
-      
+
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
         throw new Error(error.message || "Failed to create workspace");
       }
-      
+
       return api.workspaces.create.responses[201].parse(await res.json());
     },
     onSuccess: () => {
@@ -66,7 +67,7 @@ export function useCreateWorkspace() {
 // Hook to update a workspace
 export function useUpdateWorkspace() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: number } & UpdateWorkspaceRequest) => {
       const url = buildUrl(api.workspaces.update.path, { id });
@@ -76,7 +77,7 @@ export function useUpdateWorkspace() {
         body: JSON.stringify(updates),
         credentials: "include",
       });
-      
+
       if (!res.ok) throw new Error("Failed to update workspace");
       return api.workspaces.update.responses[200].parse(await res.json());
     },
@@ -89,15 +90,15 @@ export function useUpdateWorkspace() {
 // Hook to delete a workspace
 export function useDeleteWorkspace() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.workspaces.delete.path, { id });
-      const res = await fetch(url, { 
+      const res = await fetch(url, {
         method: api.workspaces.delete.method,
-        credentials: "include", 
+        credentials: "include",
       });
-      
+
       if (!res.ok) throw new Error("Failed to delete workspace");
     },
     onSuccess: () => {

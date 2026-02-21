@@ -1,20 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { User } from "@shared/models/auth";
+import type { User } from "@shared/schema";
 
 async function fetchUser(): Promise<User | null> {
-  const response = await fetch("/api/auth/user", {
-    credentials: "include",
-  });
+  try {
+    const response = await fetch("/api/auth/user", {
+      credentials: "include",
+    });
 
-  if (response.status === 401) {
-    return null;
+    if (response.status === 401) {
+      console.log("[AuthHook] Fetch user returned 401 (Not logged in)");
+      return null;
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("[AuthHook] Fetch user failed:", response.status, text);
+      throw new Error(`${response.status}: ${text}`);
+    }
+
+    const userData = await response.json();
+    console.log("[AuthHook] User fetched successfully:", userData.id || userData.email);
+    return userData;
+  } catch (err) {
+    console.error("[AuthHook] Error in fetchUser:", err);
+    throw err;
   }
-
-  if (!response.ok) {
-    throw new Error(`${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
 }
 
 async function logout(): Promise<void> {

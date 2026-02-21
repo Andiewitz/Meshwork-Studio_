@@ -40,6 +40,8 @@ services:
       DATABASE_URL: postgresql://user:password@emnesh-db:5432/emnesh_canvas
       AUTH_DATABASE_URL: postgresql://user:password@emnesh-auth-db:5432/emnesh_auth
       NODE_ENV: production
+      SESSION_SECRET: dev_secret_change_me_in_prod
+      CLIENT_ID: local-development
     depends_on:
       - emnesh-db
       - emnesh-auth-db

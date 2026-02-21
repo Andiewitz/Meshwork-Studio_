@@ -54,7 +54,10 @@ import {
     ChevronDown,
     ChevronRight,
     Minus,
-    Circle
+    Circle,
+    Grid,
+    AlignVerticalJustifyCenter,
+    AlignHorizontalJustifyCenter
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -63,6 +66,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { SystemNode } from '@/components/canvas/nodes/SystemNode';
+import {
+    K8sPodIcon, K8sDeployIcon, K8sReplicaSetIcon, K8sStatefulIcon, K8sDaemonIcon,
+    K8sServiceIcon, K8sIngressIcon, K8sConfigMapIcon, K8sSecretIcon, K8sPVCIcon,
+    K8sJobIcon, K8sCronJobIcon, K8sHPAIcon, K8sNamespaceIcon
+} from '@/components/canvas/icons/KubernetesIcons';
 
 const nodeTypes = {
     server: SystemNode,
@@ -85,6 +93,21 @@ const nodeTypes = {
     api: SystemNode,
     note: SystemNode,
     junction: SystemNode,
+    // Kubernetes
+    'k8s-pod': SystemNode,
+    'k8s-deployment': SystemNode,
+    'k8s-replicaset': SystemNode,
+    'k8s-statefulset': SystemNode,
+    'k8s-daemonset': SystemNode,
+    'k8s-service': SystemNode,
+    'k8s-ingress': SystemNode,
+    'k8s-configmap': SystemNode,
+    'k8s-secret': SystemNode,
+    'k8s-pvc': SystemNode,
+    'k8s-job': SystemNode,
+    'k8s-cronjob': SystemNode,
+    'k8s-hpa': SystemNode,
+    'k8s-namespace': SystemNode,
 };
 
 const nodeTypesList = [
@@ -114,6 +137,25 @@ const nodeTypesList = [
     { type: 'note', label: 'Sticky Note', icon: Type, category: 'Documentation' },
 
     { type: 'junction', label: 'Junction Point', icon: Circle, category: 'Utilities' },
+
+    // Kubernetes — Workloads
+    { type: 'k8s-pod', label: 'Pod', icon: K8sPodIcon, category: 'Kubernetes' },
+    { type: 'k8s-deployment', label: 'Deployment', icon: K8sDeployIcon, category: 'Kubernetes' },
+    { type: 'k8s-replicaset', label: 'ReplicaSet', icon: K8sReplicaSetIcon, category: 'Kubernetes' },
+    { type: 'k8s-statefulset', label: 'StatefulSet', icon: K8sStatefulIcon, category: 'Kubernetes' },
+    { type: 'k8s-daemonset', label: 'DaemonSet', icon: K8sDaemonIcon, category: 'Kubernetes' },
+    { type: 'k8s-job', label: 'Job', icon: K8sJobIcon, category: 'Kubernetes' },
+    { type: 'k8s-cronjob', label: 'CronJob', icon: K8sCronJobIcon, category: 'Kubernetes' },
+    // Kubernetes — Networking
+    { type: 'k8s-service', label: 'Service', icon: K8sServiceIcon, category: 'Kubernetes' },
+    { type: 'k8s-ingress', label: 'Ingress', icon: K8sIngressIcon, category: 'Kubernetes' },
+    // Kubernetes — Config & Storage
+    { type: 'k8s-configmap', label: 'ConfigMap', icon: K8sConfigMapIcon, category: 'Kubernetes' },
+    { type: 'k8s-secret', label: 'Secret', icon: K8sSecretIcon, category: 'Kubernetes' },
+    { type: 'k8s-pvc', label: 'PersistentVolumeClaim', icon: K8sPVCIcon, category: 'Kubernetes' },
+    // Kubernetes — Scaling & Grouping
+    { type: 'k8s-hpa', label: 'HPA (Autoscaler)', icon: K8sHPAIcon, category: 'Kubernetes' },
+    { type: 'k8s-namespace', label: 'Namespace', icon: K8sNamespaceIcon, category: 'Kubernetes' },
 ];
 
 function WorkspaceView() {
@@ -133,8 +175,13 @@ function WorkspaceView() {
     const [snapToGrid, setSnapToGrid] = useState(true);
     const { fitView } = useReactFlow();
     const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-        'Compute': true,
         'Infrastructure': true,
+        'Kubernetes': true,
+        'Compute': true,
+        'Networking': true,
+        'Data': true,
+        'External': true,
+        'Documentation': true,
         'Utilities': true
     });
 
@@ -268,10 +315,49 @@ function WorkspaceView() {
     const addNode = (type: string, label: string, position = { x: 100, y: 100 }) => {
         takeSnapshot();
         const nodeTypeInfo = nodeTypesList.find(n => n.type === type);
+
+        // Match dimensions from SystemNode
+        const dimensions: Record<string, { w: number, h: number }> = {
+            server: { w: 168, h: 72 },
+            microservice: { w: 168, h: 72 },
+            worker: { w: 168, h: 72 },
+            logic: { w: 168, h: 72 },
+            database: { w: 144, h: 120 },
+            cache: { w: 144, h: 120 },
+            storage: { w: 144, h: 120 },
+            search: { w: 144, h: 120 },
+            gateway: { w: 192, h: 72 },
+            loadBalancer: { w: 192, h: 72 },
+            cdn: { w: 192, h: 72 },
+            bus: { w: 192, h: 72 },
+            queue: { w: 192, h: 72 },
+            note: { w: 192, h: 192 },
+            vpc: { w: 408, h: 312 },
+            region: { w: 600, h: 408 },
+            // Kubernetes
+            'k8s-pod': { w: 144, h: 96 },
+            'k8s-deployment': { w: 192, h: 96 },
+            'k8s-replicaset': { w: 168, h: 96 },
+            'k8s-statefulset': { w: 168, h: 96 },
+            'k8s-daemonset': { w: 168, h: 96 },
+            'k8s-service': { w: 168, h: 72 },
+            'k8s-ingress': { w: 168, h: 72 },
+            'k8s-configmap': { w: 168, h: 72 },
+            'k8s-secret': { w: 168, h: 72 },
+            'k8s-pvc': { w: 168, h: 96 },
+            'k8s-job': { w: 144, h: 72 },
+            'k8s-cronjob': { w: 168, h: 96 },
+            'k8s-hpa': { w: 168, h: 96 },
+            'k8s-namespace': { w: 408, h: 312 },
+        };
+
+        const dim = dimensions[type] || { w: 168, h: 96 };
+
         const newNode: Node = {
             id: `${type}-${Date.now()}`,
             type,
             position,
+            style: { width: dim.w, height: dim.h },
             data: {
                 label: label,
                 category: nodeTypeInfo?.category || 'Compute'
@@ -330,7 +416,12 @@ function WorkspaceView() {
                 y: event.clientY,
             });
 
-            addNode(data.type, data.label, position);
+            const snappedPosition = {
+                x: Math.round(position.x / 12) * 12,
+                y: Math.round(position.y / 12) * 12
+            };
+
+            addNode(data.type, data.label, snappedPosition);
         },
         [screenToFlowPosition, addNode]
     );
@@ -405,12 +496,16 @@ function WorkspaceView() {
         );
     };
 
-    const updateNodeStyle = (id: string, border: string) => {
+    const updateNodeStyle = (id: string, style: any) => {
         takeSnapshot();
+        const snappedStyle = { ...style };
+        if (typeof snappedStyle.width === 'number') snappedStyle.width = Math.round(snappedStyle.width / 24) * 24;
+        if (typeof snappedStyle.height === 'number') snappedStyle.height = Math.round(snappedStyle.height / 24) * 24;
+
         setNodes((nds) =>
             nds.map((node) => {
                 if (node.id === id) {
-                    return { ...node, style: { ...node.style, border } };
+                    return { ...node, style: { ...node.style, ...snappedStyle } };
                 }
                 return node;
             })
@@ -420,6 +515,64 @@ function WorkspaceView() {
     const onNodeDragStart = useCallback(() => {
         takeSnapshot();
     }, [takeSnapshot]);
+
+    const onNodeDragStop = useCallback((_: any, node: Node) => {
+        // Find if this node was dropped inside a container
+        // Containment logic for VPC, Region, and K8s Namespace
+        const containers = nodes.filter(n => ['vpc', 'region', 'k8s-namespace'].includes(n.type!) && n.id !== node.id);
+
+        // Current dragged node center (approximate using measured or style)
+        const w = node.measured?.width || (node.style?.width as number) || 120;
+        const h = node.measured?.height || (node.style?.height as number) || 80;
+        const centerX = node.position.x + w / 2;
+        const centerY = node.position.y + h / 2;
+
+        const parent = containers.find(c => {
+            const cw = (c.style?.width as number) || 0;
+            const ch = (c.style?.height as number) || 0;
+            return centerX >= c.position.x &&
+                centerX <= c.position.x + cw &&
+                centerY >= c.position.y &&
+                centerY <= c.position.y + ch;
+        });
+
+        if (parent && node.parentId !== parent.id) {
+            // Drop into new parent
+            setNodes((nds) => nds.map((n) => {
+                if (n.id === node.id) {
+                    return {
+                        ...n,
+                        parentId: parent.id,
+                        // Note: Removing extent: 'parent' to allow dragging out
+                        position: {
+                            x: n.position.x - parent.position.x,
+                            y: n.position.y - parent.position.y
+                        }
+                    };
+                }
+                return n;
+            }));
+        } else if (!parent && node.parentId) {
+            // Dragged out of parent
+            const parentNode = nodes.find(n => n.id === node.parentId);
+            if (parentNode) {
+                setNodes((nds) => nds.map((n) => {
+                    if (n.id === node.id) {
+                        return {
+                            ...n,
+                            parentId: undefined,
+                            extent: undefined,
+                            position: {
+                                x: n.position.x + parentNode.position.x,
+                                y: n.position.y + parentNode.position.y
+                            }
+                        };
+                    }
+                    return n;
+                }));
+            }
+        }
+    }, [nodes, setNodes]);
 
     const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
@@ -460,7 +613,7 @@ function WorkspaceView() {
 
             <div className="flex-1 overflow-hidden">
                 <ResizablePanelGroup direction="horizontal">
-                    <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="hidden md:block">
+                    <ResizablePanel defaultSize={20} minSize={20} maxSize={30}>
                         <aside className="h-full border-r flex flex-col z-40 border-black/5 bg-[#121212] text-white">
                             <div className="h-10 border-b flex items-center px-4 gap-2 border-white/5 bg-white/5">
                                 <span className="font-bold text-[10px] uppercase tracking-widest text-white/30">Library</span>
@@ -479,56 +632,76 @@ function WorkspaceView() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto space-y-px">
-                                {['Infrastructure', 'Compute', 'Networking', 'Data', 'External', 'Documentation', 'Utilities'].map(category => {
-                                    const categoryItems = nodeTypesList.filter(item =>
-                                        item.category === category &&
-                                        (searchTerm === '' ||
-                                            item.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                            item.type.toLowerCase().includes(searchTerm.toLowerCase()))
-                                    ).sort((a, b) => a.label.localeCompare(b.label));
+                            <div className="flex-1 overflow-y-auto space-y-px scrollbar-hide">
+                                {(() => {
+                                    const categories = ['Kubernetes', 'Infrastructure', 'Compute', 'Networking', 'Data', 'External', 'Documentation', 'Utilities'];
+                                    let hasAnyResults = false;
 
-                                    if (categoryItems.length === 0) return null;
+                                    const content = categories.map(category => {
+                                        const categoryItems = nodeTypesList.filter(item =>
+                                            item.category.toLowerCase() === category.toLowerCase() &&
+                                            (searchTerm === '' ||
+                                                item.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                item.type.toLowerCase().includes(searchTerm.toLowerCase()))
+                                        ).sort((a, b) => a.label.localeCompare(b.label));
 
-                                    const isExpanded = expandedCategories[category];
+                                        if (categoryItems.length === 0) return null;
+                                        hasAnyResults = true;
 
-                                    return (
-                                        <section key={category} className="border-b border-white/[0.03]">
-                                            <button
-                                                onClick={() => toggleCategory(category)}
-                                                className="w-full h-10 flex items-center px-4 gap-2 transition-colors hover:bg-white/5 group"
-                                            >
-                                                {isExpanded ? (
-                                                    <ChevronDown className="w-3.5 h-3.5 text-white/20 group-hover:text-white/40" />
-                                                ) : (
-                                                    <ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white/40" />
+                                        const isExpanded = expandedCategories[category] !== false;
+                                        const isK8s = category === 'Kubernetes';
+
+                                        return (
+                                            <section key={category} className={`border-b border-white/[0.03] ${isK8s ? 'bg-blue-500/5 border-blue-500/10' : ''}`}>
+                                                <button
+                                                    onClick={() => toggleCategory(category)}
+                                                    className="w-full h-10 flex items-center px-4 gap-2 transition-colors hover:bg-white/5 group"
+                                                >
+                                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? '' : '-rotate-90'} ${isK8s ? 'text-blue-400' : 'text-white/20'}`} />
+                                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isK8s ? 'text-blue-400 font-black' : 'text-white/40'}`}>{category}</span>
+                                                    <span className="ml-auto text-[9px] font-bold text-white/10">{categoryItems.length}</span>
+                                                </button>
+
+                                                {isExpanded && (
+                                                    <div className="p-2 grid grid-cols-1 gap-1">
+                                                        {categoryItems.map((item) => (
+                                                            <button
+                                                                key={item.type}
+                                                                onClick={() => addNode(item.type, item.label)}
+                                                                onDragStart={(e) => onDragStart(e, item.type, item.label)}
+                                                                draggable
+                                                                className="flex items-center gap-3 p-2 rounded-lg border border-transparent transition-all text-left group hover:bg-white/5 cursor-grab active:cursor-grabbing"
+                                                            >
+                                                                <div className="p-1.5 rounded-md transition-colors bg-white/5 text-white/60 group-hover:text-white group-hover:bg-white/10">
+                                                                    <item.icon className="w-4 h-4" />
+                                                                </div>
+                                                                <span className="text-[12px] font-medium text-white/70 group-hover:text-white">{item.label}</span>
+                                                                <Plus className="w-3 h-3 ml-auto text-white/0 group-hover:text-white/20" />
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 )}
-                                                <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-white/60">{category}</span>
-                                                <span className="ml-auto text-[9px] font-bold text-white/10 group-hover:text-white/20">{categoryItems.length}</span>
-                                            </button>
+                                            </section>
+                                        );
+                                    });
 
-                                            {isExpanded && (
-                                                <div className="p-2 grid grid-cols-1 gap-1 bg-white/[0.01]">
-                                                    {categoryItems.map((item) => (
-                                                        <button
-                                                            key={item.type}
-                                                            onClick={() => addNode(item.type, item.label)}
-                                                            onDragStart={(e) => onDragStart(e, item.type, item.label)}
-                                                            draggable
-                                                            className="flex items-center gap-3 p-2.5 rounded-lg border border-transparent transition-all text-left group hover:border-white/5 hover:bg-white/5 cursor-grab active:cursor-grabbing"
-                                                        >
-                                                            <div className="p-1.5 rounded-md transition-colors bg-white/5 text-white/60 group-hover:text-white group-hover:bg-white/10">
-                                                                <item.icon className="w-4 h-4" />
-                                                            </div>
-                                                            <span className="text-[12px] font-medium text-white/70 group-hover:text-white">{item.label}</span>
-                                                            <Plus className="w-3 h-3 ml-auto text-white/0 group-hover:text-white/20" />
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </section>
-                                    );
-                                })}
+                                    if (!hasAnyResults && searchTerm !== '') {
+                                        return (
+                                            <div className="flex flex-col items-center justify-center h-40 px-6 text-center">
+                                                <Search className="w-8 h-8 text-white/5 mb-3" />
+                                                <p className="text-[11px] font-bold uppercase tracking-widest text-white/20">No components found</p>
+                                                <button
+                                                    onClick={() => setSearchTerm('')}
+                                                    className="mt-4 text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest"
+                                                >
+                                                    Clear Search
+                                                </button>
+                                            </div>
+                                        );
+                                    }
+
+                                    return content;
+                                })()}
                             </div>
                         </aside>
                     </ResizablePanel>
@@ -546,6 +719,7 @@ function WorkspaceView() {
                                 onNodeClick={onNodeClick}
                                 onNodeDoubleClick={onNodeDoubleClick}
                                 onNodeDragStart={onNodeDragStart}
+                                onNodeDragStop={onNodeDragStop}
                                 onNodeContextMenu={onNodeContextMenu}
                                 onPaneContextMenu={onPaneContextMenu as any}
                                 onDragOver={onDragOver}
@@ -592,6 +766,95 @@ function WorkspaceView() {
                                                     Edit Properties
                                                 </button>
                                                 <div className="h-px my-1 bg-black/5" />
+                                                <div className="px-3 py-1 text-[9px] uppercase font-bold text-black/20 tracking-widest">Layout</div>
+                                                <button
+                                                    onClick={() => {
+                                                        takeSnapshot();
+                                                        setNodes(nds => nds.map(n => {
+                                                            if (n.selected || n.id === menu.id) {
+                                                                const currentW = (n.style?.width as number) || n.measured?.width || 120;
+                                                                const currentH = (n.style?.height as number) || n.measured?.height || 80;
+                                                                return {
+                                                                    ...n,
+                                                                    position: {
+                                                                        x: Math.round(n.position.x / 12) * 12,
+                                                                        y: Math.round(n.position.y / 12) * 12
+                                                                    },
+                                                                    style: {
+                                                                        ...n.style,
+                                                                        width: Math.round(currentW / 24) * 24,
+                                                                        height: Math.round(currentH / 24) * 24
+                                                                    }
+                                                                };
+                                                            }
+                                                            return n;
+                                                        }));
+                                                    }}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] transition-colors hover:bg-black/5 text-black/70 hover:text-black"
+                                                >
+                                                    <Grid className="w-3.5 h-3.5" />
+                                                    Straighten (Center & Snap)
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const selectedNodes = nodes.filter(n => n.selected || n.id === menu.id);
+                                                        if (selectedNodes.length < 2) return;
+                                                        takeSnapshot();
+
+                                                        // Use first node as anchor
+                                                        const anchor = selectedNodes[0];
+                                                        const anchorW = (anchor.style?.width as number) || anchor.measured?.width || 0;
+                                                        const targetCenterX = anchor.position.x + anchorW / 2;
+
+                                                        setNodes(nds => nds.map(n => {
+                                                            if (n.selected || n.id === menu.id) {
+                                                                const w = (n.style?.width as number) || n.measured?.width || 0;
+                                                                return {
+                                                                    ...n,
+                                                                    position: {
+                                                                        ...n.position,
+                                                                        x: Math.round((targetCenterX - w / 2) / 12) * 12
+                                                                    }
+                                                                };
+                                                            }
+                                                            return n;
+                                                        }));
+                                                    }}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] transition-colors hover:bg-black/5 text-black/70 hover:text-black"
+                                                >
+                                                    <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />
+                                                    Align Centers (Vertical)
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const selectedNodes = nodes.filter(n => n.selected || n.id === menu.id);
+                                                        if (selectedNodes.length < 2) return;
+                                                        takeSnapshot();
+
+                                                        const anchor = selectedNodes[0];
+                                                        const anchorH = (anchor.style?.height as number) || anchor.measured?.height || 0;
+                                                        const targetCenterY = anchor.position.y + anchorH / 2;
+
+                                                        setNodes(nds => nds.map(n => {
+                                                            if (n.selected || n.id === menu.id) {
+                                                                const h = (n.style?.height as number) || n.measured?.height || 0;
+                                                                return {
+                                                                    ...n,
+                                                                    position: {
+                                                                        ...n.position,
+                                                                        y: Math.round((targetCenterY - h / 2) / 12) * 12
+                                                                    }
+                                                                };
+                                                            }
+                                                            return n;
+                                                        }));
+                                                    }}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] transition-colors hover:bg-black/5 text-black/70 hover:text-black"
+                                                >
+                                                    <AlignHorizontalJustifyCenter className="w-3.5 h-3.5" />
+                                                    Align Centers (Horizontal)
+                                                </button>
+                                                <div className="h-px my-1 bg-black/5" />
                                                 <button
                                                     onClick={() => deleteNode(menu.id)}
                                                     className="w-full flex items-center gap-2 px-3 py-2 text-[12px] hover:bg-red-500/10 transition-colors text-red-400 hover:text-red-300"
@@ -601,21 +864,37 @@ function WorkspaceView() {
                                                 </button>
                                             </>
                                         ) : (
-                                            <>
-                                                {nodeTypesList.map((node) => (
-                                                    <button
-                                                        key={node.type}
-                                                        onClick={() => {
-                                                            const pos = screenToFlowPosition({ x: menu.left, y: menu.top });
-                                                            addNode(node.type, node.label, pos);
-                                                        }}
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-[12px] transition-colors hover:bg-black/5 text-black/70 hover:text-black"
-                                                    >
-                                                        <node.icon className="w-3.5 h-3.5" />
-                                                        Add {node.label}
-                                                    </button>
-                                                ))}
-                                            </>
+                                            <div className="max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                                {['Kubernetes', 'Infrastructure', 'Compute', 'Networking', 'Data', 'External', 'Documentation', 'Utilities'].map(category => {
+                                                    const categoryItems = nodeTypesList.filter(n => n.category.toLowerCase() === category.toLowerCase());
+                                                    if (categoryItems.length === 0) return null;
+
+                                                    return (
+                                                        <div key={category} className="py-1">
+                                                            <div className="px-3 py-1 text-[9px] uppercase font-bold text-black/20 tracking-widest bg-black/[0.02]">
+                                                                {category}
+                                                            </div>
+                                                            {categoryItems.map((node) => (
+                                                                <button
+                                                                    key={node.type}
+                                                                    onClick={() => {
+                                                                        const pos = screenToFlowPosition({ x: menu.left, y: menu.top });
+                                                                        const snappedPos = {
+                                                                            x: Math.round(pos.x / 12) * 12,
+                                                                            y: Math.round(pos.y / 12) * 12
+                                                                        };
+                                                                        addNode(node.type, node.label, snappedPos);
+                                                                    }}
+                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] transition-colors hover:bg-black/5 text-black/70 hover:text-black"
+                                                                >
+                                                                    <node.icon className="w-3.5 h-3.5" />
+                                                                    {node.label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         )}
                                     </div>
                                 )}
@@ -791,8 +1070,14 @@ function WorkspaceView() {
                                                             <div className="text-[9px] text-white/20 uppercase font-bold">Width (PX)</div>
                                                             <Input
                                                                 type="number"
-                                                                value={selectedNode.data?.width || ''}
-                                                                onChange={(e) => updateNodeData(selectedNode.id, { width: parseInt(e.target.value) })}
+                                                                min={24}
+                                                                value={Math.round(Number(selectedNode.style?.width ?? (selectedNode as any).measured?.width ?? 0))}
+                                                                onChange={(e) => {
+                                                                    const val = parseInt(e.target.value);
+                                                                    if (!isNaN(val) && val > 0) {
+                                                                        updateNodeStyle(selectedNode.id, { width: val });
+                                                                    }
+                                                                }}
                                                                 className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
                                                             />
                                                         </div>
@@ -800,8 +1085,14 @@ function WorkspaceView() {
                                                             <div className="text-[9px] text-white/20 uppercase font-bold">Height (PX)</div>
                                                             <Input
                                                                 type="number"
-                                                                value={selectedNode.data?.height || ''}
-                                                                onChange={(e) => updateNodeData(selectedNode.id, { height: parseInt(e.target.value) })}
+                                                                min={24}
+                                                                value={Math.round(Number(selectedNode.style?.height ?? (selectedNode as any).measured?.height ?? 0))}
+                                                                onChange={(e) => {
+                                                                    const val = parseInt(e.target.value);
+                                                                    if (!isNaN(val) && val > 0) {
+                                                                        updateNodeStyle(selectedNode.id, { height: val });
+                                                                    }
+                                                                }}
                                                                 className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
                                                             />
                                                         </div>
@@ -1003,6 +1294,187 @@ function WorkspaceView() {
                                                                     className="min-h-[80px] rounded-md focus:ring-0 bg-white/5 border-white/10 text-white focus:border-white/20 resize-none text-[11px] font-mono"
                                                                 />
                                                             </div>
+                                                        )}
+
+                                                        {/* Kubernetes Specific Properties */}
+                                                        {selectedNode.type?.startsWith('k8s-') && (
+                                                            <>
+                                                                <div className="h-px bg-white/5 my-2" />
+                                                                <div className="text-[9px] text-blue-400/60 uppercase font-bold tracking-widest flex items-center gap-1.5 mb-2">
+                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                                                                        <path d="M12 2L21 7V17L12 22L3 17V7L12 2Z" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.3" />
+                                                                    </svg>
+                                                                    Kubernetes
+                                                                </div>
+
+                                                                {/* Status */}
+                                                                <div className="space-y-1.5">
+                                                                    <div className="text-[9px] text-white/20 uppercase font-bold">Status</div>
+                                                                    <select
+                                                                        value={(selectedNode.data?.status as string) || ''}
+                                                                        onChange={(e) => updateNodeData(selectedNode.id, { status: e.target.value || undefined })}
+                                                                        className="w-full h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] focus:ring-0 px-2 outline-none"
+                                                                    >
+                                                                        <option value="" className="bg-[#1a1a1a]">Default (K8s Blue)</option>
+                                                                        <option value="healthy" className="bg-[#1a1a1a]">✅ Healthy</option>
+                                                                        <option value="error" className="bg-[#1a1a1a]">❌ Error</option>
+                                                                        <option value="pending" className="bg-[#1a1a1a]">⏳ Pending</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                {/* Replicas — for Deployment, ReplicaSet, StatefulSet, DaemonSet */}
+                                                                {['k8s-deployment', 'k8s-replicaset', 'k8s-statefulset', 'k8s-daemonset'].includes(selectedNode.type!) && (
+                                                                    <div className="space-y-1.5">
+                                                                        <div className="text-[9px] text-white/20 uppercase font-bold">Replicas</div>
+                                                                        <Input
+                                                                            type="number"
+                                                                            min={0}
+                                                                            value={(selectedNode.data?.replicas as number) || 1}
+                                                                            onChange={(e) => updateNodeData(selectedNode.id, { replicas: parseInt(e.target.value) || 1 })}
+                                                                            className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+                                                                        />
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Image — for Pod, Deployment, StatefulSet, DaemonSet, Job, CronJob */}
+                                                                {['k8s-pod', 'k8s-deployment', 'k8s-statefulset', 'k8s-daemonset', 'k8s-job', 'k8s-cronjob'].includes(selectedNode.type!) && (
+                                                                    <div className="space-y-1.5">
+                                                                        <div className="text-[9px] text-white/20 uppercase font-bold">Container Image</div>
+                                                                        <Input
+                                                                            value={(selectedNode.data?.image as string) || ''}
+                                                                            onChange={(e) => updateNodeData(selectedNode.id, { image: e.target.value })}
+                                                                            placeholder="nginx:latest"
+                                                                            className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] font-mono"
+                                                                        />
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Service Type & Port */}
+                                                                {selectedNode.type === 'k8s-service' && (
+                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="text-[9px] text-white/20 uppercase font-bold">Service Type</div>
+                                                                            <select
+                                                                                value={(selectedNode.data?.serviceType as string) || 'ClusterIP'}
+                                                                                onChange={(e) => updateNodeData(selectedNode.id, { serviceType: e.target.value })}
+                                                                                className="w-full h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] focus:ring-0 px-2 outline-none"
+                                                                            >
+                                                                                <option value="ClusterIP" className="bg-[#1a1a1a]">ClusterIP</option>
+                                                                                <option value="NodePort" className="bg-[#1a1a1a]">NodePort</option>
+                                                                                <option value="LoadBalancer" className="bg-[#1a1a1a]">LoadBalancer</option>
+                                                                                <option value="ExternalName" className="bg-[#1a1a1a]">ExternalName</option>
+                                                                            </select>
+                                                                        </div>
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="text-[9px] text-white/20 uppercase font-bold">Port</div>
+                                                                            <Input
+                                                                                value={(selectedNode.data?.port as string) || '80'}
+                                                                                onChange={(e) => updateNodeData(selectedNode.id, { port: e.target.value })}
+                                                                                className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Ingress — Host & Path */}
+                                                                {selectedNode.type === 'k8s-ingress' && (
+                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="text-[9px] text-white/20 uppercase font-bold">Host</div>
+                                                                            <Input
+                                                                                value={(selectedNode.data?.host as string) || ''}
+                                                                                onChange={(e) => updateNodeData(selectedNode.id, { host: e.target.value })}
+                                                                                placeholder="app.example.com"
+                                                                                className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] font-mono"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="text-[9px] text-white/20 uppercase font-bold">Path</div>
+                                                                            <Input
+                                                                                value={(selectedNode.data?.path as string) || '/'}
+                                                                                onChange={(e) => updateNodeData(selectedNode.id, { path: e.target.value })}
+                                                                                className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] font-mono"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* PVC — Storage Size & Access Mode */}
+                                                                {selectedNode.type === 'k8s-pvc' && (
+                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="text-[9px] text-white/20 uppercase font-bold">Storage Size</div>
+                                                                            <Input
+                                                                                value={(selectedNode.data?.storageSize as string) || '10Gi'}
+                                                                                onChange={(e) => updateNodeData(selectedNode.id, { storageSize: e.target.value })}
+                                                                                className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="text-[9px] text-white/20 uppercase font-bold">Access Mode</div>
+                                                                            <select
+                                                                                value={(selectedNode.data?.accessMode as string) || 'ReadWriteOnce'}
+                                                                                onChange={(e) => updateNodeData(selectedNode.id, { accessMode: e.target.value })}
+                                                                                className="w-full h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] focus:ring-0 px-2 outline-none"
+                                                                            >
+                                                                                <option value="ReadWriteOnce" className="bg-[#1a1a1a]">ReadWriteOnce</option>
+                                                                                <option value="ReadOnlyMany" className="bg-[#1a1a1a]">ReadOnlyMany</option>
+                                                                                <option value="ReadWriteMany" className="bg-[#1a1a1a]">ReadWriteMany</option>
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* CronJob — Schedule */}
+                                                                {selectedNode.type === 'k8s-cronjob' && (
+                                                                    <div className="space-y-1.5">
+                                                                        <div className="text-[9px] text-white/20 uppercase font-bold">Schedule (Cron)</div>
+                                                                        <Input
+                                                                            value={(selectedNode.data?.schedule as string) || '*/5 * * * *'}
+                                                                            onChange={(e) => updateNodeData(selectedNode.id, { schedule: e.target.value })}
+                                                                            placeholder="*/5 * * * *"
+                                                                            className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] font-mono"
+                                                                        />
+                                                                    </div>
+                                                                )}
+
+                                                                {/* HPA — Min/Max Replicas & Target CPU */}
+                                                                {selectedNode.type === 'k8s-hpa' && (
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="text-[9px] text-white/20 uppercase font-bold">Min</div>
+                                                                            <Input
+                                                                                type="number"
+                                                                                min={1}
+                                                                                value={(selectedNode.data?.minReplicas as number) || 1}
+                                                                                onChange={(e) => updateNodeData(selectedNode.id, { minReplicas: parseInt(e.target.value) || 1 })}
+                                                                                className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="text-[9px] text-white/20 uppercase font-bold">Max</div>
+                                                                            <Input
+                                                                                type="number"
+                                                                                min={1}
+                                                                                value={(selectedNode.data?.maxReplicas as number) || 10}
+                                                                                onChange={(e) => updateNodeData(selectedNode.id, { maxReplicas: parseInt(e.target.value) || 10 })}
+                                                                                className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="text-[9px] text-white/20 uppercase font-bold">CPU %</div>
+                                                                            <Input
+                                                                                type="number"
+                                                                                min={1}
+                                                                                max={100}
+                                                                                value={(selectedNode.data?.targetCpu as number) || 80}
+                                                                                onChange={(e) => updateNodeData(selectedNode.id, { targetCpu: parseInt(e.target.value) || 80 })}
+                                                                                className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </>
                                                         )}
                                                     </div>
                                                 </section>

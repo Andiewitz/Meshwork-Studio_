@@ -39,7 +39,7 @@ export function getSession() {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: connectionString,
-    createTableIfMissing: false,
+    createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
   });
@@ -50,7 +50,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Changed for local Docker/HTTP support
       maxAge: sessionTtl,
     },
   });
@@ -67,13 +67,20 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
-  await authStorage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
-  });
+  try {
+    console.log("[Auth] Attempting to upsert user:", claims["sub"]);
+    await authStorage.upsertUser({
+      id: claims["sub"],
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+    });
+    console.log("[Auth] User upserted successfully:", claims["sub"]);
+  } catch (err) {
+    console.error("[Auth] Failed to upsert user:", err);
+    throw err;
+  }
 }
 
 export async function setupAuth(app: Express) {
@@ -88,27 +95,33 @@ export async function setupAuth(app: Express) {
   if (process.env.CLIENT_ID === "local-development") {
     app.get("/api/login", async (req, res) => {
       console.log("Development Login Bypass hit");
-      const mockUser = {
-        claims: {
-          sub: "dev-user-id",
-          email: "dev@example.com",
-          first_name: "Development",
-          last_name: "User",
-          profile_image_url: "https://avatar.vercel.sh/dev",
-          exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-        },
-        expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-      };
+      try {
+        const mockUser = {
+          claims: {
+            sub: "dev-user-id",
+            email: "dev@example.com",
+            first_name: "Development",
+            last_name: "User",
+            profile_image_url: "https://avatar.vercel.sh/dev",
+            exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+          },
+          expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+        };
 
-      await upsertUser(mockUser.claims);
+        await upsertUser(mockUser.claims);
 
-      req.login(mockUser, (err) => {
-        if (err) {
-          console.error("Mock Login Error:", err);
-          return res.status(500).send("Login failed: " + err.message);
-        }
-        res.redirect("/");
-      });
+        req.login(mockUser, (err) => {
+          if (err) {
+            console.error("Mock Login req.login() Error:", err);
+            return res.status(500).json({ message: "Login failed (req.login)", error: err.message });
+          }
+          console.log("Mock Login Successful, redirecting to /");
+          res.redirect("/");
+        });
+      } catch (err: any) {
+        console.error("Mock Login Overall Error:", err);
+        res.status(500).json({ message: "Login failed (overall)", error: err.message });
+      }
     });
 
     app.get("/api/callback", (req, res) => {
@@ -182,7 +195,13 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated()) {
+    console.log("[Auth Middleware] Not authenticated (passport)");
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  if (!user.expires_at) {
+    console.log("[Auth Middleware] Missing expires_at for user:", user.claims?.sub);
     return res.status(401).json({ message: "Unauthorized" });
   }
 

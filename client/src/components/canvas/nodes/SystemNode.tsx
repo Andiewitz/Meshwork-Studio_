@@ -14,6 +14,7 @@ import {
     Type,
     Circle
 } from 'lucide-react';
+import { k8sIcons } from '../icons/KubernetesIcons';
 
 const icons: Record<string, any> = {
     server: Server,
@@ -47,11 +48,12 @@ export function SystemNode({ data, selected, type }: NodeProps) {
     const dimensions: Record<string, { w: string, h: string }> = {
         compute: { w: 'w-[168px]', h: 'h-[72px]' },
         data: { w: 'w-[144px]', h: 'h-[120px]' }, // Cylindrical feel
-        networking: { w: 'w-[192px]', h: 'h-[60px]' },
-        external: { w: 'w-[120px]', h: 'h-[96px]' },
+        networking: { w: 'w-[192px]', h: 'h-[72px]' },
+        external: { w: 'w-[144px]', h: 'h-[96px]' },
         infrastructure: { w: 'w-full', h: 'h-full' },
-        documentation: { w: 'w-[192px]', h: 'h-auto' },
-        utilities: { w: 'w-6', h: 'h-6' }
+        documentation: { w: 'w-[192px]', h: 'h-[192px]' },
+        utilities: { w: 'w-6', h: 'h-6' },
+        kubernetes: { w: 'w-[168px]', h: 'h-[96px]' }
     };
 
     const category = (data.category as string || '').toLowerCase();
@@ -64,8 +66,16 @@ export function SystemNode({ data, selected, type }: NodeProps) {
         networking: { bg: 'bg-[#10B981]', border: 'border-[#059669]', text: 'text-white', icon: 'text-emerald-100' },
         external: { bg: 'bg-[#8B5CF6]', border: 'border-[#7C3AED]', text: 'text-white', icon: 'text-purple-100' },
         infrastructure: { bg: 'bg-white', border: 'border-black', text: 'text-black', icon: 'text-black/40' },
-        documentation: { bg: 'bg-[#FFF9C4]', border: 'border-yellow-400', text: 'text-yellow-900', icon: 'text-yellow-700/50' },
-        utilities: { bg: 'bg-white', border: 'border-black', text: 'text-black', icon: 'text-black/40' }
+        documentation: { bg: 'bg-gradient-to-br from-[#FFF9C4] to-[#FFF176]', border: 'border-yellow-400/50', text: 'text-yellow-900/80', icon: 'text-yellow-700/30' },
+        utilities: { bg: 'bg-white', border: 'border-black', text: 'text-black', icon: 'text-black/40' },
+        kubernetes: { bg: 'bg-[#326CE5]', border: 'border-[#2457B5]', text: 'text-white', icon: 'text-blue-100' }
+    };
+
+    // Kubernetes status-based color overrides
+    const k8sStatusStyles: Record<string, { bg: string, border: string }> = {
+        healthy: { bg: 'bg-[#22C55E]', border: 'border-[#16A34A]' },
+        error: { bg: 'bg-[#EF4444]', border: 'border-[#DC2626]' },
+        pending: { bg: 'bg-[#6B7280]', border: 'border-[#4B5563]' },
     };
 
     // Provider Specific Branding (High Fidelity)
@@ -110,10 +120,19 @@ export function SystemNode({ data, selected, type }: NodeProps) {
     const isData = category === 'data';
     const isInfrastructure = type === 'vpc' || type === 'region';
     const isNote = type === 'note';
+    const isKubernetes = (type as string)?.startsWith('k8s-');
+    const isK8sNamespace = type === 'k8s-namespace';
+    const k8sStatus = (data.status as string) || '';
+
+    // Override style for K8s nodes based on status
+    const k8sOverride = isKubernetes && k8sStatus ? k8sStatusStyles[k8sStatus] : null;
 
     // Handle Specialized Icons/Logos
     let IconElement: React.ReactNode;
-    if (customBrand?.logo) {
+    if (isKubernetes) {
+        const K8sIcon = k8sIcons[type as string];
+        IconElement = K8sIcon ? <K8sIcon size={22} className={style.icon} /> : <Box size={18} />;
+    } else if (customBrand?.logo) {
         IconElement = customBrand.logo;
     } else {
         const Icon = icons[provider] || icons[type as string] || Box;
@@ -121,12 +140,6 @@ export function SystemNode({ data, selected, type }: NodeProps) {
     }
 
     const borderRadius = customBrand?.radius || (type === 'junction' ? 'rounded-full' : 'rounded-xl');
-
-    // Dynamic styling: use min dimensions for default state, 100% to fill resized container
-    const nodeStyle: React.CSSProperties = {
-        minWidth: (dim.w.match(/\[(.*?)px\]/)?.[1] ? `${dim.w.match(/\[(.*?)px\]/)?.[1]}px` : undefined),
-        minHeight: (dim.h.match(/\[(.*?)px\]/)?.[1] ? `${dim.h.match(/\[(.*?)px\]/)?.[1]}px` : undefined),
-    };
 
     if (type === 'junction') {
         return (
@@ -144,85 +157,161 @@ export function SystemNode({ data, selected, type }: NodeProps) {
     return (
         <>
             <NodeResizer
-                minWidth={120}
-                minHeight={48}
+                minWidth={24}
+                minHeight={24}
                 isVisible={selected}
-                lineClassName={isNote ? "border-yellow-400" : "border-white/40"}
-                handleClassName="h-3 w-3 bg-white border-2 border-primary rounded-full shadow-md"
+                lineClassName={isNote ? "!border-yellow-500" : "!border-blue-500"}
+                lineStyle={{ padding: 6 }}
+                handleClassName="!h-3 !w-3 !bg-white !border-2 !border-blue-500 !rounded-sm !shadow-md"
+                handleStyle={{ margin: -6 }}
             />
-            <div
-                style={{
-                    ...nodeStyle,
-                    transform: isNote ? 'rotate(-0.5deg)' : undefined,
-                }}
-                className={`
-                    group relative p-3 transition-all duration-200 border-2
-                    h-full w-full
-                    ${customBrand ? `${customBrand.bg} ${customBrand.border}` : `${style.bg} ${style.border}`}
-                    ${selected ? 'shadow-[8px_8px_0px_rgba(0,0,0,0.1)] scale-[1.01]' : 'hover:scale-[1.005]'}
-                    ${isNote ? 'rounded-sm' : borderRadius}
-                    ${isInfrastructure ? 'bg-opacity-5' : ''}
-                    flex flex-col
-                `}
-            >
-                {/* All-Direction Handles */}
-                <Handle type="target" position={Position.Top} id="t-t" className="!w-3 !h-3 !border-0 !bg-white/20 hover:!bg-white !top-0 !translate-y-[-50%]" />
-                <Handle type="source" position={Position.Top} id="t-s" className="!w-3 !h-3 !border-0 !bg-white/20 hover:!bg-white !top-0 !translate-y-[-50%]" />
-                <Handle type="target" position={Position.Bottom} id="b-t" className="!w-3 !h-3 !border-0 !bg-white/20 hover:!bg-white !bottom-0 !translate-y-[50%]" />
-                <Handle type="source" position={Position.Bottom} id="b-s" className="!w-3 !h-3 !border-0 !bg-white/20 hover:!bg-white !bottom-0 !translate-y-[50%]" />
-                <Handle type="target" position={Position.Left} id="l-t" className="!w-3 !h-3 !border-0 !bg-white/20 hover:!bg-white !left-0 !translate-x-[-50%] !top-1/2 !translate-y-[-50%]" />
-                <Handle type="source" position={Position.Left} id="l-s" className="!w-3 !h-3 !border-0 !bg-white/20 hover:!bg-white !left-0 !translate-x-[-50%] !top-1/2 !translate-y-[-50%]" />
-                <Handle type="target" position={Position.Right} id="r-t" className="!w-3 !h-3 !border-0 !bg-white/20 hover:!bg-white !right-0 !translate-x-[50%] !top-1/2 !translate-y-[-50%]" />
-                <Handle type="source" position={Position.Right} id="r-s" className="!w-3 !h-3 !border-0 !bg-white/20 hover:!bg-white !right-0 !translate-x-[50%] !top-1/2 !translate-y-[-50%]" />
+            <div className="group w-full h-full relative">
+                {/* Connection Handles – hidden by default, visible on hover */}
+                <Handle type="target" position={Position.Top} id="t-t" className="!w-2.5 !h-2.5 !rounded-sm !border-2 !border-blue-500 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm" />
+                <Handle type="source" position={Position.Top} id="t-s" className="!w-2.5 !h-2.5 !rounded-sm !border-2 !border-blue-500 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm" />
+                <Handle type="target" position={Position.Bottom} id="b-t" className="!w-2.5 !h-2.5 !rounded-sm !border-2 !border-blue-500 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm" />
+                <Handle type="source" position={Position.Bottom} id="b-s" className="!w-2.5 !h-2.5 !rounded-sm !border-2 !border-blue-500 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm" />
+                <Handle type="target" position={Position.Left} id="l-t" className="!w-2.5 !h-2.5 !rounded-sm !border-2 !border-blue-500 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm" />
+                <Handle type="source" position={Position.Left} id="l-s" className="!w-2.5 !h-2.5 !rounded-sm !border-2 !border-blue-500 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm" />
+                <Handle type="target" position={Position.Right} id="r-t" className="!w-2.5 !h-2.5 !rounded-sm !border-2 !border-blue-500 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm" />
+                <Handle type="source" position={Position.Right} id="r-s" className="!w-2.5 !h-2.5 !rounded-sm !border-2 !border-blue-500 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm" />
 
-                {isInfrastructure && (
-                    <div className="absolute -top-3 left-6 px-3 py-0.5 bg-white border rounded-none text-[10px] font-bold uppercase tracking-widest text-black/40">
-                        {type}: {data.label as string}
-                    </div>
-                )}
+                {/* Node Content */}
+                <div
+                    className={`
+                        relative p-3 border-2 overflow-hidden
+                        w-full h-full
+                        ${isK8sNamespace
+                            ? `bg-[#326CE5]/5 border-[#326CE5]/40 border-dashed ${selected ? 'bg-[#326CE5]/10 border-[#326CE5]/60' : 'hover:bg-[#326CE5]/8'}`
+                            : k8sOverride
+                                ? `${k8sOverride.bg} ${k8sOverride.border}`
+                                : customBrand
+                                    ? `${customBrand.bg} ${customBrand.border}`
+                                    : `${style.bg} ${style.border}`
+                        }
+                        ${selected ? 'shadow-[8px_8px_0px_rgba(0,0,0,0.1)]' : 'group-hover:shadow-[4px_4px_0px_rgba(0,0,0,0.05)]'}
+                        ${isNote ? 'rounded-sm' : isK8sNamespace ? 'rounded-lg' : borderRadius}
+                        ${isInfrastructure ? 'bg-opacity-5' : ''}
+                        flex flex-col
+                    `}
+                >
+                    {/* Infrastructure label */}
+                    {isInfrastructure && (
+                        <div className="absolute -top-3 left-6 px-3 py-0.5 bg-white border rounded-none text-[10px] font-bold uppercase tracking-widest text-black/40">
+                            {type}: {data.label as string}
+                        </div>
+                    )}
 
-                {isNote ? (
-                    <div className="flex-1 flex flex-col p-1">
-                        <p className={`text-[13px] leading-snug font-medium whitespace-pre-wrap ${style.text}`}>
-                            {(data.label as string) || ''}
-                        </p>
-                    </div>
-                ) : (
-                    <>
-                        <div className={`flex ${isData ? 'flex-col items-center text-center mt-1' : 'items-center gap-3'} flex-shrink-0`}>
-                            <div className={`
-                                p-2 rounded-none transition-colors w-10 h-10 flex items-center justify-center
-                                bg-white/10 ${style.icon}
-                            `}>
+                    {/* K8s Namespace container label */}
+                    {isK8sNamespace && (
+                        <div className="absolute -top-3 left-4 px-2.5 py-0.5 bg-[#326CE5] rounded-sm text-[9px] font-bold uppercase tracking-widest text-white flex items-center gap-1.5 transition-all">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 2L21 7V17L12 22L3 17V7L12 2Z" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.3" />
+                            </svg>
+                            ns: {data.label as string}
+                        </div>
+                    )}
+
+                    {/* Sticky Note */}
+                    {isNote ? (
+                        <div className="flex-1 flex flex-col p-1">
+                            <p className={`text-[14px] leading-relaxed font-semibold whitespace-pre-wrap break-all italic w-full max-w-full ${style.text}`} style={{ fontFamily: 'var(--font-serif)' }}>
+                                {(data.label as string) || ''}
+                            </p>
+                        </div>
+
+                        /* Kubernetes Nodes */
+                    ) : isKubernetes && !isK8sNamespace ? (
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                            {/* Icon with status indicator dot */}
+                            <div className="relative p-2 rounded-md bg-white/15 w-10 h-10 flex items-center justify-center flex-shrink-0">
                                 {IconElement}
+                                {k8sStatus && (
+                                    <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white/80
+                                        ${k8sStatus === 'healthy' ? 'bg-green-400' :
+                                            k8sStatus === 'error' ? 'bg-red-400' : 'bg-gray-400'}
+                                    `}>
+                                        <div className="k8s-status-pulse" />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex flex-col min-w-0">
-                                <span className={`text-[12px] font-bold truncate leading-tight ${style.text}`}>
+                                <span className="text-[12px] font-bold truncate leading-tight text-white">
                                     {data.label as string}
                                 </span>
-                                <span className={`text-[9px] uppercase tracking-widest font-bold mt-0.5 opacity-60 ${style.text}`}>
-                                    {provider || type}
+                                <span className="text-[9px] uppercase tracking-widest font-bold mt-0.5 opacity-60 text-white">
+                                    {(type as string)?.replace('k8s-', '')}
                                 </span>
+                                {/* Metadata badges */}
+                                <div className="flex gap-1 mt-1.5 flex-wrap">
+                                    {Boolean(data.replicas) && (
+                                        <span className="text-[8px] px-1.5 py-0.5 bg-white/10 rounded-sm text-white/80 font-semibold">
+                                            {String(data.replicas)} replicas
+                                        </span>
+                                    )}
+                                    {Boolean(data.image) && (
+                                        <span className="text-[8px] px-1.5 py-0.5 bg-white/10 rounded-sm text-white/80 font-mono truncate max-w-[100px]">
+                                            {String(data.image)}
+                                        </span>
+                                    )}
+                                    {Boolean(data.serviceType) && (
+                                        <span className="text-[8px] px-1.5 py-0.5 bg-white/10 rounded-sm text-white/80 font-semibold">
+                                            {String(data.serviceType)}
+                                        </span>
+                                    )}
+                                    {Boolean(data.schedule) && (
+                                        <span className="text-[8px] px-1.5 py-0.5 bg-white/10 rounded-sm text-white/80 font-mono">
+                                            {String(data.schedule)}
+                                        </span>
+                                    )}
+                                    {Boolean(data.storageSize) && (
+                                        <span className="text-[8px] px-1.5 py-0.5 bg-white/10 rounded-sm text-white/80 font-semibold">
+                                            {String(data.storageSize)}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Sub-Collections Display */}
-                        {isData && Array.isArray(data.collections) && data.collections.length > 0 && (
-                            <div className="mt-3 w-full space-y-1 flex-grow overflow-hidden">
-                                <div className="text-[8px] uppercase tracking-widest font-bold opacity-30 text-white mb-1">Collections</div>
-                                <div className="flex flex-col gap-1 overflow-y-auto max-h-[200px] pr-1 scrollbar-hide">
-                                    {(data.collections as any[]).map((coll, i) => (
-                                        <div key={i} className="px-2 py-1 bg-white/10 border border-white/5 text-[10px] font-medium text-white truncate flex items-center gap-1.5 shrink-0">
-                                            <div className="w-1 h-1 rounded-full bg-white/40" />
-                                            {String(coll)}
-                                        </div>
-                                    ))}
+                        /* Default Nodes */
+                    ) : (
+                        <>
+                            <div className={`flex ${isData ? 'flex-col items-center text-center mt-1' : 'items-center gap-3'} flex-shrink-0`}>
+                                <div className={`
+                                    p-2 rounded-none transition-colors w-10 h-10 flex items-center justify-center
+                                    bg-white/10 ${style.icon}
+                                `}>
+                                    {IconElement}
+                                </div>
+
+                                <div className="flex flex-col min-w-0">
+                                    <span className={`text-[12px] font-bold truncate leading-tight ${style.text}`}>
+                                        {data.label as string}
+                                    </span>
+                                    <span className={`text-[9px] uppercase tracking-widest font-bold mt-0.5 opacity-60 ${style.text}`}>
+                                        {provider || type}
+                                    </span>
                                 </div>
                             </div>
-                        )}
-                    </>
-                )}
+
+                            {/* Sub-Collections Display */}
+                            {isData && Array.isArray(data.collections) && data.collections.length > 0 && (
+                                <div className="mt-3 w-full space-y-1 flex-grow overflow-hidden">
+                                    <div className="text-[8px] uppercase tracking-widest font-bold opacity-30 text-white mb-1">Collections</div>
+                                    <div className="flex flex-col gap-1 overflow-y-auto max-h-[200px] pr-1 scrollbar-hide">
+                                        {(data.collections as any[]).map((coll, i) => (
+                                            <div key={i} className="px-2 py-1 bg-white/10 border border-white/5 text-[10px] font-medium text-white truncate flex items-center gap-1.5 shrink-0">
+                                                <div className="w-1 h-1 rounded-full bg-white/40" />
+                                                {String(coll)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
         </>
     );

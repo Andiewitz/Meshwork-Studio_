@@ -123,7 +123,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               (isExpanded || isMobile) ? "w-full" : "justify-center"
             )}>
               <Avatar className="w-10 h-10 border-2 border-black shrink-0">
-                <AvatarImage src={user?.profileImageUrl} />
+                <AvatarImage src={user?.profileImageUrl || undefined} />
                 <AvatarFallback className="bg-primary/10 text-primary">
                   {user?.firstName?.[0] || user?.email?.[0] || "U"}
                 </AvatarFallback>

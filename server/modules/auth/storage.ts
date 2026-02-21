@@ -1,4 +1,4 @@
-import { users, type User, type UpsertUser } from "@shared/models/auth";
+import { users, type User, type UpsertUser } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -15,18 +15,25 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+    try {
+      console.log("[AuthStorage] DB Upsert for user:", userData.id);
+      const [user] = await db
+        .insert(users)
+        .values(userData)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...userData,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      console.log("[AuthStorage] DB Upsert successful");
+      return user;
+    } catch (err) {
+      console.error("[AuthStorage] DB Upsert failed:", err);
+      throw err;
+    }
   }
 }
 

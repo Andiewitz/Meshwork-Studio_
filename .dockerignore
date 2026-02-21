@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.replit
+attached_assets
+brain
+migrations
+tsc_output.txt
+log_debug.txt
+*.log
+.env

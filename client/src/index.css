@@ -9,36 +9,37 @@
   --font-serif: 'Playfair Display', serif;
 
   /* Neo-Brutalist Theme - Off-white background, high contrast */
-  --background: 48 30% 96%; /* #FDFCF8-ish */
+  --background: 48 30% 96%;
+  /* #FDFCF8-ish */
   --foreground: 0 0% 0%;
-  
+
   --card: 0 0% 100%;
   --card-foreground: 0 0% 0%;
-  
+
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 0%;
-  
+
   /* Primary - Vibrant Purple */
   --primary: 262 83% 65%;
   --primary-foreground: 0 0% 100%;
-  
+
   /* Secondary - Clean White */
   --secondary: 0 0% 100%;
   --secondary-foreground: 0 0% 0%;
-  
+
   --muted: 0 0% 90%;
   --muted-foreground: 0 0% 40%;
-  
+
   --accent: 262 83% 65%;
   --accent-foreground: 0 0% 100%;
-  
+
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
   --border: 0 0% 0%;
   --input: 0 0% 100%;
   --ring: 262 83% 65%;
-  
+
   --radius: 0.5rem;
 }
 
@@ -46,28 +47,28 @@
   /* Dark mode also neo-brutalist but inverted */
   --background: 0 0% 5%;
   --foreground: 0 0% 100%;
-  
+
   --card: 0 0% 10%;
   --card-foreground: 0 0% 100%;
-  
+
   --popover: 0 0% 10%;
   --popover-foreground: 0 0% 100%;
-  
+
   --primary: 262 83% 65%;
   --primary-foreground: 0 0% 100%;
-  
+
   --secondary: 0 0% 15%;
   --secondary-foreground: 0 0% 100%;
-  
+
   --muted: 0 0% 20%;
   --muted-foreground: 0 0% 70%;
-  
+
   --accent: 262 83% 65%;
   --accent-foreground: 0 0% 100%;
-  
+
   --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 100%;
-  
+
   --border: 0 0% 100%;
   --input: 0 0% 15%;
   --ring: 262 83% 65%;
@@ -78,8 +79,13 @@
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-serif);
     @apply font-bold tracking-tight;
   }
@@ -91,15 +97,55 @@
   }
 
   .neo-shadow {
-    @apply shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)];
+    @apply shadow-[4px_4px_0px_0px_rgba(0, 0, 0, 1)] dark:shadow-[4px_4px_0px_0px_rgba(255, 255, 255, 1)];
   }
 
   .neo-shadow-lg {
-    @apply shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)];
+    @apply shadow-[6px_6px_0px_0px_rgba(0, 0, 0, 1)] dark:shadow-[6px_6px_0px_0px_rgba(255, 255, 255, 1)];
   }
-  
+
   .neo-card {
     @apply neo-border neo-shadow bg-card p-4 rounded-xl;
   }
 }
 
+/* React Flow NodeResizer – handles & lines sit OUTSIDE the node */
+.react-flow__resize-control.line {
+  border-width: 1.5px !important;
+}
+
+.react-flow__resize-control.handle {
+  z-index: 10;
+}
+
+/* Kubernetes Status Animations */
+@keyframes k8s-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+.k8s-status-pulse {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background-color: inherit;
+  animation: k8s-pulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+/* Ensure node content clips inside its boundary */
+.react-flow__node {
+  overflow: visible !important;
+}
