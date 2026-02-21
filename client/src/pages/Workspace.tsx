@@ -48,6 +48,24 @@ import {
     Trash2,
     Copy,
     Edit2,
+    Grid,
+    Monitor,
+    Cloud,
+    GitBranch,
+    Shield,
+    Lock,
+    Key,
+    Activity,
+    BarChart3,
+    PieChart,
+    CreditCard,
+    MessageCircle,
+    ShoppingCart,
+    PlayCircle,
+    Terminal,
+    Layers,
+    Layout,
+    Briefcase,
     Search,
     User as UserIcon,
     Maximize,
@@ -55,9 +73,13 @@ import {
     ChevronRight,
     Minus,
     Circle,
-    Grid,
     AlignVerticalJustifyCenter,
-    AlignHorizontalJustifyCenter
+    AlignHorizontalJustifyCenter,
+    RotateCw,
+    Spline,
+    ArrowUpRight,
+    Milestone,
+    ArrowRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -65,6 +87,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SystemNode } from '@/components/canvas/nodes/SystemNode';
 import {
     K8sPodIcon, K8sDeployIcon, K8sReplicaSetIcon, K8sStatefulIcon, K8sDaemonIcon,
@@ -108,6 +131,36 @@ const nodeTypes = {
     'k8s-cronjob': SystemNode,
     'k8s-hpa': SystemNode,
     'k8s-namespace': SystemNode,
+    // Networking
+    route53: SystemNode,
+    nats: SystemNode,
+    socketio: SystemNode,
+    pusher: SystemNode,
+    // CI/CD
+    github_actions: SystemNode,
+    jenkins: SystemNode,
+    circleci: SystemNode,
+    gitlab: SystemNode,
+    argocd: SystemNode,
+    // Security
+    vault: SystemNode,
+    auth0: SystemNode,
+    okta: SystemNode,
+    waf: SystemNode,
+    // Monitoring
+    prometheus: SystemNode,
+    grafana: SystemNode,
+    datadog: SystemNode,
+    // Analytics
+    influxdb: SystemNode,
+    snowflake: SystemNode,
+    clickhouse: SystemNode,
+    // External
+    stripe: SystemNode,
+    twilio: SystemNode,
+    sendgrid: SystemNode,
+    shopify: SystemNode,
+    paypal: SystemNode,
 };
 
 const nodeTypesList = [
@@ -120,12 +173,34 @@ const nodeTypesList = [
     { type: 'cache', label: 'Redis Cache', icon: Zap, category: 'Data' },
     { type: 'storage', label: 'Object Storage (S3)', icon: HardDrive, category: 'Data' },
     { type: 'search', label: 'Search Index', icon: Search, category: 'Data' },
+    { type: 'influxdb', label: 'InfluxDB', icon: BarChart3, category: 'Data' },
+    { type: 'snowflake', label: 'Snowflake', icon: Layers, category: 'Data' },
+    { type: 'clickhouse', label: 'Clickhouse', icon: Database, category: 'Data' },
 
     { type: 'gateway', label: 'API Gateway', icon: Globe, category: 'Networking' },
     { type: 'loadBalancer', label: 'Load Balancer', icon: Cpu, category: 'Networking' },
     { type: 'cdn', label: 'CDN / Edge', icon: Globe, category: 'Networking' },
     { type: 'bus', label: 'Event Bus (Kafka)', icon: Share2, category: 'Networking' },
     { type: 'queue', label: 'Message Queue', icon: MessageSquare, category: 'Networking' },
+    { type: 'route53', label: 'Route 53', icon: Globe, category: 'Networking' },
+    { type: 'nats', label: 'NATS', icon: Activity, category: 'Networking' },
+    { type: 'socketio', label: 'Socket.io', icon: MessageCircle, category: 'Networking' },
+    { type: 'pusher', label: 'Pusher', icon: Zap, category: 'Networking' },
+
+    { type: 'github_actions', label: 'GitHub Actions', icon: PlayCircle, category: 'CI/CD' },
+    { type: 'jenkins', label: 'Jenkins', icon: Settings, category: 'CI/CD' },
+    { type: 'circleci', label: 'CircleCI', icon: RotateCw, category: 'CI/CD' },
+    { type: 'gitlab', label: 'GitLab', icon: GitBranch, category: 'CI/CD' },
+    { type: 'argocd', label: 'Argo CD', icon: PlayCircle, category: 'CI/CD' },
+
+    { type: 'vault', label: 'HashiCorp Vault', icon: Lock, category: 'Security' },
+    { type: 'auth0', label: 'Auth0', icon: Key, category: 'Security' },
+    { type: 'okta', label: 'Okta', icon: Shield, category: 'Security' },
+    { type: 'waf', label: 'Cloudflare WAF', icon: Shield, category: 'Security' },
+
+    { type: 'prometheus', label: 'Prometheus', icon: Activity, category: 'Monitoring' },
+    { type: 'grafana', label: 'Grafana', icon: BarChart3, category: 'Monitoring' },
+    { type: 'datadog', label: 'Datadog', icon: PieChart, category: 'Monitoring' },
 
     { type: 'vpc', label: 'VPC / Subnet', icon: Square, category: 'Infrastructure' },
     { type: 'region', label: 'Region / Zone', icon: Globe, category: 'Infrastructure' },
@@ -133,6 +208,11 @@ const nodeTypesList = [
     { type: 'user', label: 'End User', icon: UserIcon, category: 'External' },
     { type: 'app', label: 'Mobile/Web App', icon: Box, category: 'External' },
     { type: 'api', label: 'Third Party API', icon: Globe, category: 'External' },
+    { type: 'stripe', label: 'Stripe', icon: CreditCard, category: 'External' },
+    { type: 'twilio', label: 'Twilio', icon: MessageCircle, category: 'External' },
+    { type: 'sendgrid', label: 'SendGrid', icon: MessageCircle, category: 'External' },
+    { type: 'shopify', label: 'Shopify', icon: ShoppingCart, category: 'External' },
+    { type: 'paypal', label: 'PayPal', icon: CreditCard, category: 'External' },
 
     { type: 'note', label: 'Sticky Note', icon: Type, category: 'Documentation' },
 
@@ -156,6 +236,12 @@ const nodeTypesList = [
     // Kubernetes — Scaling & Grouping
     { type: 'k8s-hpa', label: 'HPA (Autoscaler)', icon: K8sHPAIcon, category: 'Kubernetes' },
     { type: 'k8s-namespace', label: 'Namespace', icon: K8sNamespaceIcon, category: 'Kubernetes' },
+
+    // Complex Distributed Systems Templates
+    { type: 'template:ecommerce', label: 'E-commerce Microservices', icon: ShoppingCart, category: 'Templates' },
+    { type: 'template:ai-platform', label: 'AI/ML Data Platform', icon: Activity, category: 'Templates' },
+    { type: 'template:enterprise-k8s', label: 'Enterprise K8s Cluster', icon: Layers, category: 'Templates' },
+    { type: 'template:fintech-saas', label: 'FinTech SaaS Stack', icon: CreditCard, category: 'Templates' },
 ];
 
 function WorkspaceView() {
@@ -173,14 +259,21 @@ function WorkspaceView() {
     const [isSimulating, setIsSimulating] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [snapToGrid, setSnapToGrid] = useState(true);
+    const [edgeType, setEdgeType] = useState<'step' | 'straight' | 'smoothstep' | 'default'>('step');
+    const [edgeStyle, setEdgeStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
+    const [hasArrow, setHasArrow] = useState(false);
     const { fitView } = useReactFlow();
     const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
         'Infrastructure': true,
         'Kubernetes': true,
+        'Templates': true,
         'Compute': true,
         'Networking': true,
         'Data': true,
         'External': true,
+        'CI/CD': true,
+        'Security': true,
+        'Monitoring': true,
         'Documentation': true,
         'Utilities': true
     });
@@ -271,11 +364,28 @@ function WorkspaceView() {
 
     useEffect(() => {
         setEdges((eds) =>
-            eds.map((edge) => ({
-                ...edge,
-                animated: isSimulating,
-                style: isSimulating ? { stroke: '#FFFFFF', strokeWidth: 2 } : { stroke: '#444' },
-            }))
+            eds.map((edge) => {
+                const currentStyle = (edge.style as any) || {};
+                const newStyle = {
+                    ...currentStyle,
+                    stroke: isSimulating ? '#FFFFFF' : '#444'
+                };
+
+                let newMarkerEnd = edge.markerEnd as any;
+                if (newMarkerEnd && typeof newMarkerEnd === 'object') {
+                    newMarkerEnd = {
+                        ...newMarkerEnd,
+                        color: isSimulating ? '#FFFFFF' : '#444'
+                    };
+                }
+
+                return {
+                    ...edge,
+                    animated: isSimulating,
+                    style: newStyle,
+                    markerEnd: newMarkerEnd
+                };
+            })
         );
     }, [isSimulating, setEdges]);
 
@@ -291,14 +401,19 @@ function WorkspaceView() {
     const onConnect = useCallback(
         (params: Connection) => {
             takeSnapshot();
+            const style: any = { stroke: '#444', strokeWidth: 2 };
+            if (edgeStyle === 'dashed') style.strokeDasharray = '5 5';
+            if (edgeStyle === 'dotted') style.strokeDasharray = '2 2';
+
             setEdges((eds) => addEdge({
                 ...params,
-                type: 'step',
-                style: { stroke: '#444', strokeWidth: 2 },
-                animated: isSimulating
+                type: edgeType,
+                style,
+                animated: isSimulating,
+                markerEnd: hasArrow ? { type: 'arrowclosed' as any, color: '#444' } : undefined
             }, eds));
         },
-        [setEdges, isSimulating, takeSnapshot],
+        [setEdges, isSimulating, takeSnapshot, edgeType, edgeStyle, hasArrow],
     );
 
     const handleSave = () => {
@@ -326,11 +441,35 @@ function WorkspaceView() {
             cache: { w: 144, h: 120 },
             storage: { w: 144, h: 120 },
             search: { w: 144, h: 120 },
+            influxdb: { w: 144, h: 120 },
+            snowflake: { w: 144, h: 120 },
+            clickhouse: { w: 144, h: 120 },
             gateway: { w: 192, h: 72 },
             loadBalancer: { w: 192, h: 72 },
             cdn: { w: 192, h: 72 },
             bus: { w: 192, h: 72 },
             queue: { w: 192, h: 72 },
+            route53: { w: 192, h: 72 },
+            nats: { w: 192, h: 72 },
+            socketio: { w: 144, h: 72 },
+            pusher: { w: 144, h: 72 },
+            github_actions: { w: 168, h: 72 },
+            jenkins: { w: 168, h: 72 },
+            circleci: { w: 168, h: 72 },
+            gitlab: { w: 168, h: 72 },
+            argocd: { w: 168, h: 72 },
+            vault: { w: 168, h: 72 },
+            auth0: { w: 168, h: 72 },
+            okta: { w: 168, h: 72 },
+            waf: { w: 168, h: 72 },
+            prometheus: { w: 168, h: 72 },
+            grafana: { w: 168, h: 72 },
+            datadog: { w: 168, h: 72 },
+            stripe: { w: 168, h: 72 },
+            twilio: { w: 168, h: 72 },
+            sendgrid: { w: 168, h: 72 },
+            shopify: { w: 168, h: 72 },
+            paypal: { w: 168, h: 72 },
             note: { w: 192, h: 192 },
             vpc: { w: 408, h: 312 },
             region: { w: 600, h: 408 },
@@ -403,6 +542,121 @@ function WorkspaceView() {
         event.dataTransfer.dropEffect = 'move';
     }, []);
 
+    const applyTemplate = (templateType: string, position: { x: number, y: number }) => {
+        takeSnapshot();
+        const base = position;
+        let newNodes: Node[] = [];
+        let newEdges: Edge[] = [];
+
+        if (templateType === 'template:ecommerce') {
+            const r53 = { id: `r53-${Date.now()}`, type: 'route53', position: { x: base.x, y: base.y }, data: { label: 'Global DNS', category: 'Networking' }, style: { width: 192, height: 72 } };
+            const waf = { id: `waf-${Date.now()}`, type: 'waf', position: { x: base.x + 240, y: base.y }, data: { label: 'Cloudflare WAF', category: 'Security' }, style: { width: 168, height: 72 } };
+            const cdn = { id: `cdn-${Date.now()}`, type: 'cdn', position: { x: base.x + 240, y: base.y + 120 }, data: { label: 'Static Assets', category: 'Networking' }, style: { width: 192, height: 72 } };
+            const alb = { id: `alb-${Date.now()}`, type: 'loadBalancer', position: { x: base.x + 480, y: base.y }, data: { label: 'Core ALB', category: 'Networking' }, style: { width: 192, height: 72 } };
+
+            // Microservices
+            const auth = { id: `auth-${Date.now()}`, type: 'auth0', position: { x: base.x + 720, y: base.y - 120 }, data: { label: 'Auth Service', category: 'Security' }, style: { width: 168, height: 72 } };
+            const product = { id: `prod-${Date.now()}`, type: 'microservice', position: { x: base.x + 720, y: base.y }, data: { label: 'Product API', category: 'Compute' }, style: { width: 168, height: 72 } };
+            const order = { id: `order-${Date.now()}`, type: 'microservice', position: { x: base.x + 720, y: base.y + 120 }, data: { label: 'Order Service', category: 'Compute' }, style: { width: 168, height: 72 } };
+
+            // Support
+            const redis = { id: `redis-${Date.now()}`, type: 'cache', position: { x: base.x + 960, y: base.y - 60 }, data: { label: 'Catalog Cache', category: 'Data' }, style: { width: 144, height: 120 } };
+            const pg = { id: `pg-${Date.now()}`, type: 'database', position: { x: base.x + 960, y: base.y + 60 }, data: { label: 'Master DB', provider: 'postgresql', category: 'Data' }, style: { width: 144, height: 120 } };
+            const stripe = { id: `stripe-${Date.now()}`, type: 'stripe', position: { x: base.x + 960, y: base.y + 240 }, data: { label: 'Payments', category: 'External' }, style: { width: 168, height: 72 } };
+
+            // Event Bus
+            const kafka = { id: `kafka-${Date.now()}`, type: 'bus', position: { x: base.x + 720, y: base.y + 240 }, data: { label: 'Event Stream', category: 'Networking' }, style: { width: 192, height: 72 } };
+
+            newNodes = [r53, waf, cdn, alb, auth, product, order, redis, pg, stripe, kafka];
+            newEdges = [
+                { id: `e-${Date.now()}-1`, source: r53.id, target: waf.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-2`, source: waf.id, target: alb.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-3`, source: waf.id, target: cdn.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-4`, source: alb.id, target: auth.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-5`, source: alb.id, target: product.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-6`, source: alb.id, target: order.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-7`, source: product.id, target: redis.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-8`, source: order.id, target: pg.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-9`, source: order.id, target: kafka.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-10`, source: order.id, target: stripe.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+            ];
+        } else if (templateType === 'template:ai-platform') {
+            const app = { id: `app-${Date.now()}`, type: 'app', position: { x: base.x, y: base.y }, data: { label: 'AI Client App', category: 'External' }, style: { width: 168, height: 72 } };
+            const nats = { id: `nats-${Date.now()}`, type: 'nats', position: { x: base.x + 240, y: base.y }, data: { label: 'Real-time Ingress', category: 'Networking' }, style: { width: 192, height: 72 } };
+            const influx = { id: `inf-${Date.now()}`, type: 'influxdb', position: { x: base.x + 480, y: base.y - 120 }, data: { label: 'Telemetry Store', category: 'Data' }, style: { width: 144, height: 120 } };
+            const worker = { id: `worker-${Date.now()}`, type: 'worker', position: { x: base.x + 480, y: base.y }, data: { label: 'Inference Engine', category: 'Compute' }, style: { width: 168, height: 72 } };
+            const vault = { id: `vault-${Date.now()}`, type: 'vault', position: { x: base.x + 480, y: base.y + 120 }, data: { label: 'Secrets Mgmt', category: 'Security' }, style: { width: 168, height: 72 } };
+
+            const snowflake = { id: `snow-${Date.now()}`, type: 'snowflake', position: { x: base.x + 720, y: base.y }, data: { label: 'Model Warehouse', category: 'Data' }, style: { width: 144, height: 120 } };
+            const clickhouse = { id: `ch-${Date.now()}`, type: 'clickhouse', position: { x: base.x + 720, y: base.y + 180 }, data: { label: 'Vector Search', category: 'Data' }, style: { width: 144, height: 120 } };
+
+            const prom = { id: `prom-${Date.now()}`, type: 'prometheus', position: { x: base.x + 960, y: base.y - 60 }, data: { label: 'Metrics', category: 'Monitoring' }, style: { width: 168, height: 72 } };
+            const grafana = { id: `graf-${Date.now()}`, type: 'grafana', position: { x: base.x + 960, y: base.y + 60 }, data: { label: 'AI Dashboard', category: 'Monitoring' }, style: { width: 168, height: 72 } };
+
+            newNodes = [app, nats, influx, worker, vault, snowflake, clickhouse, prom, grafana];
+            newEdges = [
+                { id: `e-${Date.now()}-1`, source: app.id, target: nats.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-2`, source: nats.id, target: influx.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-3`, source: nats.id, target: worker.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-4`, source: worker.id, target: vault.id, type: 'step', style: { stroke: '#444', strokeWidth: 2, strokeDasharray: '5,5' } },
+                { id: `e-${Date.now()}-5`, source: worker.id, target: snowflake.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-6`, source: worker.id, target: clickhouse.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-7`, source: snowflake.id, target: prom.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-8`, source: prom.id, target: grafana.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+            ];
+        } else if (templateType === 'template:enterprise-k8s') {
+            const region = { id: `reg-${Date.now()}`, type: 'region', position: { x: base.x, y: base.y }, data: { label: 'AWS us-east-1', category: 'Infrastructure' }, style: { width: 1200, height: 600 } };
+            const vpc = { id: `vpc-${Date.now()}`, type: 'vpc', position: { x: base.x + 50, y: base.y + 50 }, data: { label: 'Prod VPC', category: 'Infrastructure' }, parentId: region.id, style: { width: 1100, height: 500 } };
+
+            const ingress = { id: `ing-${Date.now()}`, type: 'k8s-ingress', position: { x: base.x + 100, y: base.y + 150 }, data: { label: 'Public Ingress', category: 'Kubernetes' }, parentId: vpc.id, style: { width: 168, height: 72 } };
+            const svc = { id: `svc-${Date.now()}`, type: 'k8s-service', position: { x: base.x + 300, y: base.y + 150 }, data: { label: 'Cluster Svc', category: 'Kubernetes' }, parentId: vpc.id, style: { width: 168, height: 72 } };
+
+            const deploy = { id: `dep-${Date.now()}`, type: 'k8s-deployment', position: { x: base.x + 500, y: base.y + 150 }, data: { label: 'Web Deploy', category: 'Kubernetes' }, parentId: vpc.id, style: { width: 192, height: 96 } };
+            const pod1 = { id: `p1-${Date.now()}`, type: 'k8s-pod', position: { x: base.x + 750, y: base.y + 100 }, data: { label: 'Replica A', category: 'Kubernetes' }, parentId: vpc.id, style: { width: 144, height: 96 } };
+            const pod2 = { id: `p2-${Date.now()}`, type: 'k8s-pod', position: { x: base.x + 750, y: base.y + 220 }, data: { label: 'Replica B', category: 'Kubernetes' }, parentId: vpc.id, style: { width: 144, height: 96 } };
+
+            const argo = { id: `argo-${Date.now()}`, type: 'argocd', position: { x: base.x + vpc.style.width + 100, y: base.y + 100 }, data: { label: 'GitOps (ArgoCD)', category: 'CI/CD' }, style: { width: 168, height: 72 } };
+            const actions = { id: `act-${Date.now()}`, type: 'github_actions', position: { x: base.x + vpc.style.width + 100, y: base.y + 200 }, data: { label: 'CI Pipeline', category: 'CI/CD' }, style: { width: 168, height: 72 } };
+
+            newNodes = [region, vpc, ingress, svc, deploy, pod1, pod2, argo, actions];
+            newEdges = [
+                { id: `e-${Date.now()}-1`, source: ingress.id, target: svc.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-2`, source: svc.id, target: deploy.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-3`, source: deploy.id, target: pod1.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-4`, source: deploy.id, target: pod2.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-5`, source: actions.id, target: argo.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-6`, source: argo.id, target: deploy.id, type: 'step', style: { stroke: '#444', strokeWidth: 2, strokeDasharray: '5,5' } },
+            ];
+        } else if (templateType === 'template:fintech-saas') {
+            const lb = { id: `lb-${Date.now()}`, type: 'loadBalancer', position: { x: base.x, y: base.y }, data: { label: 'Edge Gateway', category: 'Networking' }, style: { width: 192, height: 72 } };
+            const auth = { id: `okta-${Date.now()}`, type: 'okta', position: { x: base.x + 240, y: base.y - 100 }, data: { label: 'Identity (Okta)', category: 'Security' }, style: { width: 168, height: 72 } };
+            const api = { id: `api-${Date.now()}`, type: 'microservice', position: { x: base.x + 240, y: base.y + 50 }, data: { label: 'Transaction API', category: 'Compute' }, style: { width: 168, height: 72 } };
+
+            const psql = { id: `psql-${Date.now()}`, type: 'database', position: { x: base.x + 480, y: base.y - 50 }, data: { label: 'Ledger DB', provider: 'postgresql', category: 'Data' }, style: { width: 144, height: 120 } };
+            const stripe = { id: `stripe-${Date.now()}`, type: 'stripe', position: { x: base.x + 480, y: base.y + 150 }, data: { label: 'Processor', category: 'External' }, style: { width: 168, height: 72 } };
+
+            const dd = { id: `dd-${Date.now()}`, type: 'datadog', position: { x: base.x + 720, y: base.y }, data: { label: 'Observability', category: 'Monitoring' }, style: { width: 168, height: 72 } };
+            const twilio = { id: `tw-${Date.now()}`, type: 'twilio', position: { x: base.x + 720, y: base.y + 120 }, data: { label: '2FA (Twilio)', category: 'External' }, style: { width: 168, height: 72 } };
+
+            newNodes = [lb, auth, api, psql, stripe, dd, twilio];
+            newEdges = [
+                { id: `e-${Date.now()}-1`, source: lb.id, target: auth.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-2`, source: lb.id, target: api.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-3`, source: api.id, target: psql.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-4`, source: api.id, target: stripe.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-5`, source: api.id, target: dd.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+                { id: `e-${Date.now()}-6`, source: api.id, target: twilio.id, type: 'step', style: { stroke: '#444', strokeWidth: 2 } },
+            ];
+        }
+
+        setNodes((nds) => nds.concat(newNodes));
+        setEdges((eds) => eds.concat(newEdges));
+    };
+
+    const onDelete = (id: string) => {
+        deleteNode(id);
+    };
+
     const onDrop = useCallback(
         (event: React.DragEvent) => {
             event.preventDefault();
@@ -421,9 +675,13 @@ function WorkspaceView() {
                 y: Math.round(position.y / 12) * 12
             };
 
-            addNode(data.type, data.label, snappedPosition);
+            if (data.type.startsWith('template:')) {
+                applyTemplate(data.type, snappedPosition);
+            } else {
+                addNode(data.type, data.label, snappedPosition);
+            }
         },
-        [screenToFlowPosition, addNode]
+        [screenToFlowPosition, addNode, takeSnapshot, setNodes, setEdges]
     );
 
     const deleteNode = useCallback(
@@ -634,7 +892,7 @@ function WorkspaceView() {
 
                             <div className="flex-1 overflow-y-auto space-y-px scrollbar-hide">
                                 {(() => {
-                                    const categories = ['Kubernetes', 'Infrastructure', 'Compute', 'Networking', 'Data', 'External', 'Documentation', 'Utilities'];
+                                    const categories = ['Templates', 'Kubernetes', 'Infrastructure', 'Compute', 'Networking', 'Data', 'CI/CD', 'Security', 'Monitoring', 'Analytics', 'External', 'Documentation', 'Utilities'];
                                     let hasAnyResults = false;
 
                                     const content = categories.map(category => {
@@ -650,15 +908,16 @@ function WorkspaceView() {
 
                                         const isExpanded = expandedCategories[category] !== false;
                                         const isK8s = category === 'Kubernetes';
+                                        const isTemplate = category === 'Templates';
 
                                         return (
-                                            <section key={category} className={`border-b border-white/[0.03] ${isK8s ? 'bg-blue-500/5 border-blue-500/10' : ''}`}>
+                                            <section key={category} className={`border-b border-white/[0.03] ${isK8s ? 'bg-blue-500/5 border-blue-500/10' : ''} ${isTemplate ? 'bg-amber-500/5 border-amber-500/10' : ''}`}>
                                                 <button
                                                     onClick={() => toggleCategory(category)}
                                                     className="w-full h-10 flex items-center px-4 gap-2 transition-colors hover:bg-white/5 group"
                                                 >
-                                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? '' : '-rotate-90'} ${isK8s ? 'text-blue-400' : 'text-white/20'}`} />
-                                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isK8s ? 'text-blue-400 font-black' : 'text-white/40'}`}>{category}</span>
+                                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? '' : '-rotate-90'} ${isK8s ? 'text-blue-400' : isTemplate ? 'text-amber-400' : 'text-white/20'}`} />
+                                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isK8s ? 'text-blue-400 font-black' : isTemplate ? 'text-amber-400 font-black' : 'text-white/40'}`}>{category}</span>
                                                     <span className="ml-auto text-[9px] font-bold text-white/10">{categoryItems.length}</span>
                                                 </button>
 
@@ -667,10 +926,17 @@ function WorkspaceView() {
                                                         {categoryItems.map((item) => (
                                                             <button
                                                                 key={item.type}
-                                                                onClick={() => addNode(item.type, item.label)}
+                                                                onClick={() => {
+                                                                    const pos = { x: 100, y: 100 };
+                                                                    if (item.type.startsWith('template:')) {
+                                                                        applyTemplate(item.type, pos);
+                                                                    } else {
+                                                                        addNode(item.type, item.label, pos);
+                                                                    }
+                                                                }}
                                                                 onDragStart={(e) => onDragStart(e, item.type, item.label)}
                                                                 draggable
-                                                                className="flex items-center gap-3 p-2 rounded-lg border border-transparent transition-all text-left group hover:bg-white/5 cursor-grab active:cursor-grabbing"
+                                                                className={`flex items-center gap-3 p-2 rounded-lg border border-transparent transition-all text-left group hover:bg-white/5 cursor-grab active:cursor-grabbing ${isTemplate ? 'bg-amber-500/5 border-amber-500/10 hover:bg-amber-500/10' : ''}`}
                                                             >
                                                                 <div className="p-1.5 rounded-md transition-colors bg-white/5 text-white/60 group-hover:text-white group-hover:bg-white/10">
                                                                     <item.icon className="w-4 h-4" />
@@ -738,6 +1004,8 @@ function WorkspaceView() {
                                 <Controls position="bottom-right" className="!bg-white !border-black/10 !text-black/50 !shadow-2xl !rounded-lg overflow-hidden !m-6" />
                                 <MiniMap position="bottom-left" className="!bg-white !border-black/5 !shadow-2xl !rounded-xl !m-6 overflow-hidden [&_.react-flow__minimap-mask]:!fill-black/80" />
                                 <Background variant={'lines' as any} gap={24} size={1} color="#DDD" />
+
+
 
                                 {menu && (
                                     <div
@@ -865,7 +1133,7 @@ function WorkspaceView() {
                                             </>
                                         ) : (
                                             <div className="max-h-[70vh] overflow-y-auto custom-scrollbar">
-                                                {['Kubernetes', 'Infrastructure', 'Compute', 'Networking', 'Data', 'External', 'Documentation', 'Utilities'].map(category => {
+                                                {['Templates', 'Kubernetes', 'Infrastructure', 'Compute', 'Networking', 'Data', 'CI/CD', 'Security', 'Monitoring', 'Analytics', 'External', 'Documentation', 'Utilities'].map(category => {
                                                     const categoryItems = nodeTypesList.filter(n => n.category.toLowerCase() === category.toLowerCase());
                                                     if (categoryItems.length === 0) return null;
 
@@ -954,9 +1222,70 @@ function WorkspaceView() {
                                     <button className="p-2.5 rounded-xl transition-all text-black/40 hover:text-black hover:bg-black/5">
                                         <Type className="w-4 h-4" />
                                     </button>
-                                    <button className="p-2.5 rounded-xl transition-all text-black/40 hover:text-black hover:bg-black/5" title="Edge Tool">
-                                        <Minus className="w-4 h-4 rotate-45" />
-                                    </button>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className={`p-2.5 rounded-xl transition-all ${edgeType ? 'bg-black/5 text-black' : 'text-black/40 hover:text-black hover:bg-black/5'}`} title="Line Type">
+                                                {edgeType === 'step' && <Milestone className="w-4 h-4" />}
+                                                {edgeType === 'smoothstep' && <Spline className="w-4 h-4" />}
+                                                {edgeType === 'straight' && <Minus className="w-4 h-4 rotate-45" />}
+                                                {edgeType === 'default' && <ArrowUpRight className="w-4 h-4" />}
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-1 bg-white border border-black/10 rounded-xl shadow-2xl z-[150]" side="top" align="center" sideOffset={12}>
+                                            <div className="flex gap-1 p-1">
+                                                {[
+                                                    { id: 'step', icon: Milestone },
+                                                    { id: 'smoothstep', icon: Spline },
+                                                    { id: 'straight', icon: Minus, rotate: true },
+                                                    { id: 'default', icon: ArrowUpRight }
+                                                ].map((tool) => (
+                                                    <button
+                                                        key={tool.id}
+                                                        onClick={() => setEdgeType(tool.id as any)}
+                                                        className={`p-2 rounded-lg transition-all ${edgeType === tool.id ? 'bg-black text-white' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
+                                                    >
+                                                        <tool.icon className={`w-4 h-4 ${tool.rotate ? 'rotate-45' : ''}`} />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <div className="h-5 w-px mx-1 bg-black/10" />
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className={`p-2.5 rounded-xl transition-all ${edgeStyle !== 'solid' || hasArrow ? 'bg-black/5 text-black' : 'text-black/40 hover:text-black hover:bg-black/5'}`} title="Line Style">
+                                                <div className="relative">
+                                                    <Minus className="w-4 h-4" />
+                                                    {hasArrow && <ArrowRight className="w-2.5 h-2.5 absolute -right-1 -top-1 bg-white rounded-full p-0.5 border border-black/10" />}
+                                                </div>
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-1 bg-white border border-black/10 rounded-xl shadow-2xl z-[150]" side="top" align="center" sideOffset={12}>
+                                            <div className="flex gap-1 p-1 items-center">
+                                                {[
+                                                    { id: 'solid', label: 'Solid', icon: Minus },
+                                                    { id: 'dashed', label: 'Dashed', icon: Minus, className: 'border-b-2 border-dashed border-black/20 w-4 h-0 block mx-auto my-2' },
+                                                    { id: 'dotted', label: 'Dotted', icon: Minus, className: 'border-b-2 border-dotted border-black/20 w-4 h-0 block mx-auto my-2' }
+                                                ].map((style) => (
+                                                    <button
+                                                        key={style.id}
+                                                        onClick={() => setEdgeStyle(style.id as any)}
+                                                        className={`p-2.5 rounded-lg transition-all ${edgeStyle === style.id ? 'bg-black text-white' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
+                                                    >
+                                                        {style.id === 'solid' ? <Minus className="w-4 h-4" /> : <div className={`w-4 h-0.5 ${style.id === 'dashed' ? 'border-b-2 border-dashed' : 'border-b-2 border-dotted'} ${edgeStyle === style.id ? 'border-white' : 'border-black/40'}`} />}
+                                                    </button>
+                                                ))}
+                                                <div className="h-4 w-px bg-black/10 mx-1" />
+                                                <button
+                                                    onClick={() => setHasArrow(!hasArrow)}
+                                                    className={`p-2.5 rounded-lg transition-all ${hasArrow ? 'bg-amber-500 text-white shadow-lg' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
+                                                    title="Toggle Arrow"
+                                                >
+                                                    <ArrowRight className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                     <div className="h-5 w-px mx-1 bg-black/10" />
                                     <button
                                         onClick={() => fitView({ duration: 800 })}
