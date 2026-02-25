@@ -164,6 +164,8 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
           border: "2px solid #1a1a1a",
           boxShadow: "8px 8px 0px 0px #1a1a1a",
         }}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
       >
         {/* ── Dark Header ─────────────────────────────────────────────────── */}
         <div className="bg-[#121212] text-white px-6 py-4 flex items-center justify-between border-b-2 border-white/10">
@@ -325,7 +327,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
                   CREATING...
                 </>
               ) : (
-                "DEPLOY WORKSPACE →"
+                "CREATE WORKSPACE →"
               )}
             </button>
           </div>

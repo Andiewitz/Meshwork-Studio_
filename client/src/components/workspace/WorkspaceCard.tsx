@@ -153,10 +153,7 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <div
-          onClick={() => !isRenaming && setLocation(`/workspace/${workspace.id}`)}
-          className="brutal-card cursor-pointer flex items-center justify-between p-4 bg-card transition-all group hover:bg-black/5 relative overflow-hidden"
-        >
+        <div className="brutal-card cursor-pointer flex items-center justify-between p-4 bg-card transition-all group hover:bg-black/5 relative overflow-hidden">
           {/* Accent bar on hover */}
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary scale-y-0 group-hover:scale-y-100 transition-transform origin-top" />
 
@@ -183,8 +180,11 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
                   className="bg-transparent font-black text-xl uppercase tracking-tighter text-foreground outline-none border-b-2 border-primary w-full py-0"
                 />
               ) : (
-                <h3 className="font-black text-xl uppercase tracking-tighter text-foreground group-hover:text-primary transition-colors leading-tight truncate">
-                  {workspace.title}
+                <h3 
+                  onClick={() => setLocation(`/workspace/${workspace.id}`)}
+                  className="font-black text-xl uppercase tracking-tighter text-foreground group-hover:text-primary transition-colors leading-tight truncate cursor-pointer"
+                >
+                  {workspace.title || "Untitled Blueprint"}
                 </h3>
               )}
               <div className="flex items-center gap-2 mt-0.5">

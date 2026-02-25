@@ -85,11 +85,12 @@ export function FeaturedCard({ workspace, onContinue, onDelete }: FeaturedCardPr
                   setTitle(workspace.title);
                 }
               }}
+              onClick={(e) => e.stopPropagation()}
               className="bg-transparent text-4xl md:text-5xl font-black uppercase tracking-tighter leading-[0.9] outline-none border-b-4 border-primary w-full text-background mb-2"
             />
           ) : (
             <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-[0.9] truncate pr-4">
-              {workspace.title}
+              {workspace.title || "Untitled Project"}
             </h2>
           )}
           <div className="bg-background text-foreground px-3 py-1 font-bold text-xs uppercase tracking-widest border-2 border-foreground w-fit mt-2">

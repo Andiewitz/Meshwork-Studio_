@@ -196,18 +196,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Page Content */}
         <main className="flex-1 p-6 md:p-12 overflow-y-auto scrollbar-hide">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="max-w-[1400px] mx-auto space-y-12 relative z-20"
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <div className="max-w-[1400px] mx-auto space-y-12 relative z-20">
+            {children}
+          </div>
         </main>
       </div>
     </div>
