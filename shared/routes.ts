@@ -86,6 +86,16 @@ export const api = {
         401: errorSchemas.unauthorized
       },
     },
+    duplicate: {
+      method: 'POST' as const,
+      path: '/api/workspaces/:id/duplicate' as const,
+      input: z.object({ title: z.string().optional() }),
+      responses: {
+        201: z.custom<typeof workspaces.$inferSelect>(),
+        404: errorSchemas.notFound,
+        401: errorSchemas.unauthorized
+      },
+    },
     getCanvas: {
       method: 'GET' as const,
       path: '/api/workspaces/:id/canvas' as const,

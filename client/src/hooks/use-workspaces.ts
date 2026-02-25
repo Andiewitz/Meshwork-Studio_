@@ -106,3 +106,26 @@ export function useDeleteWorkspace() {
     },
   });
 }
+
+// Hook to duplicate a workspace
+export function useDuplicateWorkspace() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, title }: { id: number; title?: string }) => {
+      const url = buildUrl(api.workspaces.duplicate.path, { id });
+      const res = await fetch(url, {
+        method: api.workspaces.duplicate.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to duplicate workspace");
+      return api.workspaces.duplicate.responses[201].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.workspaces.list.path] });
+    },
+  });
+}

@@ -83,6 +83,19 @@ export function registerCanvasRoutes(app: Express) {
         res.status(204).send();
     });
 
+    app.post(api.workspaces.duplicate.path, isAuthenticated, async (req, res) => {
+        const id = Number(req.params.id);
+        const existing = await canvasStorage.getWorkspace(id);
+        if (!existing) return res.status(404).json({ message: "Not found" });
+
+        const userId = (req.user as any).claims.sub;
+        if (existing.userId !== userId) return res.status(401).json({ message: "Unauthorized" });
+
+        const { title } = req.body;
+        const duplicated = await canvasStorage.duplicateWorkspace(id, title);
+        res.status(201).json(duplicated);
+    });
+
     // Canvas logic routes
     app.get(api.workspaces.getCanvas.path, isAuthenticated, async (req, res) => {
         const id = Number(req.params.id);

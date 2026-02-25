@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { useWorkspaces, useDeleteWorkspace } from "@/hooks/use-workspaces";
 import { useAuth } from "@/hooks/use-auth";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FeaturedCard } from "@/components/workspace/FeaturedCard";
 import { WorkspaceCard } from "@/components/workspace/WorkspaceCard";
 import { CreateWorkspaceDialog } from "@/components/workspace/CreateWorkspaceDialog";
@@ -10,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 export default function Home() {
   const [location, setLocation] = useLocation();
@@ -54,6 +54,12 @@ export default function Home() {
     return result;
   }, [workspaces, searchTerm, sortBy, isWorkspacesPage]);
 
+  // Must be ABOVE early returns — hooks cannot be called conditionally
+  const mostRecent = useMemo(() => {
+    if (!workspaces) return null;
+    return [...workspaces].sort((a, b) => b.id - a.id)[0];
+  }, [workspaces]);
+
   if (isAuthLoading || isWorkspacesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -62,13 +68,13 @@ export default function Home() {
     );
   }
 
-  const mostRecent = useMemo(() => {
-    if (!workspaces) return null;
-    return [...workspaces].sort((a, b) => b.id - a.id)[0];
-  }, [workspaces]);
-
   return (
-    <DashboardLayout>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+    >
       <div className="flex flex-col gap-10 pt-4">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 reveal-on-scroll">
           <div className="flex flex-col gap-2 -ml-2">
@@ -90,9 +96,9 @@ export default function Home() {
             <div className="space-y-12 reveal-on-scroll delay-200">
               {mostRecent ? (
                 <FeaturedCard
-                  title={mostRecent.title}
-                  type={mostRecent.type}
+                  workspace={mostRecent}
                   onContinue={() => setLocation(`/workspace/${mostRecent.id}`)}
+                  onDelete={handleDelete}
                 />
               ) : (
                 <div className="h-64 brutal-card border-dashed flex items-center justify-center p-8 bg-card rotate-[-1deg]">
@@ -186,6 +192,6 @@ export default function Home() {
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
       />
-    </DashboardLayout>
+    </motion.div>
   );
 }

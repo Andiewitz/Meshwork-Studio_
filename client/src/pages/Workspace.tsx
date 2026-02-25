@@ -23,8 +23,8 @@ import {
 
 import '@xyflow/react/dist/style.css';
 import { useCanvas } from '@/hooks/use-canvas';
-import { useWorkspace } from '@/hooks/use-workspaces';
-import { useParams, Link } from 'wouter';
+import { useWorkspace, useDeleteWorkspace } from '@/hooks/use-workspaces';
+import { useParams, Link, useLocation } from 'wouter';
 import {
     Download,
     Save,
@@ -256,6 +256,8 @@ function WorkspaceView() {
     const { user } = useAuth();
     const { toast } = useToast();
     const { screenToFlowPosition } = useReactFlow();
+    const [, setLocation] = useLocation();
+    const deleteWorkspace = useDeleteWorkspace();
 
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -472,12 +474,14 @@ function WorkspaceView() {
         return newNode;
     }, [takeSnapshot, setNodes]);
 
-    const deleteNode = useCallback((id: string) => {
+    const deleteNodes = useCallback((ids: string[]) => {
         takeSnapshot();
-        setNodes((nds) => nds.filter((node) => node.id !== id));
-        setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id));
-        if (selectedNodeId === id) setSelectedNodeId(null);
+        setNodes((nds) => nds.filter((node) => !ids.includes(node.id)));
+        setEdges((eds) => eds.filter((edge) => !ids.includes(edge.source) && !ids.includes(edge.target)));
+        if (selectedNodeId && ids.includes(selectedNodeId)) setSelectedNodeId(null);
     }, [takeSnapshot, setNodes, setEdges, selectedNodeId]);
+
+    const deleteNode = useCallback((id: string) => deleteNodes([id]), [deleteNodes]);
 
     const updateNodeData = useCallback((id: string, newData: any) => {
         takeSnapshot();
@@ -560,6 +564,19 @@ function WorkspaceView() {
                 top: event.clientY,
                 left: event.clientX,
                 type: 'node',
+            });
+        },
+        [setMenu]
+    );
+
+    const onEdgeContextMenu = useCallback(
+        (event: React.MouseEvent, edge: Edge) => {
+            event.preventDefault();
+            setMenu({
+                id: edge.id,
+                top: event.clientY,
+                left: event.clientX,
+                type: 'pane', // reuse pane menu style or handle separately
             });
         },
         [setMenu]
@@ -869,9 +886,27 @@ function WorkspaceView() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button onClick={handleSave} disabled={isSyncing} className="flex items-center justify-center w-8 h-8 rounded-md border transition-all border-white/10 hover:bg-white/5 text-white/80" title="Save / Download">
+                    <button onClick={handleSave} disabled={isSyncing} className="flex items-center justify-center w-8 h-8 rounded-md border transition-all border-white/10 hover:bg-white/5 text-white/80" title="Save Project">
                         {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                     </button>
+
+                    <button
+                        onClick={() => {
+                            if (confirm("Are you sure you want to delete this entire project? This action cannot be undone.")) {
+                                deleteWorkspace.mutate(workspaceId, {
+                                    onSuccess: () => {
+                                        toast({ title: "Project Deleted", description: "Architecture removed from catalog." });
+                                        setLocation("/");
+                                    }
+                                });
+                            }
+                        }}
+                        className="flex items-center justify-center w-8 h-8 rounded-md border transition-all border-red-500/20 hover:bg-red-500/10 text-red-400"
+                        title="Delete Project"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+
                     <div className="h-4 w-px mx-1 bg-white/10" />
                     <Avatar className="w-7 h-7 ring-1 ring-white/10">
                         <AvatarImage src={user?.profileImageUrl || undefined} />
@@ -1006,7 +1041,10 @@ function WorkspaceView() {
                                 onNodeDragStart={onNodeDragStart}
                                 onNodeDragStop={onNodeDragStop}
                                 onNodeContextMenu={onNodeContextMenu}
+                                onEdgeContextMenu={onEdgeContextMenu}
                                 onPaneContextMenu={onPaneContextMenu as any}
+                                onNodesDelete={() => takeSnapshot()}
+                                onEdgesDelete={() => takeSnapshot()}
                                 onPaneClick={onPaneClick}
                                 onDragOver={onDragOver}
                                 onDrop={onDrop}
@@ -1145,11 +1183,15 @@ function WorkspaceView() {
                                                 </button>
                                                 <div className="h-px my-1 bg-black/5" />
                                                 <button
-                                                    onClick={() => deleteNode(menu.id)}
+                                                    onClick={() => {
+                                                        const selectedIds = nodes.filter(n => n.selected).map(n => n.id);
+                                                        if (!selectedIds.includes(menu.id)) selectedIds.push(menu.id);
+                                                        deleteNodes(selectedIds);
+                                                    }}
                                                     className="w-full flex items-center gap-2 px-3 py-2 text-[12px] hover:bg-red-500/10 transition-colors text-red-400 hover:text-red-300"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
-                                                    Delete
+                                                    Delete {nodes.filter(n => n.selected).length > 1 ? `(${nodes.filter(n => n.selected).length})` : ''}
                                                 </button>
                                             </>
                                         ) : (
@@ -1867,7 +1909,7 @@ function WorkspaceView() {
                                                             {(selectedNode?.data?.category as string) || 'Node'}
                                                         </div>
                                                     </div>
-                                                    <div className="grid grid-cols-4 gap-2">
+                                                    <div className="grid grid-cols-4 gap-2 pb-4">
                                                         {['#4F46E5', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4', '#222222', '#FFFFFF'].map(color => (
                                                             <button
                                                                 key={color}
@@ -1883,6 +1925,14 @@ function WorkspaceView() {
                                                             </button>
                                                         ))}
                                                     </div>
+
+                                                    <button
+                                                        onClick={() => deleteNode(selectedNode.id)}
+                                                        className="w-full h-10 flex items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 transition-all font-bold text-[10px] uppercase tracking-widest mt-6"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                        Delete Component
+                                                    </button>
                                                 </section>
                                             </>
                                         ) : (

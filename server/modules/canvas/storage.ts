@@ -26,6 +26,7 @@ export interface ICanvasStorage {
     createWorkspace(workspace: InsertWorkspace): Promise<Workspace>;
     updateWorkspace(id: number, updates: Partial<InsertWorkspace>): Promise<Workspace>;
     deleteWorkspace(id: number): Promise<void>;
+    duplicateWorkspace(id: number, newTitle?: string): Promise<Workspace>;
 
     // Canvas operations
     getNodes(workspaceId: number): Promise<Node[]>;
@@ -101,6 +102,32 @@ export class CanvasDatabaseStorage implements ICanvasStorage {
             if (newEdges.length > 0) {
                 await tx.insert(edges).values(newEdges.map(e => ({ ...e, workspaceId })));
             }
+        });
+    }
+
+    async duplicateWorkspace(id: number, newTitle?: string): Promise<Workspace> {
+        return await db.transaction(async (tx: any) => {
+            const [original] = await tx.select().from(workspaces).where(eq(workspaces.id, id));
+            if (!original) throw new Error("Workspace not found");
+
+            const [duplicated] = await tx.insert(workspaces).values({
+                ...original,
+                id: undefined,
+                title: newTitle || `${original.title} (Copy)`,
+                createdAt: new Date(),
+            }).returning();
+
+            const nodesList = await tx.select().from(nodes).where(eq(nodes.workspaceId, id));
+            const edgesList = await tx.select().from(edges).where(eq(edges.workspaceId, id));
+
+            if (nodesList.length > 0) {
+                await tx.insert(nodes).values(nodesList.map((n: any) => ({ ...n, workspaceId: duplicated.id })));
+            }
+            if (edgesList.length > 0) {
+                await tx.insert(edges).values(edgesList.map((e: any) => ({ ...e, workspaceId: duplicated.id })));
+            }
+
+            return duplicated;
         });
     }
 }
@@ -194,6 +221,33 @@ export class CanvasMemStorage implements ICanvasStorage {
         for (const e of newEdges) {
             this.edgesMap.set(e.id, { ...e, workspaceId } as Edge);
         }
+    }
+
+    async duplicateWorkspace(id: number, newTitle?: string): Promise<Workspace> {
+        const original = this.workspacesMap.get(id);
+        if (!original) throw new Error("Workspace not found");
+
+        const newId = this.currentId++;
+        const duplicated: Workspace = {
+            ...original,
+            id: newId,
+            title: newTitle || `${original.title} (Copy)`,
+            createdAt: new Date(),
+        };
+        this.workspacesMap.set(newId, duplicated);
+
+        for (const node of Array.from(this.nodesMap.values())) {
+            if (node.workspaceId === id) {
+                this.nodesMap.set(node.id, { ...node, workspaceId: newId });
+            }
+        }
+        for (const edge of Array.from(this.edgesMap.values())) {
+            if (edge.workspaceId === id) {
+                this.edgesMap.set(edge.id, { ...edge, workspaceId: newId });
+            }
+        }
+
+        return duplicated;
     }
 }
 
