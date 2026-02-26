@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 const formSchema = insertWorkspaceSchema.pick({
   title: true,
   type: true,
+  icon: true,
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -131,7 +132,12 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
     const template = TEMPLATES.find(t => t.id === selectedTemplate);
 
     createWorkspace.mutate(
-      { ...values, type: template?.type ?? "system", userId: user.id },
+      { 
+        ...values, 
+        type: template?.type ?? "system", 
+        userId: user.id,
+        icon: selectedIcon,
+      },
       {
         onSuccess: (newWorkspace) => {
           toast({

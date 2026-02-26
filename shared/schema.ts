@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, jsonb, varchar, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, jsonb, varchar, index, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
@@ -14,17 +14,19 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)]
 );
 
-// User storage table.
+// User storage table - updated for new auth system
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  email: varchar("email").unique().notNull(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  // New auth fields
+  passwordHash: varchar("password_hash"), // For email/password users
+  authProvider: varchar("auth_provider").notNull().default("email"), // "email" | "google"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
-
 
 export const collections = pgTable("collections", {
   id: serial("id").primaryKey(),
@@ -39,6 +41,7 @@ export const workspaces = pgTable("workspaces", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   type: text("type").notNull().default("system"), // system, architecture, app, presentation
+  icon: text("icon").default("box"), // icon identifier for the workspace
   userId: text("user_id"), // Decoupled from users table for multi-db support
   collectionId: integer("collection_id").references(() => collections.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -86,5 +89,3 @@ export type WorkspaceResponse = Workspace;
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
-
-

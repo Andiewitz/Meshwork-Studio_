@@ -21,6 +21,7 @@ WORKDIR /app
 # Copy production build artifacts
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules/connect-pg-simple/table.sql ./dist/table.sql
 
 # Install only production dependencies
 # This is necessary because some dependencies are marked as external in esbuild

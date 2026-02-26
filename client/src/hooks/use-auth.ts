@@ -3,7 +3,7 @@ import type { User } from "@shared/schema";
 
 async function fetchUser(): Promise<User | null> {
   try {
-    const response = await fetch("/api/auth/user", {
+    const response = await fetch("/api/auth/me", {
       credentials: "include",
     });
 
@@ -28,13 +28,20 @@ async function fetchUser(): Promise<User | null> {
 }
 
 async function logout(): Promise<void> {
-  window.location.href = "/api/logout";
+  const response = await fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error("Logout failed");
+  }
 }
 
 export function useAuth() {
   const queryClient = useQueryClient();
   const { data: user, isLoading } = useQuery<User | null>({
-    queryKey: ["/api/auth/user"],
+    queryKey: ["/api/auth/me"],
     queryFn: fetchUser,
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -43,7 +50,8 @@ export function useAuth() {
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
-      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.setQueryData(["/api/auth/me"], null);
+      window.location.href = "/auth/login";
     },
   });
 

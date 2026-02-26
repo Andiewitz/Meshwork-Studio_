@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect, useLocation } from "wouter";
+import { Switch, Route, Redirect, useLocation, Router as WouterRouter } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,7 +10,8 @@ import { cn } from "@/lib/utils";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Landing from "@/pages/Landing";
-import AuthPage from "@/pages/AuthPage";
+import Login from "@/pages/auth/Login";
+import Register from "@/pages/auth/Register";
 import Workspace from "@/pages/Workspace";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
@@ -26,7 +27,7 @@ function ProtectedRoute({ component: Component, ...rest }: { component: React.Co
   }
 
   if (!user) {
-    return <Redirect to="/auth" />;
+    return <Redirect to="/auth/login" />;
   }
 
   return <Component />;
@@ -51,14 +52,23 @@ const PageTransition = ({ children, className }: { children: React.ReactNode; cl
 function Router() {
   const [location] = useLocation();
 
-  if (location === "/auth") {
+  // Auth routes without layout
+  if (location.startsWith("/auth/") || location === "/auth") {
     return (
       <AnimatePresence mode="wait">
         <Switch location={location} key={location}>
-          <Route path="/auth">
+          <Route path="/auth/login">
             <PageTransition>
-              <AuthPage />
+              <Login />
             </PageTransition>
+          </Route>
+          <Route path="/auth/register">
+            <PageTransition>
+              <Register />
+            </PageTransition>
+          </Route>
+          <Route path="/auth">
+            <Redirect to="/auth/login" />
           </Route>
         </Switch>
       </AnimatePresence>
@@ -116,10 +126,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <WouterRouter>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </WouterRouter>
     </QueryClientProvider>
   );
 }

@@ -7,7 +7,20 @@ import {
   Trash,
   ExternalLink,
   Copy,
-  LayoutGrid
+  LayoutGrid,
+  Server,
+  Globe,
+  Database,
+  Shield,
+  GitBranch,
+  Zap,
+  Cpu,
+  Network,
+  Cloud,
+  Lock,
+  BarChart3,
+  Code2,
+  Wifi,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -28,6 +41,31 @@ import { useLocation } from "wouter";
 import { useState, useRef, useEffect } from "react";
 import { useUpdateWorkspace, useDuplicateWorkspace } from "@/hooks/use-workspaces";
 import { useToast } from "@/hooks/use-toast";
+import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Icon mapping for workspace icons
+const ICON_MAP: Record<string, LucideIcon> = {
+  server: Server,
+  globe: Globe,
+  box: Box,
+  database: Database,
+  shield: Shield,
+  git: GitBranch,
+  zap: Zap,
+  cpu: Cpu,
+  network: Network,
+  cloud: Cloud,
+  lock: Lock,
+  chart: BarChart3,
+  code: Code2,
+  wifi: Wifi,
+  grid: LayoutGrid,
+};
+
+function getWorkspaceIcon(iconId?: string): LucideIcon {
+  return ICON_MAP[iconId || "box"] || Box;
+}
 
 interface WorkspaceCardProps {
   workspace: Workspace;
@@ -41,6 +79,7 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
   const duplicateWorkspace = useDuplicateWorkspace();
 
   const [isRenaming, setIsRenaming] = useState(false);
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [title, setTitle] = useState(workspace.title);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -90,6 +129,23 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
     }
   };
 
+  const handleUpdateIcon = async (iconId: string) => {
+    try {
+      await updateWorkspace.mutateAsync({
+        id: workspace.id,
+        icon: iconId,
+      });
+      toast({ title: "Updated", description: "Icon updated successfully." });
+      setIsIconPickerOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update icon.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const MenuItems = () => (
     <>
       <DropdownMenuItem
@@ -109,6 +165,12 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
         className="gap-2 font-bold cursor-pointer"
       >
         <Copy className="w-4 h-4" /> DUPLICATE
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        onClick={() => setIsIconPickerOpen(true)}
+        className="gap-2 font-bold cursor-pointer"
+      >
+        <Box className="w-4 h-4" /> UPDATE ICON
       </DropdownMenuItem>
       <DropdownMenuSeparator className="bg-foreground/10" />
       <DropdownMenuItem
@@ -140,6 +202,12 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
       >
         <Copy className="w-4 h-4" /> DUPLICATE
       </ContextMenuItem>
+      <ContextMenuItem
+        onClick={() => setIsIconPickerOpen(true)}
+        className="gap-2 font-bold cursor-pointer"
+      >
+        <Box className="w-4 h-4" /> UPDATE ICON
+      </ContextMenuItem>
       <ContextMenuSeparator className="bg-foreground/10" />
       <ContextMenuItem
         onClick={() => onDelete?.(workspace.id)}
@@ -150,6 +218,8 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
     </>
   );
 
+  const Icon = getWorkspaceIcon(workspace.icon || undefined);
+
   return (
     <ContextMenu>
       <ContextMenuTrigger>
@@ -159,7 +229,7 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
 
           <div className="flex items-center gap-4 flex-1">
             <div className="w-10 h-10 border-2 border-foreground flex items-center justify-center bg-card transition-all group-hover:bg-foreground group-hover:text-white group-hover:-rotate-3 duration-300">
-              <Box className="w-5 h-5 transition-transform" />
+              <Icon className="w-5 h-5 transition-transform" />
             </div>
 
             <div className="flex flex-col flex-1 min-w-0">
@@ -223,8 +293,40 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
       <ContextMenuContent className="brutal-card border-2 border-foreground p-1 bg-card min-w-[180px]">
         <ContextMenuItems />
       </ContextMenuContent>
+
+      {/* Icon Picker Overlay */}
+      {isIconPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setIsIconPickerOpen(false)}>
+          <div className="brutal-card bg-card border-2 border-foreground p-4 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-black text-sm uppercase tracking-widest">SELECT ICON</h3>
+              <button
+                onClick={() => setIsIconPickerOpen(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Box className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {Object.entries(ICON_MAP).map(([id, IconComp]) => (
+                <button
+                  key={id}
+                  onClick={() => handleUpdateIcon(id)}
+                  className={cn(
+                    "w-10 h-10 flex items-center justify-center border-2 transition-all",
+                    workspace.icon === id
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-card border-foreground/20 hover:border-foreground hover:bg-foreground/5"
+                  )}
+                >
+                  <IconComp className="w-5 h-5" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </ContextMenu>
   );
 }
-
 

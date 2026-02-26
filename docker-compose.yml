@@ -1,18 +1,18 @@
 name: emnesh-studio
 
 services:
-  emnesh-db:
-    container_name: emnesh-postgres-canvas
+  emnesh-workspace-db:
+    container_name: emnesh-postgres-workspace
     image: postgres:15-alpine
     restart: always
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: emnesh_canvas
+      POSTGRES_DB: emnesh_workspace
     ports:
-      - '5432:5432'
+      - '5434:5432'
     volumes:
-      - pgdata_canvas:/var/lib/postgresql/data
+      - pgdata_workspace:/var/lib/postgresql/data
 
   emnesh-auth-db:
     container_name: emnesh-postgres-auth
@@ -27,8 +27,8 @@ services:
     volumes:
       - pgdata_auth:/var/lib/postgresql/data
 
-  emnesh-app:
-    container_name: emnesh-main-app
+  emnesh-backend:
+    container_name: emnesh-backend-api
     image: emnesh-app:latest
     build:
       context: .
@@ -37,15 +37,37 @@ services:
     ports:
       - '5000:5000'
     environment:
-      DATABASE_URL: postgresql://user:password@emnesh-db:5432/emnesh_canvas
+      DATABASE_URL: postgresql://user:password@emnesh-workspace-db:5432/emnesh_workspace
+      WORKSPACE_DATABASE_URL: postgresql://user:password@emnesh-workspace-db:5432/emnesh_workspace
       AUTH_DATABASE_URL: postgresql://user:password@emnesh-auth-db:5432/emnesh_auth
       NODE_ENV: production
       SESSION_SECRET: dev_secret_change_me_in_prod
-      CLIENT_ID: local-development
+      # Google OAuth (optional - configure for production)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # SMTP for email verification (optional - logs to console in dev)
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      # App URL for redirects
+      APP_URL: ${APP_URL:-http://localhost:5000}
     depends_on:
-      - emnesh-db
+      - emnesh-workspace-db
       - emnesh-auth-db
 
+  emnesh-frontend:
+    container_name: emnesh-frontend
+    image: nginx:alpine
+    restart: always
+    ports:
+      - '80:80'
+    volumes:
+      - ./dist/public:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - emnesh-backend
+
 volumes:
-  pgdata_canvas:
+  pgdata_workspace:
   pgdata_auth:

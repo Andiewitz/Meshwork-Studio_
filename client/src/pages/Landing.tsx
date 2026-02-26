@@ -24,10 +24,10 @@ export default function Landing() {
 
           <div className="flex items-center gap-4">
             <Button variant="ghost" asChild>
-              <a href="/api/login">Sign In</a>
+              <a href="/auth/login">Sign In</a>
             </Button>
             <Button asChild className="rounded-full px-6">
-              <a href="/api/login">Get Started</a>
+              <a href="/auth/login">Get Started</a>
             </Button>
           </div>
         </div>

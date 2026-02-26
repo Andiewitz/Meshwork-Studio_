@@ -1,4 +1,5 @@
-import { ArrowRight, MoreHorizontal, Pencil, Copy, Trash, ExternalLink } from "lucide-react";
+import { ArrowRight, MoreHorizontal, Pencil, Copy, Trash, ExternalLink, Box, Server, Globe, Database, Shield, GitBranch, Zap, Cpu, Network, Cloud, Lock, BarChart3, Code2, Wifi, LayoutGrid } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,9 +17,33 @@ interface FeaturedCardProps {
     id: number;
     title: string;
     type: string;
+    icon?: string | null;
   };
   onContinue?: () => void;
   onDelete?: (id: number) => void;
+}
+
+// Icon mapping for workspace icons
+const ICON_MAP: Record<string, LucideIcon> = {
+  server: Server,
+  globe: Globe,
+  box: Box,
+  database: Database,
+  shield: Shield,
+  git: GitBranch,
+  zap: Zap,
+  cpu: Cpu,
+  network: Network,
+  cloud: Cloud,
+  lock: Lock,
+  chart: BarChart3,
+  code: Code2,
+  wifi: Wifi,
+  grid: LayoutGrid,
+};
+
+function getWorkspaceIcon(iconId?: string): LucideIcon {
+  return ICON_MAP[iconId || "box"] || Box;
 }
 
 export function FeaturedCard({ workspace, onContinue, onDelete }: FeaturedCardProps) {
@@ -29,6 +54,7 @@ export function FeaturedCard({ workspace, onContinue, onDelete }: FeaturedCardPr
   const [isRenaming, setIsRenaming] = useState(false);
   const [title, setTitle] = useState(workspace.title);
   const inputRef = useRef<HTMLInputElement>(null);
+  const Icon = getWorkspaceIcon(workspace.icon || undefined);
 
   useEffect(() => {
     if (isRenaming) {
@@ -93,7 +119,8 @@ export function FeaturedCard({ workspace, onContinue, onDelete }: FeaturedCardPr
               {workspace.title || "Untitled Project"}
             </h2>
           )}
-          <div className="bg-background text-foreground px-3 py-1 font-bold text-xs uppercase tracking-widest border-2 border-foreground w-fit mt-2">
+          <div className="bg-background text-foreground px-3 py-1 font-bold text-xs uppercase tracking-widest border-2 border-foreground w-fit mt-2 flex items-center gap-2">
+            <Icon className="w-4 h-4" />
             {workspace.type || "Workspace"}
           </div>
         </div>

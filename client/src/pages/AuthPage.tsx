@@ -74,7 +74,7 @@ export default function AuthPage() {
                                     className="w-full h-14 text-lg font-medium rounded-xl group relative overflow-hidden"
                                     asChild
                                 >
-                                    <a href="/api/login">
+                                    <a href="/auth/login">
                                         <span className="relative z-10 flex items-center justify-center gap-2">
                                             Continue to Studio
                                             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
