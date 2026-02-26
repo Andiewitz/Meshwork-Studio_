@@ -12,6 +12,7 @@ import Home from "@/pages/Home";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
+import Settings from "@/pages/Settings";
 import Workspace from "@/pages/Workspace";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
@@ -106,6 +107,13 @@ function Router() {
             <ProtectedRoute component={() => (
               <PageTransition>
                 <Home />
+              </PageTransition>
+            )} />
+          </Route>
+          <Route path="/settings">
+            <ProtectedRoute component={() => (
+              <PageTransition>
+                <Settings />
               </PageTransition>
             )} />
           </Route>
