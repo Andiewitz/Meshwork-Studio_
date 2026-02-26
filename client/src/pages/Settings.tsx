@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import { Loader2, User, Lock, Trash2, Download, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import {
   AlertDialog,
@@ -47,14 +48,18 @@ export default function Settings() {
     setIsUpdatingProfile(true);
     try {
       const res = await apiRequest("PATCH", "/api/user/profile", {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        firstName: firstName.trim() || null,
+        lastName: lastName.trim() || null,
       });
       
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to update profile");
       }
+
+      // Update local user data immediately for better UX
+      const updatedUser = await res.json();
+      queryClient.setQueryData(["/api/auth/me"], updatedUser);
 
       toast({
         title: "Profile Updated",
@@ -437,7 +442,12 @@ export default function Settings() {
                     placeholder="DELETE ALL"
                   />
                   <AlertDialogFooter>
-                    <AlertDialogCancel className="brutal-btn">Cancel</AlertDialogCancel>
+                    <AlertDialogCancel 
+                      className="brutal-btn"
+                      onClick={() => setDeleteDataConfirmText("")}
+                    >
+                      Cancel
+                    </AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDeleteAllData}
                       disabled={isDeletingData || deleteDataConfirmText !== "DELETE ALL"}
@@ -489,7 +499,12 @@ export default function Settings() {
                     placeholder="DELETE"
                   />
                   <AlertDialogFooter>
-                    <AlertDialogCancel className="brutal-btn">Cancel</AlertDialogCancel>
+                    <AlertDialogCancel 
+                      className="brutal-btn"
+                      onClick={() => setDeleteConfirmText("")}
+                    >
+                      Cancel
+                    </AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDeleteAccount}
                       disabled={isDeletingAccount || deleteConfirmText !== "DELETE"}
