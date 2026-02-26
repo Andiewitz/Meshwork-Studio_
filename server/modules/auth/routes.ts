@@ -69,8 +69,8 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
-  // Login with email/password (with CAPTCHA in production)
-  app.post("/api/auth/login", captchaMiddleware, (req: Request, res: Response, next) => {
+  // Login with email/password (NO CAPTCHA for returning users)
+  app.post("/api/auth/login", (req: Request, res: Response, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         return next(err);
