@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,72 +7,19 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Chrome, Box } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
-// hCaptcha site key (free tier available at hcaptcha.com)
-const HCAPTCHA_SITE_KEY = "10000000-ffff-ffff-ffff-000000000001"; // Test key - replace with yours in production
-
-declare global {
-  interface Window {
-    hcaptcha: any;
-    onloadHCaptchaCallback: () => void;
-  }
-}
-
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState("");
-  const captchaRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Load hCaptcha script
-  useEffect(() => {
-    if (window.hcaptcha) {
-      renderCaptcha();
-    } else {
-      const script = document.createElement("script");
-      script.src = "https://js.hcaptcha.com/1/api.js?onload=onloadHCaptchaCallback&render=explicit";
-      script.async = true;
-      script.defer = true;
-      window.onloadHCaptchaCallback = renderCaptcha;
-      document.head.appendChild(script);
-    }
-  }, []);
-
-  const renderCaptcha = () => {
-    if (captchaRef.current && window.hcaptcha) {
-      window.hcaptcha.render(captchaRef.current, {
-        sitekey: HCAPTCHA_SITE_KEY,
-        callback: (token: string) => setCaptchaToken(token),
-        "expired-callback": () => setCaptchaToken(""),
-      });
-    }
-  };
-
-  const resetCaptcha = () => {
-    if (window.hcaptcha && captchaRef.current) {
-      window.hcaptcha.reset(captchaRef.current);
-      setCaptchaToken("");
-    }
-  };
-
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!captchaToken) {
-      toast({
-        title: "CAPTCHA required",
-        description: "Please complete the CAPTCHA verification.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const res = await apiRequest("POST", "/api/auth/login", { email, password, captchaToken });
+      const res = await apiRequest("POST", "/api/auth/login", { email, password });
       const data = await res.json();
 
       if (res.ok) {
@@ -87,7 +34,6 @@ export default function Login() {
           description: data.message || "Invalid credentials",
           variant: "destructive",
         });
-        resetCaptcha();
       }
     } catch (err: any) {
       toast({
@@ -95,7 +41,6 @@ export default function Login() {
         description: err.message || "Something went wrong",
         variant: "destructive",
       });
-      resetCaptcha();
     } finally {
       setIsLoading(false);
     }
@@ -154,15 +99,10 @@ export default function Login() {
               />
             </div>
 
-            {/* CAPTCHA */}
-            <div className="flex justify-center py-2">
-              <div ref={captchaRef} />
-            </div>
-
             <Button
               type="submit"
               className="w-full accent-btn"
-              disabled={isLoading || !captchaToken}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <>
