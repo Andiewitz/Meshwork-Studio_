@@ -70,7 +70,22 @@ export const edges = pgTable("edges", {
 });
 
 export const insertCollectionSchema = createInsertSchema(collections).omit({ id: true, createdAt: true });
-export const insertWorkspaceSchema = createInsertSchema(workspaces).omit({ id: true, createdAt: true });
+// Custom validation for workspace title
+const titleRegex = /^[a-zA-Z0-9\-_\s]+$/; // Alphanumeric, spaces, hyphens, underscores only
+// Emoji detection - using surrogate pair ranges for ES5 compatibility
+const hasEmojiRegex = /(?:[\u2700-\u27bf]|(?:\ud83c[\udde6-\uddff]){2}|[\ud800-\udbff][\udc00-\udfff]|[\u0023-\u0039]\ufe0f?\u20e3|[\u3297\u3299][\ufe0f]?|[\u303d\u3030\u2b55\u2b50\u2b1c\u2b1b\u23f3\u23f0\u231b\u231a\u21aa\u2199\u2198\u2197\u2196\u2195\u2194\u2139\u2122\u2049\u203c\u3030]|[\u2600-\u26FF][\ufe0f]?|[\u2700-\u27BF][\ufe0f]?)/;
+
+export const insertWorkspaceSchema = createInsertSchema(workspaces, {
+  title: z.string()
+    .min(1, "Title is required")
+    .max(16, "Title must be 16 characters or less")
+    .refine((val) => !hasEmojiRegex.test(val), {
+      message: "Title cannot contain emojis",
+    })
+    .refine((val) => titleRegex.test(val) || val.trim().length > 0, {
+      message: "Title can only contain letters, numbers, spaces, hyphens, and underscores",
+    }),
+}).omit({ id: true, createdAt: true });
 export const insertNodeSchema = createInsertSchema(nodes);
 export const insertEdgeSchema = createInsertSchema(edges);
 

@@ -81,19 +81,48 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [title, setTitle] = useState(workspace.title);
+  const [titleError, setTitleError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const justStartedRenaming = useRef(false);
+  const preventBlur = useRef(false);
+
+  // Validation constants
+  const titleRegex = /^[a-zA-Z0-9\-_\s]+$/;
+  const hasEmojiRegex = /(?:[\u2700-\u27bf]|(?:\ud83c[\udde6-\uddff]){2}|[\ud800-\udbff][\udc00-\udfff]|[\u0023-\u0039]\ufe0f?\u20e3|[\u3297\u3299][\ufe0f]?|[\u303d\u3030\u2b55\u2b50\u2b1c\u2b1b\u23f3\u23f0\u231b\u231a\u21aa\u2199\u2198\u2197\u2196\u2195\u2194\u2139\u2122\u2049\u203c\u3030]|[\u2600-\u26FF][\ufe0f]?|[\u2700-\u27BF][\ufe0f]?)/;
 
   useEffect(() => {
     if (isRenaming) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
+      justStartedRenaming.current = true;
+      preventBlur.current = true;
+      // Small delay to let dropdown close before focusing
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+        justStartedRenaming.current = false;
+      }, 50);
     }
   }, [isRenaming]);
 
+  const validateTitle = (value: string): string | null => {
+    if (value.length > 16) return "Max 16 characters";
+    if (hasEmojiRegex.test(value)) return "No emojis allowed";
+    if (!titleRegex.test(value)) return "Invalid characters";
+    return null;
+  };
+
   const handleRename = async () => {
+    if (justStartedRenaming.current) return;
+    
+    const error = validateTitle(title);
+    if (error) {
+      setTitleError(error);
+      return;
+    }
+    
     if (!title.trim() || title === workspace.title) {
       setIsRenaming(false);
       setTitle(workspace.title);
+      setTitleError(null);
       return;
     }
 
@@ -237,17 +266,26 @@ export function WorkspaceCard({ workspace, onDelete }: WorkspaceCardProps) {
                 <input
                   ref={inputRef}
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    setTitle(newValue);
+                    setTitleError(validateTitle(newValue));
+                  }}
                   onBlur={handleRename}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleRename();
                     if (e.key === 'Escape') {
                       setIsRenaming(false);
                       setTitle(workspace.title);
+                      setTitleError(null);
                     }
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-transparent font-black text-xl uppercase tracking-tighter text-foreground outline-none border-b-2 border-primary w-full py-0"
+                  maxLength={16}
+                  className={cn(
+                    "bg-transparent font-black text-xl uppercase tracking-tighter text-foreground outline-none border-b-2 w-full py-0",
+                    titleError ? "border-red-500 text-red-500" : "border-primary"
+                  )}
                 />
               ) : (
                 <h3 
