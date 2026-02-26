@@ -42,10 +42,10 @@ function createTransporter() {
 export async function sendVerificationCode(email: string, code: string): Promise<void> {
   const transporter = createTransporter();
 
-  const subject = "Your Verification Code - EMNESH Studio";
+  const subject = "Your Verification Code - Meshwork Studio v1.0";
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #1a1a1a; font-weight: bold; text-transform: uppercase;">EMNESH Studio</h2>
+      <h2 style="color: #1a1a1a; font-weight: bold; text-transform: uppercase;">Meshwork Studio v1.0</h2>
       <p>Your verification code is:</p>
       <div style="background: #f0f0f0; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; border: 2px solid #1a1a1a;">
         ${code}
@@ -68,7 +68,7 @@ export async function sendVerificationCode(email: string, code: string): Promise
 
   try {
     await transporter.sendMail({
-      from: `"EMNESH Studio" <${process.env.SMTP_USER}>`,
+      from: `"Meshwork Studio v1.0" <${process.env.SMTP_USER}>`,
       to: email,
       subject,
       html,

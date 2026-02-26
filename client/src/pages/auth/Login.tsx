@@ -59,7 +59,7 @@ export default function Login() {
             <Box className="w-6 h-6" />
           </div>
           <span className="ml-3 text-2xl font-black uppercase tracking-tighter">
-            EMNESH
+            Meshwork Studio
           </span>
         </div>
 

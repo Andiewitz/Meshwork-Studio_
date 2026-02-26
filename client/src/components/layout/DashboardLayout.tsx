@@ -57,7 +57,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           {(isExpanded || isMobile) && (
             <span className="font-sans font-black text-xl tracking-tighter uppercase text-foreground truncate">
-              Weave Studio
+              Meshwork Studio v1.0
             </span>
           )}
         </div>
@@ -154,7 +154,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex font-sans relative overflow-x-hidden">
-      <div className="weave-bg-text">WEAVE STUDIO</div>
+      <div className="meshwork-bg-text">MESHWORK STUDIO v1.0</div>
 
       {/* Desktop Sidebar */}
       <aside className={cn(
