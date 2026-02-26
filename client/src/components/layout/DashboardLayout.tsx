@@ -52,6 +52,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         (isExpanded || isMobile) ? "justify-between border-border" : "justify-center"
       )}>
         <div className="flex items-center gap-3">
+          {!(isExpanded || isMobile) && (
+            <div className="w-10 h-10 rounded-none bg-foreground flex items-center justify-center text-background font-bold font-serif text-xl border-2 border-foreground shrink-0 shadow-[4px_4px_0px_0px_rgba(26,26,26,1)]">
+              M
+            </div>
+          )}
           {(isExpanded || isMobile) && (
             <span className="font-sans font-black text-xl tracking-tighter uppercase text-foreground truncate">
               Meshwork Studio
