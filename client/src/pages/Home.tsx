@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useWorkspaces, useDeleteWorkspace } from "@/hooks/use-workspaces";
 import { useAuth } from "@/hooks/use-auth";
@@ -60,6 +60,17 @@ export default function Home() {
     return [...workspaces].sort((a, b) => b.id - a.id)[0];
   }, [workspaces]);
 
+  // Get time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  const greeting = getGreeting();
+  const userName = user?.firstName || user?.email?.split('@')[0] || "Architect";
+
   if (isAuthLoading || isWorkspacesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -76,11 +87,11 @@ export default function Home() {
             {isWorkspacesPage ? (
               <>All<br />Projects</>
             ) : (
-              <>Welcome<br />Back.</>
+              <>{greeting},<br />{userName}.</>
             )}
           </h1>
           <p className="mt-6 text-xl font-bold uppercase tracking-widest border-l-4 border-foreground pl-4 ml-2 max-w-md">
-            {isWorkspacesPage ? "A complete blueprint of your infrastructure." : "Architecting the future, one node at a time."}
+            {isWorkspacesPage ? "A complete blueprint of your infrastructure." : "Let's architect something extraordinary today."}
           </p>
         </div>
       </div>
