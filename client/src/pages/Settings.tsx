@@ -293,7 +293,8 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Security Card */}
+        {/* Security Card - Only for email users */}
+        {user?.authProvider === "email" && (
         <Card className="brutal-card border-2 border-foreground">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -379,6 +380,7 @@ export default function Settings() {
             </Button>
           </CardContent>
         </Card>
+        )}
 
         {/* Data & Privacy Card */}
         <Card className="brutal-card border-2 border-foreground lg:col-span-2">

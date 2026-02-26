@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import passport from "passport";
 import { db } from "./db";
 import { users, workspaces, nodes, edges, collections } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "./password";
 import { isAuthenticated } from "./authCore";
 import { captchaMiddleware } from "./captcha";
@@ -207,27 +207,29 @@ export function registerAuthRoutes(app: Express): void {
     try {
       const userId = req.user.id;
 
-      // Get all user workspaces first
-      const userWorkspaces = await db
-        .select({ id: workspaces.id })
-        .from(workspaces)
-        .where(eq(workspaces.userId, userId));
+      await db.transaction(async (tx) => {
+        // Get all user workspaces first
+        const userWorkspaces = await tx
+          .select({ id: workspaces.id })
+          .from(workspaces)
+          .where(eq(workspaces.userId, userId));
 
-      const workspaceIds = userWorkspaces.map(w => w.id);
+        const workspaceIds = userWorkspaces.map(w => w.id);
 
-      if (workspaceIds.length > 0) {
-        // Delete edges for user's workspaces
-        await db.delete(edges).where(and(...workspaceIds.map(id => eq(edges.workspaceId, id))));
+        if (workspaceIds.length > 0) {
+          // Delete edges for user's workspaces
+          await tx.delete(edges).where(inArray(edges.workspaceId, workspaceIds));
 
-        // Delete nodes for user's workspaces
-        await db.delete(nodes).where(and(...workspaceIds.map(id => eq(nodes.workspaceId, id))));
+          // Delete nodes for user's workspaces
+          await tx.delete(nodes).where(inArray(nodes.workspaceId, workspaceIds));
 
-        // Delete workspaces
-        await db.delete(workspaces).where(eq(workspaces.userId, userId));
-      }
+          // Delete workspaces
+          await tx.delete(workspaces).where(eq(workspaces.userId, userId));
+        }
 
-      // Delete collections
-      await db.delete(collections).where(eq(collections.userId, userId));
+        // Delete collections
+        await tx.delete(collections).where(eq(collections.userId, userId));
+      });
 
       res.json({ message: "All data deleted successfully" });
     } catch (error) {
@@ -241,30 +243,32 @@ export function registerAuthRoutes(app: Express): void {
     try {
       const userId = req.user.id;
 
-      // Get all user workspaces first
-      const userWorkspaces = await db
-        .select({ id: workspaces.id })
-        .from(workspaces)
-        .where(eq(workspaces.userId, userId));
+      await db.transaction(async (tx) => {
+        // Get all user workspaces first
+        const userWorkspaces = await tx
+          .select({ id: workspaces.id })
+          .from(workspaces)
+          .where(eq(workspaces.userId, userId));
 
-      const workspaceIds = userWorkspaces.map(w => w.id);
+        const workspaceIds = userWorkspaces.map(w => w.id);
 
-      if (workspaceIds.length > 0) {
-        // Delete edges for user's workspaces
-        await db.delete(edges).where(and(...workspaceIds.map(id => eq(edges.workspaceId, id))));
+        if (workspaceIds.length > 0) {
+          // Delete edges for user's workspaces
+          await tx.delete(edges).where(inArray(edges.workspaceId, workspaceIds));
 
-        // Delete nodes for user's workspaces
-        await db.delete(nodes).where(and(...workspaceIds.map(id => eq(nodes.workspaceId, id))));
+          // Delete nodes for user's workspaces
+          await tx.delete(nodes).where(inArray(nodes.workspaceId, workspaceIds));
 
-        // Delete workspaces
-        await db.delete(workspaces).where(eq(workspaces.userId, userId));
-      }
+          // Delete workspaces
+          await tx.delete(workspaces).where(eq(workspaces.userId, userId));
+        }
 
-      // Delete collections
-      await db.delete(collections).where(eq(collections.userId, userId));
+        // Delete collections
+        await tx.delete(collections).where(eq(collections.userId, userId));
 
-      // Delete user
-      await db.delete(users).where(eq(users.id, userId));
+        // Delete user
+        await tx.delete(users).where(eq(users.id, userId));
+      });
 
       // Logout user
       req.logout(() => {
