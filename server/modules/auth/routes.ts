@@ -65,7 +65,7 @@ export function registerAuthRoutes(app: Express): void {
       });
     } catch (err: any) {
       console.error("[Auth] Registration error:", err);
-      res.status(500).json({ message: err.message || "Registration failed" });
+      res.status(500).json({ message: err.message || "Registration failed due to server error" });
     }
   });
 
@@ -76,7 +76,7 @@ export function registerAuthRoutes(app: Express): void {
         return next(err);
       }
       if (!user) {
-        return res.status(401).json({ message: info?.message || "Invalid credentials" });
+        return res.status(401).json({ message: info?.message || "Authentication failed - please check your credentials" });
       }
       req.login(user, (err) => {
         if (err) {
@@ -122,7 +122,7 @@ export function registerAuthRoutes(app: Express): void {
       res.json(user);
     } catch (error) {
       console.error("[Auth] Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      res.status(500).json({ message: "Failed to fetch user profile - please try again" });
     }
   });
 }

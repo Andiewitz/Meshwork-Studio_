@@ -71,7 +71,7 @@ export function captchaMiddleware(req: any, res: any, next: any) {
   const token = req.body.captchaToken;
 
   if (!token) {
-    return res.status(400).json({ message: 'CAPTCHA token required' });
+    return res.status(400).json({ message: 'CAPTCHA verification required - please complete the challenge' });
   }
 
   verifyCaptcha(token).then((valid) => {

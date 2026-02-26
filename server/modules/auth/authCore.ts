@@ -67,5 +67,5 @@ export const isAuthenticated: RequestHandler = (req, res, next) => {
   if (req.isAuthenticated()) {
     return next();
   }
-  res.status(401).json({ message: "Unauthorized" });
+  res.status(401).json({ message: "Session expired or not logged in" });
 };

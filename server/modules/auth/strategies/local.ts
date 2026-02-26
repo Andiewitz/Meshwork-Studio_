@@ -26,8 +26,8 @@ export function createLocalStrategy() {
         console.log("[LocalAuth] User found:", user ? "yes" : "no");
 
         if (!user) {
-          console.log("[LocalAuth] User not found");
-          return done(null, false, { message: "Invalid email or password" });
+          console.log("[LocalAuth] User not found:", email);
+          return done(null, false, { message: "No account found with this email address" });
         }
 
         // Check if user has a password (email auth)
@@ -42,7 +42,8 @@ export function createLocalStrategy() {
         console.log("[LocalAuth] Password valid:", isValid);
         
         if (!isValid) {
-          return done(null, false, { message: "Invalid email or password" });
+          console.log("[LocalAuth] Password incorrect for user:", email);
+          return done(null, false, { message: "Incorrect password" });
         }
 
         console.log("[LocalAuth] Login successful for:", user.id);
