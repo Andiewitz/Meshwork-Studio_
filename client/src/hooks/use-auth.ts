@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import type { User } from "@shared/schema";
 
 async function fetchUser(): Promise<User | null> {
@@ -40,6 +41,7 @@ async function logout(): Promise<void> {
 
 export function useAuth() {
   const queryClient = useQueryClient();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
     queryFn: fetchUser,
@@ -51,15 +53,18 @@ export function useAuth() {
     mutationFn: logout,
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/me"], null);
-      window.location.href = "/auth/login";
+      setIsRedirecting(true);
+      // Clear all queries to ensure fresh state on next login
+      queryClient.clear();
     },
   });
 
   return {
     user,
-    isLoading,
+    isLoading: isLoading || isRedirecting,
     isAuthenticated: !!user,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
+    isRedirecting,
   };
 }

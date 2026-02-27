@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2 } from "lucide-react";
+import { RedirectingScreen } from "@/components/ui/loading-screen";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import NotFound from "@/pages/not-found";
@@ -16,15 +16,11 @@ import Settings from "@/pages/Settings";
 import Workspace from "@/pages/Workspace";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
-function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType<any> }) {
-  const { user, isLoading } = useAuth();
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, isLoading, isRedirecting } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+  if (isLoading || isRedirecting) {
+    return <RedirectingScreen />;
   }
 
   if (!user) {
@@ -36,13 +32,10 @@ function ProtectedRoute({ component: Component, ...rest }: { component: React.Co
 
 const PageTransition = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -8 }}
-    transition={{
-      duration: 0.2,
-      ease: [0.25, 0.1, 0.25, 1],
-    }}
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.15 }}
     className={cn("flex-1", className)}
   >
     {children}
@@ -51,21 +44,17 @@ const PageTransition = ({ children, className }: { children: React.ReactNode; cl
 
 function Router() {
   const [location] = useLocation();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isRedirecting } = useAuth();
 
-  // Show loading spinner while checking auth
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+  // Show redirecting screen during auth transitions
+  if (isLoading || isRedirecting) {
+    return <RedirectingScreen />;
   }
 
-  // Auth routes without layout
-  if (location.startsWith("/auth/") || location === "/auth") {
+  // Auth routes - render without layout
+  if (location.startsWith("/auth/")) {
     return (
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="sync">
         <Switch location={location} key={location}>
           <Route path="/auth/login">
             <PageTransition>
@@ -77,7 +66,7 @@ function Router() {
               <Register />
             </PageTransition>
           </Route>
-          <Route path="/auth">
+          <Route>
             <Redirect to="/auth/login" />
           </Route>
         </Switch>
@@ -85,67 +74,43 @@ function Router() {
     );
   }
 
-  // Public landing page routes
-  if (location === "/" || location === "/landing") {
-    if (!user) {
-      return (
-        <AnimatePresence mode="wait">
-          <Switch location={location} key={location}>
-            <Route path="/">
-              <PageTransition>
-                <Landing />
-              </PageTransition>
-            </Route>
-            <Route path="/landing">
-              <Redirect to="/" />
-            </Route>
-          </Switch>
-        </AnimatePresence>
-      );
-    }
+  // Public landing page (only for non-authenticated users)
+  if (location === "/" && !user) {
+    return (
+      <AnimatePresence mode="sync">
+        <PageTransition>
+          <Landing />
+        </PageTransition>
+      </AnimatePresence>
+    );
   }
 
+  // Workspace routes
   if (location.startsWith("/workspace/")) {
     return (
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="sync">
         <Switch location={location} key={location}>
           <Route path="/workspace/:id">
-            <ProtectedRoute component={() => (
-              <PageTransition className="h-full w-full">
-                <Workspace />
-              </PageTransition>
-            )} />
+            <ProtectedRoute component={Workspace} />
           </Route>
         </Switch>
       </AnimatePresence>
     );
   }
 
-  // Dashboard routes with static layout
+  // Dashboard routes with layout
   return (
     <DashboardLayout>
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="sync">
         <Switch location={location} key={location}>
           <Route path="/">
-            <ProtectedRoute component={() => (
-              <PageTransition>
-                <Home />
-              </PageTransition>
-            )} />
+            <ProtectedRoute component={Home} />
           </Route>
           <Route path="/workspaces">
-            <ProtectedRoute component={() => (
-              <PageTransition>
-                <Home />
-              </PageTransition>
-            )} />
+            <ProtectedRoute component={Home} />
           </Route>
           <Route path="/settings">
-            <ProtectedRoute component={() => (
-              <PageTransition>
-                <Settings />
-              </PageTransition>
-            )} />
+            <ProtectedRoute component={Settings} />
           </Route>
           <Route>
             <PageTransition>
@@ -158,12 +123,10 @@ function Router() {
   );
 }
 
-
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <WouterRouter base="/">
+      <WouterRouter>
         <TooltipProvider>
           <Toaster />
           <Router />
