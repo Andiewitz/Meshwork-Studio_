@@ -46,13 +46,12 @@ function Router() {
   const [location] = useLocation();
   const { user, isLoading, isRedirecting } = useAuth();
 
-  // Show redirecting screen during auth transitions
-  if (isLoading || isRedirecting) {
-    return <RedirectingScreen />;
-  }
-
-  // Auth routes - render without layout
+  // Auth routes - render immediately without waiting for auth check (fixes blank screen)
   if (location.startsWith("/auth/")) {
+    // Still show loading screen during redirect after logout
+    if (isRedirecting) {
+      return <RedirectingScreen />;
+    }
     return (
       <Switch location={location} key={location}>
         <Route path="/auth/login">
@@ -66,6 +65,11 @@ function Router() {
         </Route>
       </Switch>
     );
+  }
+
+  // Show redirecting screen during auth transitions for protected routes
+  if (isLoading || isRedirecting) {
+    return <RedirectingScreen />;
   }
 
   // Public landing page (only for non-authenticated users)
