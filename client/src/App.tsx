@@ -163,7 +163,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <WouterRouter>
+      <WouterRouter base="/">
         <TooltipProvider>
           <Toaster />
           <Router />
