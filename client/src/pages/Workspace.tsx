@@ -756,10 +756,16 @@ function WorkspaceView() {
                     deleteNode(selectedNodeId);
                 }
             }
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                if (!isSyncing) {
+                    handleSave();
+                }
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedNodeId, deleteNode]);
+    }, [selectedNodeId, deleteNode, isSyncing, nodes, edges]);
 
     const duplicateNode = useCallback(
         (id: string) => {
@@ -886,8 +892,8 @@ function WorkspaceView() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button onClick={handleSave} disabled={isSyncing} className="flex items-center justify-center w-8 h-8 rounded-md border transition-all border-white/10 hover:bg-white/5 text-white/80" title="Save Project">
-                        {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                    <button onClick={handleSave} disabled={isSyncing} className="flex items-center justify-center w-8 h-8 rounded-md border transition-all border-white/10 hover:bg-white/5 hover:border-[#FF5A36]/50 text-white/80 hover:text-[#FF5A36]" title="Save Project (Ctrl+S)">
+                        {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     </button>
 
                     <button

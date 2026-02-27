@@ -9,7 +9,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
-import Landing from "@/pages/Landing";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import Settings from "@/pages/Settings";
@@ -32,10 +31,10 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
 const PageTransition = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    transition={{ duration: 0.15 }}
+    initial={{ opacity: 0, y: 30, scale: 0.98 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, y: -20, scale: 0.98 }}
+    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
     className={cn("flex-1", className)}
   >
     {children}
@@ -53,17 +52,28 @@ function Router() {
       return <RedirectingScreen />;
     }
     return (
-      <Switch location={location} key={location}>
-        <Route path="/auth/login">
-          <Login />
-        </Route>
-        <Route path="/auth/register">
-          <Register />
-        </Route>
-        <Route>
-          <Redirect to="/auth/login" />
-        </Route>
-      </Switch>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="min-h-screen"
+        >
+          <Switch location={location} key={location}>
+            <Route path="/auth/login">
+              <Login />
+            </Route>
+            <Route path="/auth/register">
+              <Register />
+            </Route>
+            <Route>
+              <Redirect to="/auth/login" />
+            </Route>
+          </Switch>
+        </motion.div>
+      </AnimatePresence>
     );
   }
 
@@ -72,26 +82,24 @@ function Router() {
     return <RedirectingScreen />;
   }
 
-  // Public landing page (only for non-authenticated users)
-  if (location === "/" && !user) {
-    return (
-      <AnimatePresence mode="sync">
-        <PageTransition>
-          <Landing />
-        </PageTransition>
-      </AnimatePresence>
-    );
-  }
-
   // Workspace routes
   if (location.startsWith("/workspace/")) {
     return (
-      <AnimatePresence mode="sync">
-        <Switch location={location} key={location}>
-          <Route path="/workspace/:id">
-            <ProtectedRoute component={Workspace} />
-          </Route>
-        </Switch>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location}
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -30 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="h-full"
+        >
+          <Switch location={location} key={location}>
+            <Route path="/workspace/:id">
+              <ProtectedRoute component={Workspace} />
+            </Route>
+          </Switch>
+        </motion.div>
       </AnimatePresence>
     );
   }
@@ -99,23 +107,32 @@ function Router() {
   // Dashboard routes with layout
   return (
     <DashboardLayout>
-      <AnimatePresence mode="sync">
-        <Switch location={location} key={location}>
-          <Route path="/">
-            <ProtectedRoute component={Home} />
-          </Route>
-          <Route path="/workspaces">
-            <ProtectedRoute component={Home} />
-          </Route>
-          <Route path="/settings">
-            <ProtectedRoute component={Settings} />
-          </Route>
-          <Route>
-            <PageTransition>
-              <NotFound />
-            </PageTransition>
-          </Route>
-        </Switch>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="flex-1"
+        >
+          <Switch location={location} key={location}>
+            <Route path="/">
+              <ProtectedRoute component={Home} />
+            </Route>
+            <Route path="/workspaces">
+              <ProtectedRoute component={Home} />
+            </Route>
+            <Route path="/settings">
+              <ProtectedRoute component={Settings} />
+            </Route>
+            <Route>
+              <PageTransition>
+                <NotFound />
+              </PageTransition>
+            </Route>
+          </Switch>
+        </motion.div>
       </AnimatePresence>
     </DashboardLayout>
   );

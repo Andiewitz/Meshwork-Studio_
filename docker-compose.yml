@@ -56,6 +56,18 @@ services:
       - emnesh-workspace-db
       - emnesh-auth-db
 
+  emnesh-landing:
+    container_name: emnesh-landing
+    image: emnesh-landing:latest
+    build:
+      context: ./landing_page
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '8080:80'
+    depends_on:
+      - emnesh-backend
+
   emnesh-frontend:
     container_name: emnesh-frontend
     image: nginx:alpine
