@@ -181,6 +181,43 @@ const PageTransition = ({ children, className }) => (
 
 ---
 
+## February 27, 2026 Session
+
+### 10. Register Page Blank White Screen (Express Route Syntax)
+
+**The Problem:**
+Register page showed a completely blank white screen. Browser network tab showed 404 errors for CSS/JS assets with old hashes. Issue persisted across browsers (Edge, Chrome) and hard refreshes.
+
+**Root Cause:**
+1. **Invalid Express 4 route pattern**: `app.use("*", ...)` in `server/static.ts` threw an error on server startup: "path array should have only strings or regexps"
+2. **Backend container crash**: Express failed to start, so nginx fell through to the backend which wasn't serving the SPA correctly
+3. **Stale assets in backend image**: Even after fixing the route pattern, the backend image had old built files from Feb 26
+
+**The Fix:**
+
+1. Changed Express catch-all route to use regex pattern (Express 4 compatible):
+```typescript
+// Before (INVALID in Express 4):
+app.use("*", (_req, res) => {
+  res.sendFile(path.resolve(distPath, "index.html"));
+});
+
+// After (WORKING):
+app.get(/.*/, (_req, res) => {
+  res.sendFile(path.resolve(distPath, "index.html"));
+});
+```
+
+2. Rebuilt Docker image with no cache to get fresh assets:
+```bash
+docker-compose build --no-cache emnesh-backend
+docker-compose up -d emnesh-backend
+```
+
+**Files Changed:** `server/static.ts`
+
+---
+
 ## Key Takeaways (Updated)
 
 1. **Event handling in React requires specificity** - Always check which mouse button triggered an action if you want different behaviors for left vs right clicks.
@@ -204,3 +241,5 @@ const PageTransition = ({ children, className }) => (
 10. **CAPTCHA UX matters** - Only require CAPTCHA for high-risk actions (registration), not for returning users (login). Implement replay protection and proper error handling.
 
 11. **Animations should be invisible** - If users notice the transition, it's too flashy. Subtle fades + small movements beat scale/blur effects.
+
+12. **Express 4 route syntax matters** - `app.use("*")` is invalid; use `app.get(/.*/)` for catch-all SPA routes. Always check server logs when routes fail silently.
