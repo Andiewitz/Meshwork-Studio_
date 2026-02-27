@@ -51,6 +51,16 @@ const PageTransition = ({ children, className }: { children: React.ReactNode; cl
 
 function Router() {
   const [location] = useLocation();
+  const { user, isLoading } = useAuth();
+
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // Auth routes without layout
   if (location.startsWith("/auth/") || location === "/auth") {
@@ -73,6 +83,26 @@ function Router() {
         </Switch>
       </AnimatePresence>
     );
+  }
+
+  // Public landing page routes
+  if (location === "/" || location === "/landing") {
+    if (!user) {
+      return (
+        <AnimatePresence mode="wait">
+          <Switch location={location} key={location}>
+            <Route path="/">
+              <PageTransition>
+                <Landing />
+              </PageTransition>
+            </Route>
+            <Route path="/landing">
+              <Redirect to="/" />
+            </Route>
+          </Switch>
+        </AnimatePresence>
+      );
+    }
   }
 
   if (location.startsWith("/workspace/")) {

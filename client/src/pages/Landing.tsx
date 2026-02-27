@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Switch, Route, Redirect, useLocation, Router as WouterRouter, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Check, ArrowRight } from "lucide-react";
@@ -24,10 +24,10 @@ export default function Landing() {
 
           <div className="flex items-center gap-4">
             <Button variant="ghost" asChild>
-              <a href="/auth/login">Sign In</a>
+              <Link href="/auth/login">Sign In</Link>
             </Button>
             <Button asChild className="rounded-full px-6">
-              <a href="/auth/login">Get Started</a>
+              <Link href="/auth/login">Get Started</Link>
             </Button>
           </div>
         </div>
@@ -55,10 +55,10 @@ export default function Landing() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="rounded-full h-14 px-8 text-lg" asChild>
-                <a href="/auth">
+                <Link href="/auth/login">
                   Start for Free
                   <ArrowRight className="ml-2 w-5 h-5" />
-                </a>
+                </Link>
               </Button>
               <Button size="lg" variant="outline" className="rounded-full h-14 px-8 text-lg">
                 View Demo

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Chrome, Box, Eye, EyeOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -33,6 +34,8 @@ export default function Login() {
           title: "Welcome back!",
           description: `Logged in as ${data.user.email}`,
         });
+        // Invalidate auth query to refresh user state
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         setLocation("/");
       } else {
         toast({
