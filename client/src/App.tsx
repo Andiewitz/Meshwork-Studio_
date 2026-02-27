@@ -54,23 +54,17 @@ function Router() {
   // Auth routes - render without layout
   if (location.startsWith("/auth/")) {
     return (
-      <AnimatePresence mode="sync">
-        <Switch location={location} key={location}>
-          <Route path="/auth/login">
-            <PageTransition>
-              <Login />
-            </PageTransition>
-          </Route>
-          <Route path="/auth/register">
-            <PageTransition>
-              <Register />
-            </PageTransition>
-          </Route>
-          <Route>
-            <Redirect to="/auth/login" />
-          </Route>
-        </Switch>
-      </AnimatePresence>
+      <Switch location={location} key={location}>
+        <Route path="/auth/login">
+          <Login />
+        </Route>
+        <Route path="/auth/register">
+          <Register />
+        </Route>
+        <Route>
+          <Redirect to="/auth/login" />
+        </Route>
+      </Switch>
     );
   }
 
