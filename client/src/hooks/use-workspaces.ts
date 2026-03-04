@@ -3,6 +3,13 @@ import { api, buildUrl } from "@shared/routes";
 import { type CreateWorkspaceRequest, type UpdateWorkspaceRequest } from "@shared/schema";
 import { useAuth } from "./use-auth";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+
+function getApiUrl(path: string): string {
+  if (path.startsWith("http")) return path;
+  return `${API_BASE_URL}${path}`;
+}
+
 // Hook to fetch all workspaces
 export function useWorkspaces() {
   const { isAuthenticated } = useAuth();
@@ -10,7 +17,7 @@ export function useWorkspaces() {
   return useQuery({
     queryKey: [api.workspaces.list.path],
     queryFn: async () => {
-      const res = await fetch(api.workspaces.list.path, { credentials: "include" });
+      const res = await fetch(getApiUrl(api.workspaces.list.path), { credentials: "include" });
       if (!res.ok) {
         const errorText = await res.text().catch(() => "Unknown error");
         console.error(`[useWorkspaces] Failed with status ${res.status}:`, errorText);
@@ -31,7 +38,7 @@ export function useWorkspace(id: number) {
     queryKey: [api.workspaces.get.path, id],
     queryFn: async () => {
       const url = buildUrl(api.workspaces.get.path, { id });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(getApiUrl(url), { credentials: "include" });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch workspace");
       return api.workspaces.get.responses[200].parse(await res.json());
@@ -46,7 +53,7 @@ export function useCreateWorkspace() {
 
   return useMutation({
     mutationFn: async (data: CreateWorkspaceRequest) => {
-      const res = await fetch(api.workspaces.create.path, {
+      const res = await fetch(getApiUrl(api.workspaces.create.path), {
         method: api.workspaces.create.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -73,7 +80,7 @@ export function useUpdateWorkspace() {
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: number } & UpdateWorkspaceRequest) => {
       const url = buildUrl(api.workspaces.update.path, { id });
-      const res = await fetch(url, {
+      const res = await fetch(getApiUrl(url), {
         method: api.workspaces.update.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
