@@ -31,7 +31,8 @@ async function fetchUser(): Promise<User | null> {
     return userData;
   } catch (err) {
     console.error("[AuthHook] Error in fetchUser:", err);
-    throw err;
+    // Return null instead of throwing to prevent infinite loading screen
+    return null;
   }
 }
 
