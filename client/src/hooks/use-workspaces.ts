@@ -103,7 +103,7 @@ export function useDeleteWorkspace() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.workspaces.delete.path, { id });
-      const res = await fetch(url, {
+      const res = await fetch(getApiUrl(url), {
         method: api.workspaces.delete.method,
         credentials: "include",
       });
@@ -123,7 +123,7 @@ export function useDuplicateWorkspace() {
   return useMutation({
     mutationFn: async ({ id, title }: { id: number; title?: string }) => {
       const url = buildUrl(api.workspaces.duplicate.path, { id });
-      const res = await fetch(url, {
+      const res = await fetch(getApiUrl(url), {
         method: api.workspaces.duplicate.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
