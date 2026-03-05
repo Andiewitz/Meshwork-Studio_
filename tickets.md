@@ -14,17 +14,17 @@
 
 ### Q2
 
-[ ] When creating a new project it doesnt require to add name and would only be "Untitled Project"
+- [x] When creating a new project it doesnt require to add name and would only be "Untitled Project"
 
-[ ] Viewport tracking when viewport is mobile size will show a message that this app is not for mobile size
+- [x] Viewport tracking when viewport is mobile size will show a message that this app is not for mobile size
 
-[ ] Update dashboard icons to a proper library and shift away from weird black boxes as highlights
+- [x] Update dashboard icons to a proper library and shift away from weird black boxes as highlights
 
-[ ] Add multi delete functionality for projects
+- [x] Add multi delete functionality for projects
 
-[ ] Add a new page and new icon the navbar, the dev page basically also the documentation and logs page where we will display all the logs and documentation for the app.
+- [x] Add a new page and new icon the navbar, the dev page basically also the documentation and logs page where we will display all the logs and documentation for the app.
 
-[ ] When licking projects on the home page and projects page, have it be able the project by clicking the entire card cuz sometimes it only works when clicking the name or close to it.
+- [x] When licking projects on the home page and projects page, have it be able the project by clicking the entire card cuz sometimes it only works when clicking the name or close to it.
 
 
 
