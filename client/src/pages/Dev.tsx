@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Search, Grid3X3, List, Tag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface BlogPost {
   id: number;
@@ -238,36 +239,52 @@ export default function DevPage() {
           </div>
         </aside>
 
-        {/* Blog Grid */}
+        {/* Blog Grid/List with smooth transition */}
         <div className="flex-1">
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredPosts.map((post) => (
-                <BlogCard key={post.id} post={post} />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredPosts.map((post) => (
-                <div key={post.id} className="flex gap-4 p-4 bg-card rounded-xl group cursor-pointer hover:bg-muted/50 transition-colors">
-                  <div className={cn("w-32 h-24 rounded-lg shrink-0", post.imageColor)} />
-                  <div className="flex-1 space-y-1">
-                    <p className="text-xs text-muted-foreground font-sans">{post.date}</p>
-                    <h3 className="font-display font-semibold group-hover:text-primary transition-colors">
-                      {post.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground font-sans line-clamp-2">
-                      {post.subtitle}
-                    </p>
-                    <div className="flex items-center gap-4 pt-1">
-                      <span className="text-xs text-muted-foreground font-sans">{post.category}</span>
-                      <span className="text-xs text-muted-foreground font-sans">{post.readTime}</span>
+          <AnimatePresence mode="wait">
+            {viewMode === "grid" ? (
+              <motion.div
+                key="grid"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+              >
+                {filteredPosts.map((post) => (
+                  <BlogCard key={post.id} post={post} />
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="list"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                className="space-y-4"
+              >
+                {filteredPosts.map((post) => (
+                  <div key={post.id} className="flex gap-4 p-4 bg-card rounded-xl group cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className={cn("w-32 h-24 rounded-lg shrink-0", post.imageColor)} />
+                    <div className="flex-1 space-y-1">
+                      <p className="text-xs text-muted-foreground font-sans">{post.date}</p>
+                      <h3 className="font-display font-semibold group-hover:text-primary transition-colors">
+                        {post.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground font-sans line-clamp-2">
+                        {post.subtitle}
+                      </p>
+                      <div className="flex items-center gap-4 pt-1">
+                        <span className="text-xs text-muted-foreground font-sans">{post.category}</span>
+                        <span className="text-xs text-muted-foreground font-sans">{post.readTime}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
