@@ -13,8 +13,64 @@ interface BlogPost {
   category: string;
   readTime: string;
   imageColor: string;
+  imagePattern?: string;
   content?: string;
   author?: string;
+}
+
+function PatternSvg({ pattern }: { pattern: string }) {
+  const patterns: Record<string, JSX.Element> = {
+    chart: (
+      <svg viewBox="0 0 200 150" className="w-full h-full">
+        <path d="M40,110 Q60,60 80,90 T120,70 T160,50" fill="none" stroke="#1a1a1a" strokeWidth="3" />
+        <circle cx="80" cy="90" r="4" fill="#1a1a1a" />
+        <circle cx="120" cy="70" r="4" fill="#1a1a1a" />
+        <path d="M140,40 L150,30 M150,40 L160,30" stroke="#1a1a1a" strokeWidth="2" />
+      </svg>
+    ),
+    stairs: (
+      <svg viewBox="0 0 200 150" className="w-full h-full">
+        <path d="M60,120 L60,90 L90,90 L90,60 L120,60 L120,30" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+        <path d="M130,40 Q140,30 150,40" fill="none" stroke="#fff" strokeWidth="2" />
+      </svg>
+    ),
+    book: (
+      <svg viewBox="0 0 200 150" className="w-full h-full">
+        <rect x="50" y="30" width="100" height="90" rx="4" fill="none" stroke="#1a1a1a" strokeWidth="3" />
+        <line x1="80" y1="30" x2="80" y2="120" stroke="#1a1a1a" strokeWidth="2" />
+        <line x1="95" y1="50" x2="130" y2="50" stroke="#1a1a1a" strokeWidth="2" />
+        <line x1="95" y1="65" x2="130" y2="65" stroke="#1a1a1a" strokeWidth="2" />
+        <line x1="95" y1="80" x2="120" y2="80" stroke="#1a1a1a" strokeWidth="2" />
+      </svg>
+    ),
+    code: (
+      <svg viewBox="0 0 200 150" className="w-full h-full">
+        <path d="M70,75 L50,55 L70,35" fill="none" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M130,75 L150,55 L130,35" fill="none" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="85" y1="85" x2="115" y2="25" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    ),
+    eye: (
+      <svg viewBox="0 0 200 150" className="w-full h-full">
+        <ellipse cx="100" cy="75" rx="50" ry="30" fill="none" stroke="#1a1a1a" strokeWidth="3" />
+        <circle cx="100" cy="75" r="15" fill="#1a1a1a" />
+        <path d="M150,45 L170,35" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" />
+        <path d="M155,55 L175,50" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    ),
+    nodes: (
+      <svg viewBox="0 0 200 150" className="w-full h-full">
+        <circle cx="60" cy="75" r="12" fill="#1a1a1a" />
+        <circle cx="140" cy="50" r="12" fill="#1a1a1a" />
+        <circle cx="140" cy="100" r="12" fill="#1a1a1a" />
+        <line x1="72" y1="75" x2="128" y2="55" stroke="#1a1a1a" strokeWidth="2" />
+        <line x1="72" y1="75" x2="128" y2="95" stroke="#1a1a1a" strokeWidth="2" />
+        <circle cx="140" cy="50" r="4" fill="#fff" />
+        <circle cx="140" cy="100" r="4" fill="#fff" />
+      </svg>
+    ),
+  };
+  return patterns[pattern] || null;
 }
 
 const blogPosts: BlogPost[] = [
@@ -26,6 +82,7 @@ const blogPosts: BlogPost[] = [
     category: "Announcements",
     readTime: "4 min read",
     imageColor: "bg-[#E8DED5]",
+    imagePattern: "nodes",
     author: "The Weave Team",
     content: `
 Today marks a significant milestone for our team. After months of reflection and growth, we're excited to announce that Meshwork Studio is now **Weave Studio**.
@@ -64,6 +121,7 @@ Thank you for being part of this journey. We can't wait to see what you weave ne
     category: "Engineering",
     readTime: "12 min read",
     imageColor: "bg-[#7A8B6E]",
+    imagePattern: "stairs",
     author: "Sarah Chen",
     content: `
 Real-time collaboration is the holy grail of canvas-based applications. Here's how we built ours.
@@ -114,6 +172,7 @@ Sub-50ms latency for all collaborative operations, even with 20+ concurrent edit
     category: "Technical",
     readTime: "15 min read",
     imageColor: "bg-[#D4846A]",
+    imagePattern: "book",
     author: "Marcus Johnson",
     content: `
 When we started Weave Studio, we chose React Flow as our foundation. Two years later, we've learned a lot about extending and customizing node editors.
@@ -176,6 +235,7 @@ We're extracting our node system into a standalone library. If you're building n
     category: "Features",
     readTime: "8 min read",
     imageColor: "bg-[#B8C5C4]",
+    imagePattern: "code",
     author: "Emily Park",
     content: `
 Export functionality bridges the gap between your canvas workspace and the rest of your workflow. Here's how we built ours.
@@ -233,6 +293,7 @@ All exports are reversible:
     category: "Product",
     readTime: "6 min read",
     imageColor: "bg-[#C4A77D]",
+    imagePattern: "eye",
     author: "Alex Rivera",
     content: `
 When you have dozens of workspaces, organization becomes critical. Here's how our new management features help.
@@ -294,6 +355,7 @@ For organizations:
     category: "Design",
     readTime: "7 min read",
     imageColor: "bg-[#9B8B7A]",
+    imagePattern: "chart",
     author: "Jordan Lee",
     content: `
 The human brain didn't evolve to think in lists. It evolved to think in spaces. That's why we built Weave Studio on an infinite canvas.
@@ -504,7 +566,7 @@ export default function Dev() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] relative">
+    <div className="min-h-[calc(100vh-4rem)] relative pb-24">
       {/* Dev blog background - fixed to cover full viewport */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_31px,currentColor_31px,currentColor_32px)] opacity-[0.02]" />
@@ -595,7 +657,9 @@ export default function Dev() {
                     onClick={() => setSelectedPost(post)}
                     className="group cursor-pointer bg-card rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-all hover:shadow-lg"
                   >
-                    <div className={cn("h-48 w-full", post.imageColor)} />
+                    <div className={cn("h-48 w-full flex items-center justify-center p-8", post.imageColor)}>
+                      {post.imagePattern && <PatternSvg pattern={post.imagePattern} />}
+                    </div>
                     <div className="p-5 space-y-3">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Tag className="w-3 h-3" />
@@ -631,7 +695,9 @@ export default function Dev() {
                     onClick={() => setSelectedPost(post)}
                     className="flex gap-4 p-4 bg-card rounded-xl group cursor-pointer hover:bg-muted/50 transition-colors border border-border hover:border-primary/50"
                   >
-                    <div className={cn("w-32 h-24 rounded-lg shrink-0", post.imageColor)} />
+                    <div className={cn("w-32 h-24 rounded-lg shrink-0 flex items-center justify-center p-4", post.imageColor)}>
+                      {post.imagePattern && <PatternSvg pattern={post.imagePattern} />}
+                    </div>
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Tag className="w-3 h-3" />
