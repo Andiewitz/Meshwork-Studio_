@@ -13,7 +13,8 @@ import {
   User as UserIcon,
   PanelLeftClose,
   PanelLeftOpen,
-  ChevronRight
+  ChevronRight,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -43,6 +44,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItems = [
     { icon: LayoutDashboard, label: "Home", href: "/" },
     { icon: FolderOpen, label: "Workspaces", href: "/workspaces" },
+    { icon: FileText, label: "Dev Logs", href: "/dev" },
     { icon: Settings, label: "Settings", href: "/settings" },
   ];
 

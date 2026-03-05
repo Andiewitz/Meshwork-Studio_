@@ -13,6 +13,7 @@ import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import Settings from "@/pages/Settings";
 import Workspace from "@/pages/Workspace";
+import Dev from "@/pages/Dev";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -125,6 +126,9 @@ function Router() {
             </Route>
             <Route path="/settings">
               <ProtectedRoute component={Settings} />
+            </Route>
+            <Route path="/dev">
+              <ProtectedRoute component={Dev} />
             </Route>
             <Route>
               <PageTransition>
