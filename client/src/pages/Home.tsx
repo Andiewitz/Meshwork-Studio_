@@ -127,25 +127,25 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col gap-10 pt-4">
+    <div className="flex flex-col gap-8 pt-2">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 reveal-on-scroll">
-        <div className="flex flex-col gap-2 -ml-2">
-          <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter mix-blend-darken text-foreground leading-[0.85]">
+        <div className="flex flex-col gap-3">
+          <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight text-foreground leading-[1.1]">
             {isWorkspacesPage ? (
-              <>All<br />Projects</>
+              <>All Projects</>
             ) : (
-              <>{greeting},<br />{userName}.</>
+              <>{greeting}, {userName}.</>
             )}
           </h1>
-          <p className="mt-6 text-xl font-bold uppercase tracking-widest border-l-4 border-foreground pl-4 ml-2 max-w-md">
+          <p className="text-base font-sans text-muted-foreground max-w-md leading-relaxed">
             {isWorkspacesPage ? "A complete blueprint of your infrastructure." : "Let's architect something extraordinary today."}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mt-6">
         {!isWorkspacesPage && (
-          <div className="space-y-12 reveal-on-scroll delay-200">
+          <div className="space-y-8 reveal-on-scroll delay-200">
             {mostRecent ? (
               <FeaturedCard
                 workspace={mostRecent}
@@ -153,64 +153,64 @@ export default function Home() {
                 onDelete={handleDelete}
               />
             ) : (
-              <div className="brutal-card bg-foreground text-background p-8 md:p-12 flex flex-col gap-6 relative overflow-hidden group min-h-[280px] justify-center">
-                <div className="flex flex-col items-center text-center gap-4 relative z-10">
-                  <div className="w-16 h-16 border-4 border-background flex items-center justify-center">
-                    <Box className="w-8 h-8" />
+              <div className="brutal-card bg-foreground text-background p-8 md:p-10 flex flex-col gap-5 relative overflow-hidden group min-h-[240px] justify-center">
+                <div className="flex flex-col items-center text-center gap-3 relative z-10">
+                  <div className="w-12 h-12 border-2 border-background flex items-center justify-center">
+                    <Box className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-tight">
+                    <h3 className="text-xl font-display font-semibold tracking-tight">
                       Start Your First Project
                     </h3>
-                    <p className="text-background/60 font-bold text-sm uppercase tracking-widest mt-2">
+                    <p className="text-background/60 font-sans text-sm mt-1">
                       Create a workspace to begin architecting
                     </p>
                   </div>
                   <Button 
                     onClick={() => setIsCreateOpen(true)} 
-                    className="accent-btn h-14 px-10 text-lg mt-4"
+                    className="accent-btn h-12 px-8 text-sm mt-2"
                   >
-                    CREATE WORKSPACE
+                    Create Workspace
                   </Button>
                 </div>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary mix-blend-multiply rounded-full blur-3xl opacity-20 pointer-events-none" />
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-6">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-4">
               <Button
                 onClick={() => setIsCreateOpen(true)}
-                className="accent-btn h-16 px-10 text-lg flex-1 sm:flex-none"
+                className="accent-btn h-12 px-6 text-sm font-medium flex-1 sm:flex-none"
               >
-                NEW WORKSPACE
+                New workspace
               </Button>
 
               <Button
-                className="brutal-card h-16 px-8 text-foreground font-bold uppercase tracking-wider text-lg hover:bg-foreground hover:text-white transition-colors flex-1 sm:flex-none"
+                className="brutal-card h-12 px-6 text-foreground font-medium text-sm hover:bg-foreground hover:text-white transition-colors flex-1 sm:flex-none"
               >
-                IMPORT
+                Import
               </Button>
 
               <Link href="/workspaces">
-                <Button variant="ghost" className="text-foreground font-bold text-lg uppercase tracking-wider gap-3 hover:bg-transparent group">
-                  VIEW ALL
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                <Button variant="ghost" className="text-foreground font-medium text-sm gap-2 hover:bg-transparent group">
+                  View all
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </div>
           </div>
         )}
 
-        <div className={cn("space-y-6 reveal-on-scroll delay-300", isWorkspacesPage ? "lg:col-span-2 mt-0" : "lg:-mt-32")}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b-2 border-foreground pb-4">
-            <div className="flex items-center gap-8">
-              <h2 className="text-2xl font-black uppercase tracking-wider">
-                {isWorkspacesPage ? "My Projects" : "Recent"}
+        <div className={cn("space-y-5 reveal-on-scroll delay-300", isWorkspacesPage ? "lg:col-span-2 mt-0" : "lg:-mt-24")}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+            <div className="flex items-center gap-6">
+              <h2 className="text-lg font-display font-semibold tracking-tight">
+                {isWorkspacesPage ? "My projects" : "Recent"}
               </h2>
-              {!isWorkspacesPage && <h2 className="text-2xl font-black text-muted-foreground uppercase tracking-wider">Team</h2>}
+              {!isWorkspacesPage && <span className="text-lg font-display font-medium text-muted-foreground">Team</span>}
             </div>
 
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               {isWorkspacesPage && (
                 <>
                   {!isMultiSelectMode ? (
@@ -218,9 +218,9 @@ export default function Home() {
                       variant="outline"
                       size="sm"
                       onClick={() => setIsMultiSelectMode(true)}
-                      className="font-bold uppercase tracking-wider text-xs"
+                      className="font-label font-medium text-xs"
                     >
-                      Select Multiple
+                      Select multiple
                     </Button>
                   ) : (
                     <>
@@ -228,16 +228,16 @@ export default function Home() {
                         variant="outline"
                         size="sm"
                         onClick={handleSelectAll}
-                        className="font-bold uppercase tracking-wider text-xs"
+                        className="font-label font-medium text-xs"
                       >
-                        {selectedIds.size === filteredWorkspaces.length ? "Deselect All" : "Select All"}
+                        {selectedIds.size === filteredWorkspaces.length ? "Deselect all" : "Select all"}
                       </Button>
                       {selectedIds.size > 0 && (
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={handleBulkDelete}
-                          className="font-bold uppercase tracking-wider text-xs gap-2"
+                          className="font-label font-medium text-xs gap-2"
                         >
                           <Trash2 className="w-4 h-4" />
                           Delete ({selectedIds.size})
@@ -250,7 +250,7 @@ export default function Home() {
                           setIsMultiSelectMode(false);
                           setSelectedIds(new Set());
                         }}
-                        className="font-bold uppercase tracking-wider text-xs"
+                        className="font-label font-medium text-xs"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -260,26 +260,26 @@ export default function Home() {
               )}
             </div>
 
-            <div className="relative w-full max-w-[240px] reveal-on-scroll delay-100">
+            <div className="relative w-full max-w-[200px] reveal-on-scroll delay-100">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-foreground/40" />
+                <Search className="h-4 w-4 text-muted-foreground" />
               </div>
               <input
                 type="text"
-                placeholder="SEARCH..."
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-10 pl-9 pr-4 bg-card border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(26,26,26,1)] focus:outline-none focus:shadow-[6px_6px_0px_0px_rgba(26,26,26,1)] transition-all font-bold uppercase tracking-widest text-[10px]"
+                className="w-full h-9 pl-9 pr-4 bg-card border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring font-sans text-sm"
               />
             </div>
 
             {isWorkspacesPage && (
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Sort by:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-label font-medium text-muted-foreground uppercase tracking-wide">Sort by:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-transparent font-bold text-sm uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5 p-1 transition-colors"
+                  className="bg-transparent font-sans font-medium text-sm focus:outline-none cursor-pointer hover:bg-muted px-2 py-1 rounded transition-colors"
                 >
                   <option value="recent">Recent</option>
                   <option value="name">Name</option>

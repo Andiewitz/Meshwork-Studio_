@@ -49,20 +49,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   ];
 
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
-    <div className="flex flex-col h-full bg-white dark:bg-black overflow-hidden">
+    <div className="flex flex-col h-full bg-card overflow-hidden">
       <div className={cn(
-        "p-6 flex items-center transition-all duration-300 border-b-2 border-transparent",
-        (isExpanded || isMobile) ? "justify-between border-border" : "justify-center"
+        "p-4 flex items-center transition-all duration-300 border-b border-border",
+        (isExpanded || isMobile) ? "justify-between" : "justify-center"
       )}>
         <div className="flex items-center gap-3">
           {!(isExpanded || isMobile) && (
-            <div className="w-10 h-10 rounded-none bg-foreground flex items-center justify-center text-background font-bold font-serif text-xl border-2 border-foreground shrink-0 shadow-[4px_4px_0px_0px_rgba(26,26,26,1)]">
+            <div className="w-9 h-9 rounded-md bg-foreground flex items-center justify-center text-background font-display font-semibold text-lg shrink-0">
               M
             </div>
           )}
           {(isExpanded || isMobile) && (
-            <span className="font-sans font-black text-xl tracking-tighter uppercase text-foreground truncate">
-              Meshwork Studio
+            <span className="font-display font-semibold text-lg tracking-tight text-foreground truncate">
+              Meshwork
             </span>
           )}
         </div>
@@ -80,26 +80,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         )}
       </div>
 
-      <nav className="flex-1 px-4 mt-4 overflow-y-auto scrollbar-hide">
-        <div className="space-y-2">
+      <nav className="flex-1 px-3 mt-2 overflow-y-auto scrollbar-hide">
+        <div className="space-y-1">
           {navItems.map((item) => {
             const isActive = location === item.href;
             return (
               <Link key={item.href} href={item.href} className={cn(
-                "flex items-center gap-4 h-12 rounded-none transition-all duration-200 group relative border-2 border-transparent hover:border-foreground/20",
-                (isExpanded || isMobile) ? "px-4" : "justify-center",
+                "flex items-center gap-3 h-10 rounded-md transition-all duration-200 group relative",
+                (isExpanded || isMobile) ? "px-3" : "justify-center",
                 isActive
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-black/5"
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}>
-                <item.icon className={cn("w-5 h-5 shrink-0", isActive && "text-background")} />
+                <item.icon className={cn("w-4 h-4 shrink-0", isActive && "text-primary")} />
                 {(isExpanded || isMobile) && (
-                  <span className={cn("font-bold text-sm uppercase tracking-wider whitespace-nowrap opacity-100 transition-opacity duration-300", isActive && "text-background")}>
+                  <span className={cn("font-sans text-sm font-medium whitespace-nowrap opacity-100 transition-opacity duration-300", isActive && "text-primary")}>
                     {item.label}
                   </span>
                 )}
                 {!isExpanded && !isMobile && (
-                  <div className="absolute left-full ml-4 px-3 py-1.5 bg-foreground text-background font-bold text-xs uppercase tracking-wider rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-lg">
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground font-sans text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-md border">
                     {item.label}
                   </div>
                 )}
@@ -110,44 +110,44 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </nav>
 
       <div className={cn(
-        "p-4 flex flex-col gap-4 transition-all duration-300",
+        "p-3 flex flex-col gap-2 transition-all duration-300",
         (isExpanded || isMobile) ? "items-stretch" : "items-center"
       )}>
         <button className={cn(
-          "flex items-center gap-4 h-12 rounded-none text-primary border-2 border-transparent hover:border-primary/20 hover:bg-primary/5 transition-all font-bold uppercase tracking-wider text-sm",
-          (isExpanded || isMobile) ? "px-4 w-full" : "justify-center w-12"
+          "flex items-center gap-3 h-9 rounded-md text-primary hover:bg-primary/5 transition-all font-sans font-medium text-sm",
+          (isExpanded || isMobile) ? "px-3 w-full" : "justify-center w-9"
         )}>
-          <Sparkles className="w-5 h-5 shrink-0" />
+          <Sparkles className="w-4 h-4 shrink-0" />
           {(isExpanded || isMobile) && <span>Upgrade</span>}
         </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className={cn(
-              "flex items-center gap-3 rounded-lg transition-all border-2 border-transparent hover:border-foreground/20 p-2 hover:shadow-md hover:bg-card",
+              "flex items-center gap-2 rounded-md transition-all hover:bg-muted p-1.5",
               (isExpanded || isMobile) ? "w-full" : "justify-center"
             )}>
-              <Avatar className="w-10 h-10 border-2 border-foreground rounded-none shrink-0 bg-background">
+              <Avatar className="w-8 h-8 border border-border rounded-md shrink-0 bg-background">
                 <AvatarImage src={user?.profileImageUrl || undefined} />
-                <AvatarFallback className="bg-primary/10 text-primary rounded-none font-bold">
+                <AvatarFallback className="bg-primary/10 text-primary rounded-md font-display font-semibold text-sm">
                   {user?.firstName?.[0] || user?.email?.[0] || "U"}
                 </AvatarFallback>
               </Avatar>
               {(isExpanded || isMobile) && (
                 <div className="flex flex-col items-start overflow-hidden">
-                  <span className="text-sm font-black uppercase tracking-tighter truncate w-full text-foreground">{user?.firstName || 'User'}</span>
-                  <span className="text-[10px] text-muted-foreground truncate w-full uppercase tracking-widest">{user?.email}</span>
+                  <span className="font-sans text-sm font-medium truncate w-full text-foreground">{user?.firstName || 'User'}</span>
+                  <span className="text-xs text-muted-foreground truncate w-full font-sans">{user?.email}</span>
                 </div>
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuLabel className="font-sans font-medium">My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="font-sans text-sm">
               <Link href="/settings">Settings</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => logout()}>
+            <DropdownMenuItem onClick={() => logout()} className="font-sans text-sm">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>

@@ -1,12 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;600;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-sans: 'Space Grotesk', sans-serif;
-  --font-serif: 'Inter', sans-serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-label: 'Inter', sans-serif;
+  --font-mono: ui-monospace, monospace;
 
   /* Lumina / Avant-Garde Theme */
   --background: 0 0% 94%;
