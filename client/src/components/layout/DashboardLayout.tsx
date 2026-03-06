@@ -50,6 +50,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [isExpanded]);
 
+
   const navItems = [
     { icon: LayoutDashboard, label: "Home", href: "/" },
     { icon: FolderOpen, label: "Workspaces", href: "/workspaces" },
