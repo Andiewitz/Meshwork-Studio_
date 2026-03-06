@@ -1,4 +1,4 @@
-import { ReactNode, useState, useRef } from "react";
+import { ReactNode, useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -41,8 +41,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [location] = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
   const hasAnimated = useRef(false);
+  const [animateKey, setAnimateKey] = useState(0);
 
-  const navItems = [
+  // Trigger animation when expanding/collapsing navbar
+  useEffect(() => {
+    if (hasAnimated.current) {
+      setAnimateKey(prev => prev + 1);
+    }
+  }, [isExpanded]);
     { icon: LayoutDashboard, label: "Home", href: "/" },
     { icon: FolderOpen, label: "Workspaces", href: "/workspaces" },
     { icon: FileText, label: "Dev Logs", href: "/dev" },
@@ -89,8 +95,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             const isActive = location === item.href;
             return (
               <motion.div
-                key={item.href}
-                initial={hasAnimated.current ? false : { opacity: 0, x: -20 }}
+                key={`${animateKey}-${item.href}`}
+                initial={hasAnimated.current ? { opacity: 0, x: -20 } : { opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05, duration: 0.3 }}
                 onAnimationComplete={() => {
