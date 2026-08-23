@@ -9,9 +9,14 @@ import { storeCsrfToken } from "./secure-fetch";
  */
 export async function refreshCsrfToken(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/csrf-token", {
+    let response = await fetch("/api/v1/auth/csrf-token", {
       credentials: "include",
     });
+    if (!response.ok) {
+      response = await fetch("/api/v1/csrf-token", {
+        credentials: "include",
+      });
+    }
     if (response.ok) {
       const data = await response.json();
       if (data.csrfToken) {

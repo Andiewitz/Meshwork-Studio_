@@ -16,14 +16,24 @@ function safeEqual(left: string, right: string): boolean {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-function isValidOrigin(originOrReferer: string | undefined): boolean {
+function isValidOrigin(req: Request, originOrReferer: string | undefined): boolean {
   if (!originOrReferer) return true; // If browser or non-browser client doesn't send Origin, rely on CSRF tokens
 
   try {
     const originUrl = new URL(originOrReferer);
     const host = originUrl.host;
 
-    // Allow localhost/127.0.0.1 in non-production
+    // 1. Same-origin match against current request Host or X-Forwarded-Host
+    const reqHost = req.get("host");
+    const forwardedHost = req.get("x-forwarded-host");
+    if (reqHost && (reqHost === host || reqHost.split(":")[0] === host.split(":")[0])) {
+      return true;
+    }
+    if (forwardedHost && (forwardedHost === host || forwardedHost.split(":")[0] === host.split(":")[0])) {
+      return true;
+    }
+
+    // 2. Allow localhost/127.0.0.1 in non-production
     if (!authConfig.isProduction) {
       if (
         host.startsWith("localhost") ||
@@ -42,6 +52,11 @@ function isValidOrigin(originOrReferer: string | undefined): boolean {
     if (process.env.APP_URL) {
       const allowedAppUrl = new URL(process.env.APP_URL);
       if (originUrl.origin === allowedAppUrl.origin) return true;
+    }
+
+    // 3. Allow known production domain patterns
+    if (host.includes("duckdns.org") || host.includes("meshwork")) {
+      return true;
     }
 
     return false;
@@ -78,13 +93,13 @@ export function createCsrfMiddleware(storage: IAuthStorage) {
     // 1. Origin & Referer Verification
     const origin = req.get("origin");
     const referer = req.get("referer");
-    if (origin && !isValidOrigin(origin)) {
+    if (origin && !isValidOrigin(req, origin)) {
       const error = csrfRejected();
       return res
         .status(error.status)
         .json({ code: error.code, message: "Invalid request origin" });
     }
-    if (!origin && referer && !isValidOrigin(referer)) {
+    if (!origin && referer && !isValidOrigin(req, referer)) {
       const error = csrfRejected();
       return res
         .status(error.status)
@@ -92,7 +107,10 @@ export function createCsrfMiddleware(storage: IAuthStorage) {
     }
 
     // 2. Double-Submit Cookie & Header Token Verification
-    const cookieToken = req.cookies?.[authConfig.csrfCookieName];
+    const cookieToken =
+      req.cookies?.[authConfig.csrfCookieName] ||
+      req.cookies?.["__Host-meshwork_csrf"] ||
+      req.cookies?.["meshwork_csrf"];
     const headerToken = req.get("X-CSRF-Token") || req.get("x-csrf-token");
 
     if (!cookieToken || !headerToken || !safeEqual(cookieToken, headerToken)) {

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { insertWorkspaceSchema } from "@shared/schema";
 import { useCreateWorkspace, useWorkspaces } from "@/hooks/use-workspaces";
 import { useAuth } from "@/hooks/use-auth";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   ArrowPathIcon,
   ServerIcon,
@@ -120,6 +120,10 @@ export function CreateWorkspaceDialog({
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
+        <DialogTitle className="sr-only">Create New Workspace</DialogTitle>
+        <DialogDescription className="sr-only">
+          Configure and create a new canvas architecture workspace.
+        </DialogDescription>
         {isAtLimit ? (
           /* ── Free tier limit reached ──────────────────────────────────── */
           <div className="px-6 py-10 flex flex-col items-center text-center gap-5">

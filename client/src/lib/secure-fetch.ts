@@ -52,14 +52,19 @@ export async function secureFetch(
   // fetch a fresh CSRF token and retry the original request once.
   if (
     response.status === 403 &&
-    !requestUrl.includes("/api/v1/csrf-token") &&
+    !requestUrl.includes("csrf-token") &&
     !["GET", "HEAD", "OPTIONS"].includes(method)
   ) {
     try {
-      const csrfEndpoint = getApiUrl("/api/v1/csrf-token");
-      const csrfResponse = await fetch(csrfEndpoint, {
+      const csrfEndpoint = getApiUrl("/api/v1/auth/csrf-token");
+      let csrfResponse = await fetch(csrfEndpoint, {
         credentials: "include",
       });
+      if (!csrfResponse.ok) {
+        csrfResponse = await fetch(getApiUrl("/api/v1/csrf-token"), {
+          credentials: "include",
+        });
+      }
       if (csrfResponse.ok) {
         const data = (await csrfResponse.json()) as { csrfToken?: string };
         if (data.csrfToken) {
@@ -85,7 +90,9 @@ export async function secureFetch(
  */
 function getCsrfToken(): string {
   if (typeof window !== "undefined") {
-    const stored = sessionStorage.getItem("csrfToken");
+    const stored =
+      sessionStorage.getItem("csrfToken") ||
+      sessionStorage.getItem("auth.csrfToken");
     if (stored) {
       return stored;
     }
@@ -99,6 +106,7 @@ function getCsrfToken(): string {
 export function storeCsrfToken(token: string): void {
   if (typeof window !== "undefined") {
     sessionStorage.setItem("csrfToken", token);
+    sessionStorage.setItem("auth.csrfToken", token);
   }
 }
 
@@ -108,5 +116,6 @@ export function storeCsrfToken(token: string): void {
 export function clearCsrfToken(): void {
   if (typeof window !== "undefined") {
     sessionStorage.removeItem("csrfToken");
+    sessionStorage.removeItem("auth.csrfToken");
   }
 }
