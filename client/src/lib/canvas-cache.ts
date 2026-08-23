@@ -8,7 +8,7 @@ export interface CanvasCache {
     timestamp: number;
 }
 
-export function saveCanvasToLocalCache(workspaceId: number, nodes: any[], edges: any[]) {
+export function saveCanvasToLocalCache(workspaceId: string | number, nodes: any[], edges: any[]) {
     try {
         const cache: CanvasCache = { nodes, edges, timestamp: Date.now() };
         localStorage.setItem(`${CANVAS_CACHE_PREFIX}${workspaceId}`, JSON.stringify(cache));
@@ -17,7 +17,7 @@ export function saveCanvasToLocalCache(workspaceId: number, nodes: any[], edges:
     }
 }
 
-export function getCanvasFromLocalCache(workspaceId: number): CanvasCache | null {
+export function getCanvasFromLocalCache(workspaceId: string | number): CanvasCache | null {
     try {
         const item = localStorage.getItem(`${CANVAS_CACHE_PREFIX}${workspaceId}`);
         return item ? JSON.parse(item) : null;
@@ -27,6 +27,6 @@ export function getCanvasFromLocalCache(workspaceId: number): CanvasCache | null
     }
 }
 
-export function clearCanvasLocalCache(workspaceId: number) {
+export function clearCanvasLocalCache(workspaceId: string | number) {
     localStorage.removeItem(`${CANVAS_CACHE_PREFIX}${workspaceId}`);
 }

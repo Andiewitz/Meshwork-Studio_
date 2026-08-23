@@ -81,7 +81,7 @@ export default function Home() {
 
   const isWorkspacesPage = location === "/workspaces";
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     deleteWorkspace.mutate(id);
   };
 

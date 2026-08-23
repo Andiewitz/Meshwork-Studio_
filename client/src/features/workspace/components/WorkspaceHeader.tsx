@@ -48,7 +48,7 @@ import {
 
 export interface WorkspaceHeaderProps {
   workspace: any;
-  workspaceId: number;
+  workspaceId: string;
   user: any;
   userRole: string;
   canEdit: boolean;

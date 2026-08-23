@@ -42,6 +42,10 @@ vi.mock("@services/auth", () => ({
     },
   },
   AuthService: {
+    csrf: {
+      protect: (_req: any, _res: any, next: any) => next(),
+      issue: (_req: any, res: any) => res.json({ csrfToken: "test" }),
+    },
     middleware: {
       isAuthenticated: (req: any, res: any, next: any) => {
         if (req.headers["x-test-user-id"]) {
@@ -187,35 +191,36 @@ describe("Workspace Routes Integration Tests (IDOR & Zod)", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.title).toBe("New Title");
-      expect(mockUpdateWorkspace).toHaveBeenCalledWith(1, {
+      expect(mockUpdateWorkspace).toHaveBeenCalledWith("1", {
         title: "New Title",
       });
     });
 
     it("should successfully toggle favorite status if user is owner", async () => {
       mockGetWorkspace.mockResolvedValue({
-        id: 1,
+        id: "1",
+        userId: "user-123",
         title: "My Workspace",
-        userId: "user_A",
         isFavorite: false,
       });
-      mockGetWorkspaceRole.mockResolvedValue("workspace-owner");
+
+      mockGetWorkspaceRole.mockResolvedValue("owner");
 
       mockUpdateWorkspace.mockResolvedValue({
-        id: 1,
+        id: "1",
+        userId: "user-123",
         title: "My Workspace",
-        userId: "user_A",
         isFavorite: true,
       });
 
       const res = await request(app)
         .put("/api/v1/workspaces/1")
-        .set("x-test-user-id", "user_A")
+        .set("x-test-user-id", "user-123")
         .send({ isFavorite: true });
 
       expect(res.status).toBe(200);
       expect(res.body.isFavorite).toBe(true);
-      expect(mockUpdateWorkspace).toHaveBeenCalledWith(1, { isFavorite: true });
+      expect(mockUpdateWorkspace).toHaveBeenCalledWith("1", { isFavorite: true });
     });
   });
 });

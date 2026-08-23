@@ -54,8 +54,24 @@ vi.mock("@services/workspace/db/storage", () => ({
   WorkspaceDatabaseStorage: vi.fn(),
 }));
 
-vi.mock("@server/modules/auth", () => ({
+vi.mock("@services/auth", () => ({
   AuthModule: {
+    middleware: {
+      isAuthenticated: (req: any, res: any, next: any) => {
+        if (req.headers["x-test-user-id"]) {
+          req.user = { id: req.headers["x-test-user-id"] };
+          next();
+        } else {
+          res.status(401).json({ message: "Not authenticated" });
+        }
+      },
+    },
+  },
+  AuthService: {
+    csrf: {
+      protect: (_req: any, _res: any, next: any) => next(),
+      issue: (_req: any, res: any) => res.json({ csrfToken: "test" }),
+    },
     middleware: {
       isAuthenticated: (req: any, res: any, next: any) => {
         if (req.headers["x-test-user-id"]) {
@@ -281,13 +297,13 @@ describe("Team Routes - Full Coverage", () => {
   describe("POST /api/teams/:id/workspaces", () => {
     it("shares workspace if user is member AND workspace owner", async () => {
       mockIsTeamMember.mockResolvedValue(true);
-      mockGetWorkspace.mockResolvedValue({ id: 1, userId: "u1" });
-      mockShareWorkspace.mockResolvedValue({ teamId: "t1", workspaceId: 1 });
+      mockGetWorkspace.mockResolvedValue({ id: "ws-1", userId: "u1" });
+      mockShareWorkspace.mockResolvedValue({ teamId: "t1", workspaceId: "ws-1" });
 
       const res = await request(app)
         .post("/api/v1/teams/t1/workspaces")
         .set("x-test-user-id", "u1")
-        .send({ workspaceId: 1 });
+        .send({ workspaceId: "ws-1" });
       expect(res.status).toBe(201);
     });
 
@@ -296,17 +312,17 @@ describe("Team Routes - Full Coverage", () => {
       const res = await request(app)
         .post("/api/v1/teams/t1/workspaces")
         .set("x-test-user-id", "hacker")
-        .send({ workspaceId: 1 });
+        .send({ workspaceId: "ws-1" });
       expect(res.status).toBe(403);
     });
 
     it("blocks sharing workspace you do not own (IDOR)", async () => {
       mockIsTeamMember.mockResolvedValue(true);
-      mockGetWorkspace.mockResolvedValue({ id: 1, userId: "someone_else" });
+      mockGetWorkspace.mockResolvedValue({ id: "ws-1", userId: "someone_else" });
       const res = await request(app)
         .post("/api/v1/teams/t1/workspaces")
         .set("x-test-user-id", "u1")
-        .send({ workspaceId: 1 });
+        .send({ workspaceId: "ws-1" });
       expect(res.status).toBe(403);
       expect(mockShareWorkspace).not.toHaveBeenCalled();
     });
@@ -586,11 +602,13 @@ describe("Team Routes - Full Coverage", () => {
       expect(res.body.role).toBe("none");
     });
 
-    it("rejects invalid workspace ID", async () => {
+    it("returns none when workspace role is not found", async () => {
+      mockGetWorkspaceRole.mockResolvedValue(null);
       const res = await request(app)
-        .get("/api/v1/workspaces/abc/role")
+        .get("/api/v1/workspaces/ws-nonexistent/role")
         .set("x-test-user-id", "u1");
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(200);
+      expect(res.body.role).toBe("none");
     });
 
     it("rejects unauthenticated requests", async () => {

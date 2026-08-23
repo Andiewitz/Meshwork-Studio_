@@ -191,7 +191,7 @@ export function useShareWorkspace() {
       workspaceId,
     }: {
       teamId: string;
-      workspaceId: number;
+      workspaceId: string;
     }) => {
       const res = await secureFetch(
         getApiUrl(`/api/v1/teams/${teamId}/workspaces`),

@@ -71,9 +71,9 @@ function getWorkspaceIcon(iconId?: string): React.ComponentType<any> {
 
 interface WorkspaceCardProps {
   workspace: Workspace;
-  onDelete?: (id: number) => void;
+  onDelete?: (id: string) => void;
   isSelected?: boolean;
-  onToggleSelect?: (id: number) => void;
+  onToggleSelect?: (id: string) => void;
   isMultiSelectMode?: boolean;
   isDeleting?: boolean;
   viewMode?: "grid" | "list";

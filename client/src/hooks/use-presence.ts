@@ -45,7 +45,7 @@ interface ServerMessage {
 // ─── Hook ────────────────────────────────────────────────────────────
 
 export function usePresence(
-  workspaceId: number | null,
+  workspaceId: string | number | null,
   onNodeMove?: (
     nodeId: string,
     x: number,

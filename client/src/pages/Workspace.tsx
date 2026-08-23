@@ -210,8 +210,8 @@ import {
 } from "@/features/workspace/utils/canvasSettings";
 
 function WorkspaceView() {
-  const { id } = useParams();
-  const workspaceId = Number(id);
+  const { id } = useParams<{ id?: string }>();
+  const workspaceId = id || "";
   const {
     data: canvasData,
     isLoading: isCanvasLoading,
@@ -733,7 +733,7 @@ function WorkspaceView() {
 
   const history = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
   const redoStack = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
-  const lastLoadedId = useRef<number | null>(null);
+  const lastLoadedId = useRef<string | null>(null);
 
   type SaveStatus = "saved" | "saving" | "unsaved" | "offline_saved";
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");

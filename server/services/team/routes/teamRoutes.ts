@@ -183,16 +183,19 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
     res.json(workspaces);
   });
 
+function getParam(req: Request, param = "id"): string {
+  const val = req.params[param];
+  return Array.isArray(val) ? val[0] : (val || "");
+}
+
   // ── Unshare workspace ────────────────────────────────────────────
   app.delete(
     "/api/v1/teams/:id/workspaces/:workspaceId",
     AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
-      const teamId = Array.isArray(req.params.id)
-        ? req.params.id[0]
-        : req.params.id;
-      const workspaceId = req.params.workspaceId;
+      const teamId = getParam(req, "id");
+      const workspaceId = getParam(req, "workspaceId");
       const userId = getUserId(req);
 
       const isMember = await teamStorage.isTeamMember(teamId, userId);
@@ -323,7 +326,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
 
   // ── Get user's role for a workspace ──────────────────────────────
   app.get("/api/v1/workspaces/:id/role", isAuthenticated, async (req, res) => {
-    const workspaceId = req.params.id;
+    const workspaceId = getParam(req, "id");
     const userId = getUserId(req);
 
     if (!workspaceId)
@@ -338,7 +341,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
     "/api/v1/workspaces/:id/members",
     isAuthenticated,
     async (req, res) => {
-      const workspaceId = req.params.id;
+      const workspaceId = getParam(req, "id");
       const userId = getUserId(req);
 
       if (!workspaceId)

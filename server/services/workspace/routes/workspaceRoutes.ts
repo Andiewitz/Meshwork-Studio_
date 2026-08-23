@@ -134,8 +134,14 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     res.json(workspaces);
   });
 
+function getParamId(req: Request, param = "id"): string {
+  const val = req.params[param];
+  return Array.isArray(val) ? val[0] : (val || "");
+}
+
   app.get(api.workspaces.get.path, isAuthenticated, async (req, res) => {
-    const workspace = await workspaceStorage.getWorkspace(req.params.id);
+    const id = getParamId(req);
+    const workspace = await workspaceStorage.getWorkspace(id);
     if (!workspace)
       return res.status(404).json({ message: "Workspace not found" });
 
@@ -185,7 +191,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     async (req, res) => {
       try {
         const input = api.workspaces.update.input.parse(req.body);
-        const id = req.params.id;
+        const id = getParamId(req);
         const existing = await workspaceStorage.getWorkspace(id);
         if (!existing) return res.status(404).json({ message: "Not found" });
 
@@ -204,7 +210,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
           return res.status(400).json({ message: err.errors[0].message });
         }
         log.error(
-          { err, userId: getUserId(req), workspaceId: req.params.id },
+          { err, userId: getUserId(req), workspaceId: getParamId(req) },
           "Failed to update workspace",
         );
         throw err;
@@ -217,7 +223,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
-      const id = req.params.id;
+      const id = getParamId(req);
       const existing = await workspaceStorage.getWorkspace(id);
       if (!existing) return res.status(404).json({ message: "Not found" });
 
@@ -247,7 +253,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
-      const id = req.params.id;
+      const id = getParamId(req);
       const existing = await workspaceStorage.getWorkspace(id);
       if (!existing) return res.status(404).json({ message: "Not found" });
 

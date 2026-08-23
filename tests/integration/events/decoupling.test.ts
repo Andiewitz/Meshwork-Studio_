@@ -130,10 +130,10 @@ describe("EventBus & Decoupling Integration Tests", () => {
     });
 
     it("should clear canvas data when a workspace is deleted", async () => {
-      await eventBus.emitAsync("workspace.deleted", { id: 42 });
+      await eventBus.emitAsync("workspace.deleted", { id: "42" });
 
       expect(mockCanvasStorage.syncCanvas).toHaveBeenCalledTimes(1);
-      expect(mockCanvasStorage.syncCanvas).toHaveBeenCalledWith(42, [], []);
+      expect(mockCanvasStorage.syncCanvas).toHaveBeenCalledWith("42", [], []);
     });
   });
 
@@ -148,12 +148,12 @@ describe("EventBus & Decoupling Integration Tests", () => {
 
     it("should duplicate canvas data when a workspace is duplicated", async () => {
       await eventBus.emitAsync("workspace.duplicated", {
-        originalId: 10,
-        newId: 20,
+        originalId: "10",
+        newId: "20",
       });
 
       expect(mockCanvasStorage.duplicateCanvas).toHaveBeenCalledTimes(1);
-      expect(mockCanvasStorage.duplicateCanvas).toHaveBeenCalledWith(10, 20);
+      expect(mockCanvasStorage.duplicateCanvas).toHaveBeenCalledWith("10", "20");
     });
   });
 

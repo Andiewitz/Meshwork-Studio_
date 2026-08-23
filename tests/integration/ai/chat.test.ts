@@ -20,6 +20,25 @@ vi.mock("@services/ai/db", () => ({
   deleteApiKey: vi.fn(),
 }));
 
+vi.mock("@services/auth", () => ({
+  AuthService: {
+    csrf: {
+      protect: (_req: any, _res: any, next: any) => next(),
+      issue: (_req: any, res: any) => res.json({ csrfToken: "test" }),
+    },
+    middleware: {
+      isAuthenticated: (req: any, res: any, next: any) => {
+        if (req.headers["x-test-user-id"]) {
+          req.user = { id: req.headers["x-test-user-id"] };
+          next();
+        } else {
+          res.status(401).json({ message: "Not authenticated" });
+        }
+      },
+    },
+  },
+}));
+
 const setupTestApp = () => {
   const app = express();
   app.use(express.json());

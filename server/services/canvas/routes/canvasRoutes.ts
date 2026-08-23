@@ -10,6 +10,11 @@ import { canEditWorkspace } from "@server/lib/permissions";
 
 const log = createChildLogger("canvas-routes");
 
+function getParamId(req: any, param = "id"): string {
+  const val = req.params[param];
+  return Array.isArray(val) ? val[0] : (val || "");
+}
+
 export function registerCanvasRoutes(app: Express, context: AppContext) {
   const isAuthenticated =
     context.registry.get<RequestHandler>("isAuthenticated");
@@ -19,7 +24,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
 
   // Canvas logic routes
   app.get(api.workspaces.getCanvas.path, isAuthenticated, async (req, res) => {
-    const id = req.params.id;
+    const id = getParamId(req);
     const workspace = await workspaceStorage.getWorkspace(id);
     if (!workspace)
       return res.status(404).json({ message: "Workspace not found" });
@@ -44,7 +49,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
-      const id = req.params.id;
+      const id = getParamId(req);
       const workspace = await workspaceStorage.getWorkspace(id);
       if (!workspace)
         return res.status(404).json({ message: "Workspace not found" });
@@ -69,7 +74,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
-      const id = req.params.id;
+      const id = getParamId(req);
       const { toWorkspaceId } = req.body;
 
       const workspace = await workspaceStorage.getWorkspace(id);

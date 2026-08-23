@@ -168,7 +168,7 @@ export default function Team() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const handleShareWorkspace = async (workspaceId: number) => {
+  const handleShareWorkspace = async (workspaceId: string) => {
     if (!selectedTeamId) return;
     try {
       await shareWorkspace.mutateAsync({ teamId: selectedTeamId, workspaceId });

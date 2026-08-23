@@ -10,6 +10,13 @@ import { createAuthMiddleware } from "@services/auth/middleware/authMiddleware";
 import { registerAuthRoutes } from "@services/auth/routes/authRoutes";
 import { authConfig } from "@services/auth/config";
 
+function getFirstCookie(res: request.Response): string {
+  const raw = res.headers["set-cookie"];
+  if (Array.isArray(raw)) return raw[0] || "";
+  if (typeof raw === "string") return raw;
+  return "";
+}
+
 const setupTestApp = () => {
   const app = express();
   app.use(express.json());
@@ -46,8 +53,7 @@ describe("Authentication Integration Tests", () => {
     // Get initial CSRF token
     const res = await request(app).get("/api/v1/auth/csrf-token");
     csrfToken = res.body.csrfToken;
-    const rawCookie = res.headers["set-cookie"];
-    csrfCookie = Array.isArray(rawCookie) ? rawCookie[0] : (rawCookie as string);
+    csrfCookie = getFirstCookie(res);
   });
 
   it("should_register_new_user_and_issue_session_cookie", async () => {
@@ -69,7 +75,7 @@ describe("Authentication Integration Tests", () => {
 
     const cookies = res.headers["set-cookie"];
     expect(cookies).toBeDefined();
-    const cookieStr = Array.isArray(cookies) ? cookies.join("; ") : cookies;
+    const cookieStr = Array.isArray(cookies) ? cookies.join("; ") : String(cookies);
     expect(cookieStr).toContain(authConfig.sessionCookieName);
   });
 
@@ -100,7 +106,7 @@ describe("Authentication Integration Tests", () => {
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "login@example.com", password: "Password123!" });
     
-    const regCookie = (regRes.headers["set-cookie"] as string[])[0];
+    const regCookie = getFirstCookie(regRes);
 
     // Login with existing cookie to test rotation
     const loginRes = await request(app)
@@ -113,7 +119,7 @@ describe("Authentication Integration Tests", () => {
     expect(loginRes.body.user.email).toBe("login@example.com");
     expect(loginRes.body.expiresAt).toBeDefined();
 
-    const newCookies = loginRes.headers["set-cookie"] as string[];
+    const newCookies = loginRes.headers["set-cookie"];
     expect(newCookies).toBeDefined();
   });
 
@@ -141,7 +147,7 @@ describe("Authentication Integration Tests", () => {
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "session@example.com", password: "Password123!" });
 
-    const sessionCookie = (regRes.headers["set-cookie"] as string[])[0];
+    const sessionCookie = getFirstCookie(regRes);
 
     const sessionRes = await request(app)
       .get("/api/v1/auth/session")
@@ -168,7 +174,7 @@ describe("Authentication Integration Tests", () => {
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "logout@example.com", password: "Password123!" });
 
-    const sessionCookie = (regRes.headers["set-cookie"] as string[])[0];
+    const sessionCookie = getFirstCookie(regRes);
 
     // Logout
     const logoutRes = await request(app)
@@ -194,7 +200,7 @@ describe("Authentication Integration Tests", () => {
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "pwd@example.com", password: "OldPassword123!" });
 
-    const sessionCookie = (regRes.headers["set-cookie"] as string[])[0];
+    const sessionCookie = getFirstCookie(regRes);
 
     const changeRes = await request(app)
       .post("/api/v1/auth/change-password")

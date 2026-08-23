@@ -6,13 +6,14 @@ import type { Node, Edge } from "@xyflow/react";
 export * from "../lib/canvas-cache";
 import { clearCanvasLocalCache } from "../lib/canvas-cache";
 
-export function useCanvas(workspaceId: number) {
+export function useCanvas(workspaceId: string | number | null | undefined) {
     const queryClient = useQueryClient();
-    const url = buildUrl(api.workspaces.getCanvas.path, { id: workspaceId });
+    const url = workspaceId ? buildUrl(api.workspaces.getCanvas.path, { id: workspaceId }) : "";
 
     const query = useQuery({
         queryKey: [url],
         queryFn: async () => {
+            if (!url) return { nodes: [], edges: [] };
             const res = await apiRequest("GET", url);
             return res.json() as Promise<{ nodes: Node[]; edges: Edge[] }>;
         },
@@ -21,6 +22,7 @@ export function useCanvas(workspaceId: number) {
 
     const syncMutation = useMutation({
         mutationFn: async ({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) => {
+            if (!url) throw new Error("Workspace ID is required to sync canvas");
             // Normalize animated property for Postgres compatibility
             const normalizedEdges = edges.map(edge => ({
                 ...edge,
@@ -30,7 +32,7 @@ export function useCanvas(workspaceId: number) {
             return res.json();
         },
         onSuccess: () => {
-            clearCanvasLocalCache(workspaceId);
+            if (workspaceId) clearCanvasLocalCache(workspaceId);
             queryClient.invalidateQueries({ queryKey: [url] });
         },
     });

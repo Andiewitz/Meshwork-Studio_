@@ -57,13 +57,13 @@ export function useWorkspaces() {
 }
 
 // Hook to fetch a single workspace
-export function useWorkspace(id: number) {
+export function useWorkspace(id: string | null | undefined) {
   const { isAuthenticated } = useAuth();
 
   return useQuery({
     queryKey: [api.workspaces.get.path, id],
     queryFn: async () => {
-      const url = buildUrl(api.workspaces.get.path, { id });
+      const url = buildUrl(api.workspaces.get.path, { id: id! });
       const res = await secureFetch(getApiUrl(url), { credentials: "include" });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch workspace");
@@ -111,7 +111,7 @@ export function useUpdateWorkspace() {
     mutationFn: async ({
       id,
       ...updates
-    }: { id: number } & UpdateWorkspaceRequest) => {
+    }: { id: string } & UpdateWorkspaceRequest) => {
       const url = buildUrl(api.workspaces.update.path, { id });
       const res = await secureFetch(getApiUrl(url), {
         method: api.workspaces.update.method,
@@ -193,7 +193,7 @@ export function useDeleteWorkspace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const url = buildUrl(api.workspaces.delete.path, { id });
       const res = await secureFetch(getApiUrl(url), {
         method: api.workspaces.delete.method,
@@ -215,7 +215,7 @@ export function useDuplicateWorkspace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, title }: { id: number; title?: string }) => {
+    mutationFn: async ({ id, title }: { id: string; title?: string }) => {
       const url = buildUrl(api.workspaces.duplicate.path, { id });
       const res = await secureFetch(getApiUrl(url), {
         method: api.workspaces.duplicate.method,
@@ -245,7 +245,7 @@ export {
   rank,
 } from "@shared/permissions";
 
-export function useWorkspaceRole(workspaceId: number | null) {
+export function useWorkspaceRole(workspaceId: string | null | undefined) {
   return useQuery<{ role: WorkspaceRole }>({
     queryKey: ["workspace-role", workspaceId],
     queryFn: async () => {
@@ -271,7 +271,7 @@ export interface WorkspaceMember {
   color: string;
 }
 
-export function useWorkspaceMembers(workspaceId: number | null) {
+export function useWorkspaceMembers(workspaceId: string | null | undefined) {
   return useQuery<{ teamId: string | null; members: WorkspaceMember[] }>({
     queryKey: ["workspace-members", workspaceId],
     queryFn: async () => {
