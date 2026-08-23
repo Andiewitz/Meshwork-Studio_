@@ -75,6 +75,7 @@ export function registerAuthRoutes(
           accessTokenExpiresAt: result.expiresAt,
         });
       } catch (error) {
+        log.error({ err: error }, "Error in auth register endpoint");
         const output = publicAuthError(error);
         res.status(output.status).json(output.body);
       }
@@ -105,6 +106,7 @@ export function registerAuthRoutes(
           accessTokenExpiresAt: result.expiresAt,
         });
       } catch (error) {
+        log.error({ err: error }, "Error in auth login endpoint");
         const output = publicAuthError(error);
         res.status(output.status).json(output.body);
       }

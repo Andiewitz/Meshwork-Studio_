@@ -27,7 +27,6 @@ function toPublicUser(user: User): PublicUser {
     firstName: user.firstName,
     lastName: user.lastName,
     profileImageUrl: user.profileImageUrl,
-    passwordHash: user.passwordHash ?? null,
     authProvider: user.authProvider,
     isActive: user.isActive ?? true,
     hasNotifiedTeam: user.hasNotifiedTeam,
@@ -292,7 +291,7 @@ export class DrizzleAuthStorage implements IAuthStorage {
         lockedUntil,
       })
       .onConflictDoUpdate({
-        target: loginAttempts.id,
+        target: loginAttempts.email,
         set: {
           failed: newFailed,
           lastAttempt: now,

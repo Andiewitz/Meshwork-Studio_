@@ -95,17 +95,14 @@ export const authCsrfSecrets = pgTable("auth_csrf_secrets", {
 export const loginAttempts = pgTable(
   "login_attempts",
   {
-    id: varchar("id", { length: 128 })
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-    email: varchar("email", { length: 320 }).notNull(),
+    email: varchar("email", { length: 320 }).primaryKey(),
     failed: integer("failed").notNull().default(0),
     lastAttempt: timestamp("last_attempt").notNull().defaultNow(),
     lockedUntil: timestamp("locked_until"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
-    index("IDX_login_attempts_email").on(table.email),
+    uniqueIndex("login_attempts_email_uidx").on(table.email),
     index("IDX_login_attempts_locked_until").on(table.lockedUntil),
   ],
 );

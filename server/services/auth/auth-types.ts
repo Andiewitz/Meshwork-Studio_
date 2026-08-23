@@ -9,7 +9,6 @@ export interface PublicUser {
   firstName: string | null;
   lastName: string | null;
   profileImageUrl: string | null;
-  passwordHash: string | null;
   authProvider: string;
   isActive: boolean | null;
   hasNotifiedTeam?: boolean | null;
