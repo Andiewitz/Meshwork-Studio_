@@ -5,10 +5,13 @@ export type AuthProvider = "email" | "password" | "google" | "github";
 export interface PublicUser {
   id: string;
   email: string;
+  emailNormalized: string | null;
   firstName: string | null;
   lastName: string | null;
   profileImageUrl: string | null;
+  passwordHash: string | null;
   authProvider: string;
+  isActive: boolean | null;
   hasNotifiedTeam?: boolean | null;
   readNotificationIds?: unknown;
   createdAt?: Date | null;
@@ -23,12 +26,10 @@ export interface AuthContext {
 
 export interface AuthenticatedRequest extends Request {
   auth: AuthContext;
-  user?: PublicUser;
 }
 
 export interface OptionalAuthRequest extends Request {
   auth?: AuthContext;
-  user?: PublicUser;
 }
 
 export interface AuthResult {

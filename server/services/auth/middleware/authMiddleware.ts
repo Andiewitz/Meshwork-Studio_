@@ -25,7 +25,7 @@ export function createAuthMiddleware(
         sessionId: session.idHash,
         user,
       };
-      (req as OptionalAuthRequest).user = user;
+      (req as any).user = user;
     } catch {
       // Ignore errors in optional auth
     }
@@ -63,7 +63,7 @@ export function createAuthMiddleware(
         sessionId: session.idHash,
         user,
       };
-      (req as AuthenticatedRequest).user = user;
+      (req as any).user = user;
       next();
     } catch (error) {
       next(error);

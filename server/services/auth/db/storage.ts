@@ -23,10 +23,13 @@ function toPublicUser(user: User): PublicUser {
   return {
     id: user.id,
     email: user.email,
+    emailNormalized: user.emailNormalized ?? null,
     firstName: user.firstName,
     lastName: user.lastName,
     profileImageUrl: user.profileImageUrl,
+    passwordHash: user.passwordHash ?? null,
     authProvider: user.authProvider,
+    isActive: user.isActive ?? true,
     hasNotifiedTeam: user.hasNotifiedTeam,
     readNotificationIds: user.readNotificationIds,
     createdAt: user.createdAt,
