@@ -1,5 +1,8 @@
 import type { Node, Edge } from "@xyflow/react";
-import { validateAndRepairCanvas } from "@/lib/ai-canvas-utils";
+import {
+  validateAndRepairCanvas,
+  getSmartHandleIds,
+} from "@/lib/ai-canvas-utils";
 
 export interface EditCanvasNodeInput {
   id?: string;
@@ -243,10 +246,19 @@ export function executeEditCanvas(
     if (!existingEdgeKeys.has(key)) {
       existingEdgeKeys.add(key);
       const edgeId = incoming.id || `edge-${Date.now()}-${idx}`;
+      const sNode = existingNodeMap.get(incoming.source);
+      const tNode = existingNodeMap.get(incoming.target);
+      const handles =
+        sNode && tNode
+          ? getSmartHandleIds(sNode, tNode)
+          : { sourceHandle: undefined, targetHandle: undefined };
+
       workingEdges.push({
         id: edgeId,
         source: incoming.source,
         target: incoming.target,
+        sourceHandle: handles.sourceHandle,
+        targetHandle: handles.targetHandle,
         type: "smoothstep",
         style: {
           stroke: incoming.color || "#555",

@@ -576,11 +576,26 @@ export function SystemNode({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Connection Handles — small rounded dots */}
+        {/* Connection Handles — small rounded dots on all 4 cardinal directions */}
+        {/* Top */}
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="top-target"
+          className={handleCls}
+        />
         <Handle
           type="source"
           position={Position.Top}
           id="top"
+          className={handleCls}
+        />
+
+        {/* Bottom */}
+        <Handle
+          type="target"
+          position={Position.Bottom}
+          id="bottom-target"
           className={handleCls}
         />
         <Handle
@@ -589,10 +604,26 @@ export function SystemNode({
           id="bottom"
           className={handleCls}
         />
+
+        {/* Left */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="left-target"
+          className={handleCls}
+        />
         <Handle
           type="source"
           position={Position.Left}
           id="left"
+          className={handleCls}
+        />
+
+        {/* Right */}
+        <Handle
+          type="target"
+          position={Position.Right}
+          id="right-target"
           className={handleCls}
         />
         <Handle

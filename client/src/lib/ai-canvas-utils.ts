@@ -166,6 +166,43 @@ interface RawCanvas {
   edges: RawEdge[];
 }
 
+/**
+ * Calculates optimal source and target handles based on relative geometric positions
+ */
+export function getSmartHandleIds(
+  sourceNode: Node,
+  targetNode: Node,
+): { sourceHandle: string; targetHandle: string } {
+  const sW = (sourceNode.style?.width as number) || 168;
+  const sH = (sourceNode.style?.height as number) || 72;
+  const tW = (targetNode.style?.width as number) || 168;
+  const tH = (targetNode.style?.height as number) || 72;
+
+  const sCenterX = sourceNode.position.x + sW / 2;
+  const sCenterY = sourceNode.position.y + sH / 2;
+  const tCenterX = targetNode.position.x + tW / 2;
+  const tCenterY = targetNode.position.y + tH / 2;
+
+  const dx = tCenterX - sCenterX;
+  const dy = tCenterY - sCenterY;
+
+  // Horizontal flow dominates if |dx| >= |dy|
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    if (dx >= 0) {
+      return { sourceHandle: "right", targetHandle: "left-target" };
+    } else {
+      return { sourceHandle: "left", targetHandle: "right-target" };
+    }
+  } else {
+    // Vertical flow dominates
+    if (dy >= 0) {
+      return { sourceHandle: "bottom", targetHandle: "top-target" };
+    } else {
+      return { sourceHandle: "top", targetHandle: "bottom-target" };
+    }
+  }
+}
+
 export function validateAndRepairCanvas(
   raw: unknown,
 ): { nodes: Node[]; edges: Edge[] } | null {
@@ -236,17 +273,26 @@ export function validateAndRepairCanvas(
     };
   });
 
-  const nodeIds = new Set(nodes.map((n) => n.id));
+  const nodeMap = new Map<string, Node>(nodes.map((n) => [n.id, n]));
 
   const edges: Edge[] = r.edges
-    .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
+    .filter((e) => nodeMap.has(e.source) && nodeMap.has(e.target))
     .map((e, i) => {
+      const sourceNode = nodeMap.get(e.source)!;
+      const targetNode = nodeMap.get(e.target)!;
+      const { sourceHandle, targetHandle } = getSmartHandleIds(
+        sourceNode,
+        targetNode,
+      );
       const hasDash = e.style?.strokeDasharray;
       const hasArrow = e.markerEnd != null;
+
       return {
         id: e.id ?? `edge-${i}`,
         source: e.source,
         target: e.target,
+        sourceHandle,
+        targetHandle,
         type: e.type ?? "smoothstep",
         style: {
           stroke: e.style?.stroke ?? "#555",
