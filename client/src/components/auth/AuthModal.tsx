@@ -14,6 +14,7 @@ import {
 import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuthModal } from "./AuthModalContext";
+import { useAuth } from "@/hooks/use-auth";
 import { refreshCsrfToken } from "@/lib/csrf-init";
 import { PASSWORD_POLICY, validatePasswordStrength } from "@shared/auth";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,6 +36,7 @@ function LoginForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { close, switchMode } = useAuthModal();
+  const { notifyLoginSuccess } = useAuth();
   const [step, setStep] = useState<"email" | "password">("email");
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -119,6 +121,12 @@ function LoginForm() {
           description: `Logged in as ${data.user.email}`,
         });
         queryClient.setQueryData(["/api/v1/auth/me"], data.user);
+        notifyLoginSuccess(
+          data.user as any,
+          (data as any).accessTokenExpiresAt ||
+            (data as any).expiresAt ||
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        );
         close();
         setLocation("/home");
       } else {
@@ -370,6 +378,7 @@ function RegisterForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { close, switchMode } = useAuthModal();
+  const { notifyLoginSuccess } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const recaptchaRef = useRef<ReCAPTCHA>(null);
@@ -447,6 +456,12 @@ function RegisterForm() {
         // Auto-login successful - prime auth cache and redirect to app
         if ("user" in data) {
           queryClient.setQueryData(["/api/v1/auth/me"], data.user);
+          notifyLoginSuccess(
+            data.user as any,
+            (data as any).accessTokenExpiresAt ||
+              (data as any).expiresAt ||
+              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          );
         }
         toast({
           title: "Account created!",
