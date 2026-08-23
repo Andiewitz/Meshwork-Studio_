@@ -729,9 +729,7 @@ export default function AuthPage() {
   return (
     <>
       <Helmet>
-        <title>
-          {mode === "login" ? "Sign In" : "Create Account"} — Meshwork Studio
-        </title>
+        <title>{mode === "login" ? "Sign In" : "Create Account"}</title>
       </Helmet>
       <div className="min-h-screen flex bg-[#111113]">
         {/* Left: form panel */}

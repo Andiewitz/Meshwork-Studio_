@@ -1044,7 +1044,7 @@ const Home = () => {
       className="relative font-sans text-white min-h-screen flex flex-col bg-background overflow-x-hidden"
     >
       <Helmet>
-        <title>Meshwork Studio — Cloud Infrastructure Canvas</title>
+        <title>Meshwork Studio | Design your architecture with AI</title>
         <meta
           name="description"
           content="Design, visualize, and auto-sync your cloud architecture with Meshwork Studio. Explore comprehensive technical guides and JSON schemas."
@@ -1059,6 +1059,15 @@ const Home = () => {
         <meta
           property="og:url"
           content="https://meshwork-studio.duckdns.org/"
+        />
+        <meta
+          property="og:image"
+          content="https://meshwork-studio.duckdns.org/assets/web-preview.png"
+        />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+          name="twitter:image"
+          content="https://meshwork-studio.duckdns.org/assets/web-preview.png"
         />
       </Helmet>
 

@@ -100,7 +100,7 @@ export default function TermsOfService() {
       className="relative font-sans text-white min-h-screen flex flex-col bg-background"
     >
       <Helmet>
-        <title>Terms of Service — Meshwork Studio</title>
+        <title>Terms of Service</title>
         <meta
           name="description"
           content="Terms of Service for Meshwork Studio, the collaborative cloud architecture design platform."

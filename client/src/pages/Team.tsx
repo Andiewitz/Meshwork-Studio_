@@ -201,7 +201,7 @@ export default function Team() {
   return (
     <>
       <Helmet>
-        <title>Team — Meshwork Studio</title>
+        <title>Team</title>
       </Helmet>
       <motion.div
         initial="hidden"

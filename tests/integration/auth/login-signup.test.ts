@@ -75,7 +75,9 @@ describe("Authentication Integration Tests", () => {
 
     const cookies = res.headers["set-cookie"];
     expect(cookies).toBeDefined();
-    const cookieStr = Array.isArray(cookies) ? cookies.join("; ") : String(cookies);
+    const cookieStr = Array.isArray(cookies)
+      ? cookies.join("; ")
+      : (cookies ?? "");
     expect(cookieStr).toContain(authConfig.sessionCookieName);
   });
 
@@ -105,7 +107,7 @@ describe("Authentication Integration Tests", () => {
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "login@example.com", password: "Password123!" });
-    
+
     const regCookie = getFirstCookie(regRes);
 
     // Login with existing cookie to test rotation

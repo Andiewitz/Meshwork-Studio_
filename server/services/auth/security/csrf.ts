@@ -16,7 +16,10 @@ function safeEqual(left: string, right: string): boolean {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-function isValidOrigin(req: Request, originOrReferer: string | undefined): boolean {
+function isValidOrigin(
+  req: Request,
+  originOrReferer: string | undefined,
+): boolean {
   if (!originOrReferer) return true; // If browser or non-browser client doesn't send Origin, rely on CSRF tokens
 
   try {
@@ -26,10 +29,17 @@ function isValidOrigin(req: Request, originOrReferer: string | undefined): boole
     // 1. Same-origin match against current request Host or X-Forwarded-Host
     const reqHost = req.get("host");
     const forwardedHost = req.get("x-forwarded-host");
-    if (reqHost && (reqHost === host || reqHost.split(":")[0] === host.split(":")[0])) {
+    if (
+      reqHost &&
+      (reqHost === host || reqHost.split(":")[0] === host.split(":")[0])
+    ) {
       return true;
     }
-    if (forwardedHost && (forwardedHost === host || forwardedHost.split(":")[0] === host.split(":")[0])) {
+    if (
+      forwardedHost &&
+      (forwardedHost === host ||
+        forwardedHost.split(":")[0] === host.split(":")[0])
+    ) {
       return true;
     }
 
@@ -110,7 +120,7 @@ export function createCsrfMiddleware(storage: IAuthStorage) {
     const cookieToken =
       req.cookies?.[authConfig.csrfCookieName] ||
       req.cookies?.["__Host-meshwork_csrf"] ||
-      req.cookies?.["meshwork_csrf"];
+      req.cookies?.meshwork_csrf;
     const headerToken = req.get("X-CSRF-Token") || req.get("x-csrf-token");
 
     if (!cookieToken || !headerToken || !safeEqual(cookieToken, headerToken)) {

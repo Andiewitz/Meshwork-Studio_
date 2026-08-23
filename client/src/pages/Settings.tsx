@@ -351,7 +351,7 @@ export default function Settings() {
   return (
     <>
       <Helmet>
-        <title>Settings — Meshwork Studio</title>
+        <title>Settings</title>
       </Helmet>
 
       <div className="flex h-screen w-full bg-[#0d0d0f] text-white selection:bg-white/20 select-none overflow-hidden">

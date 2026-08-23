@@ -119,11 +119,7 @@ export default function Home() {
   return (
     <>
       <Helmet>
-        <title>
-          {isWorkspacesPage
-            ? "Workspaces — Meshwork Studio"
-            : "Home — Meshwork Studio"}
-        </title>
+        <title>{isWorkspacesPage ? "Workspaces" : "Home"}</title>
       </Helmet>
 
       {/* Blueprint Generation Banner */}

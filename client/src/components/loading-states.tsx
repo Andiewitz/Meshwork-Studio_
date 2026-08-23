@@ -1,16 +1,27 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { AnimatedSpinner } from "@/components/ui/animated-spinner";
 
-interface LoadingScreenProps {
+export interface RedirectLoadingProps {
   message?: string;
   subMessage?: string;
+  className?: string;
 }
 
-// Standard loading — centered logo inside glowing brand AnimatedSpinner
-export function LoadingScreen({ message, subMessage }: LoadingScreenProps) {
+/**
+ * RedirectLoading (formerly default redirect loading screen)
+ * Full-screen centered brand spinner with Meshwork logo and animated status.
+ */
+export function RedirectLoading({
+  message = "Redirecting...",
+  subMessage,
+  className = "",
+}: RedirectLoadingProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background fixed inset-0 z-[100]">
+    <div
+      className={`flex flex-col items-center justify-center min-h-screen bg-background fixed inset-0 z-[100] ${className}`}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -38,12 +49,4 @@ export function LoadingScreen({ message, subMessage }: LoadingScreenProps) {
   );
 }
 
-// Dashboard/workspace loading — unified brand spinner
-export function LineSyncLoader({ message }: { message?: string }) {
-  return <LoadingScreen message={message} />;
-}
-
-// Auth redirecting — unified brand spinner
-export function RedirectingScreen() {
-  return <LoadingScreen message="Redirecting..." />;
-}
+export default RedirectLoading;

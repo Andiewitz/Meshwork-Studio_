@@ -835,7 +835,7 @@ export default function DevDocs() {
   );
 
   const canonicalUrl = `https://meshwork-studio.duckdns.org/docs`;
-  const pageTitle = `${activePost.title} — Meshwork Studio Docs`;
+  const pageTitle = activePost.title || "Docs";
   const pageDescription = activePost.subtitle;
 
   return (
@@ -849,9 +849,17 @@ export default function DevDocs() {
         <meta property="og:type" content="article" />
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:site_name" content="Meshwork Studio" />
-        <meta name="twitter:card" content="summary" />
+        <meta
+          property="og:image"
+          content="https://meshwork-studio.duckdns.org/assets/web-preview.png"
+        />
+        <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
+        <meta
+          name="twitter:image"
+          content="https://meshwork-studio.duckdns.org/assets/web-preview.png"
+        />
         <meta name="robots" content="index, follow" />
       </Helmet>
       {/* Desktop Sidebar */}

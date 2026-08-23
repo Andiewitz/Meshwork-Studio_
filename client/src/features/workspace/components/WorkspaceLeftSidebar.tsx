@@ -12,8 +12,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { LuHistory, LuPlus } from "react-icons/lu";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import StreamingText from "@/components/ui/streaming-text";
+import LoadingState from "@/components/ui/loading-state";
 import {
   runMoshAgent,
   MoshAgentMessage,
@@ -59,6 +59,9 @@ export function WorkspaceLeftSidebar({
   const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash");
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
+    null,
+  );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -168,7 +171,9 @@ export function WorkspaceLeftSidebar({
           setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
         }
 
-        setMessages((prev) => [...prev, agentResult.message]);
+        const newMsg = agentResult.message;
+        setStreamingMessageId(newMsg.id);
+        setMessages((prev) => [...prev, newMsg]);
       } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : "";
         let errorMessage = "An unexpected error occurred.";
@@ -280,83 +285,106 @@ export function WorkspaceLeftSidebar({
           </div>
 
           {messages.length === 0 && (
-            <div className="py-3 flex flex-col items-center text-center space-y-2.5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00E5A0]/20 to-[#3B82F6]/20 border border-[#00E5A0]/30 flex items-center justify-center shadow-[0_0_24px_rgba(0,229,160,0.15)]">
-                <SparklesIcon className="w-5 h-5 text-[#00E5A0]" />
-              </div>
-              <div className="space-y-0.5">
-                <h3 className="text-xs font-semibold text-white">
-                  Meshwork AI Architect
-                </h3>
-                <p className="text-[11px] text-white/40 max-w-[240px]">
-                  Describe any system or ask to design, connect, and optimize
-                  cloud topologies.
-                </p>
+            <div className="py-2 flex flex-col">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-5 h-5 rounded-md bg-white/[0.07] border border-white/[0.08] flex items-center justify-center shrink-0">
+                  <CpuChipIcon className="w-3 h-3 text-white/70" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-white/80">Mosh</p>
+                  <p className="text-[10px] text-white/35">
+                    Describe any system or ask to design cloud topologies.
+                  </p>
+                </div>
               </div>
 
-              <div className="w-full space-y-1 pt-1">
-                <div className="text-[9px] uppercase font-bold tracking-wider text-white/30 text-left px-0.5">
-                  Quick Suggestions
-                </div>
-                {suggestions.map((s, idx) => (
+              {/* Suggestions as border-b list */}
+              <div className="flex flex-col">
+                {suggestions.map((s, sIdx) => (
                   <button
-                    key={idx}
+                    key={sIdx}
+                    type="button"
                     onClick={() => {
                       setInput(s);
                       textareaRef.current?.focus();
                     }}
-                    className="w-full flex items-center justify-between p-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.06] hover:border-[#00E5A0]/30 text-left text-[11px] text-white/70 hover:text-white transition-all group"
+                    className="flex items-center gap-2 border-b border-white/[0.06] py-2 px-0.5 text-left text-[11.5px] text-white/55 hover:bg-white/[0.04] hover:text-white/85 transition-colors duration-100 cursor-pointer rounded-sm"
                   >
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="shrink-0 text-white/25"
+                    >
+                      <path d="M9 10l-5 5 5 5" />
+                      <path d="M20 4v7a4 4 0 0 1-4 4H4" />
+                    </svg>
                     <span className="line-clamp-2">{s}</span>
-                    <ArrowUpRightIcon className="w-2.5 h-2.5 text-white/20 group-hover:text-[#00E5A0] shrink-0 ml-2 transition-colors" />
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {messages.map((msg) => (
+          {messages.map((msg, idx) => (
             <motion.div
               key={msg.id}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {msg.role === "assistant" && (
-                <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                  <CpuChipIcon className="w-3 h-3 text-white" />
+              {msg.role === "user" ? (
+                <div className="flex justify-end">
+                  <div
+                    className="max-w-[85%] rounded-xl rounded-tr-sm px-3 py-2 text-[11px] text-white"
+                    style={{
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                    }}
+                  >
+                    <span className="whitespace-pre-wrap">{msg.content}</span>
+                  </div>
                 </div>
-              )}
-              <div
-                className={`max-w-[85%] rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-gradient-to-br from-[#FF6B35]/20 to-[#E8391A]/10 border border-[#FF6B35]/30 text-white rounded-tr-sm"
-                    : "bg-white/[0.04] border border-white/[0.07] text-white/90 rounded-tl-sm"
-                }`}
-              >
-                {msg.role === "assistant" ? (
-                  <>
-                    <div className="prose prose-invert prose-xs max-w-none prose-p:my-0.5 prose-headings:text-white prose-code:text-[#00E5A0] prose-code:bg-white/[0.06] prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {msg.content}
-                      </ReactMarkdown>
-                    </div>
+              ) : (
+                /* Assistant — no bubble */
+                <div className="flex gap-2">
+                  <div className="w-5 h-5 rounded-md bg-white/[0.07] border border-white/[0.08] flex items-center justify-center shrink-0 mt-0.5 text-white/70">
+                    <CpuChipIcon className="w-3 h-3" />
+                  </div>
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <StreamingText
+                      content={msg.content}
+                      isStreaming={msg.id === streamingMessageId}
+                      onComplete={() => setStreamingMessageId(null)}
+                      onRetry={() => {
+                        const prevUserMsg = messages
+                          .slice(0, idx)
+                          .reverse()
+                          .find((m) => m.role === "user");
+                        if (prevUserMsg)
+                          void executePrompt(prevUserMsg.content);
+                      }}
+                    />
 
                     {msg.toolCalls && msg.toolCalls.length > 0 && (
-                      <div className="space-y-1.5 mt-2 pt-2 border-t border-white/[0.08]">
+                      <div className="space-y-1.5 mt-2 pt-2 border-t border-white/[0.06]">
                         {msg.toolCalls.map((tc) => (
                           <div
                             key={tc.id}
-                            className="flex items-start gap-2 p-2 rounded-lg bg-[#00E5A0]/10 border border-[#00E5A0]/20 text-[10px] text-[#00E5A0] font-mono"
+                            className="flex items-start gap-2 p-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[10px] text-white/70 font-mono"
                           >
-                            <SparklesIcon className="w-3.5 h-3.5 mt-0.5 text-[#00E5A0] shrink-0" />
+                            <SparklesIcon className="w-3 h-3 mt-0.5 text-white/50 shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-[#00E5A0]">
+                              <div className="font-semibold text-white/80">
                                 {tc.name === "edit_canvas"
-                                  ? "🛠️ Canvas Action: edit_canvas"
+                                  ? "🛠️ Canvas Action"
                                   : `🛠️ ${tc.name}`}
                               </div>
-                              <div className="text-white/80 text-[10px] mt-0.5 whitespace-normal">
+                              <div className="text-white/60 text-[9px] mt-0.5 whitespace-normal">
                                 {tc.result?.summary ||
                                   tc.args.explanation ||
                                   "Modified architecture components."}
@@ -368,58 +396,31 @@ export function WorkspaceLeftSidebar({
                     )}
 
                     {msg.appliedToCanvas && !msg.toolCalls && (
-                      <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-white/[0.06] text-[9px] text-emerald-400 font-medium">
-                        <CheckIcon className="w-2.5 h-2.5" />
+                      <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40 font-medium">
+                        <div className="w-1 h-1 rounded-full bg-white/40" />
                         Applied to canvas
                       </div>
                     )}
-                  </>
-                ) : (
-                  <span className="whitespace-pre-wrap">{msg.content}</span>
-                )}
-              </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           ))}
 
           {isLoading && (
-            <div className="flex items-center gap-2 text-[11px] text-white/50 py-1.5">
-              <ArrowPathIcon className="w-3.5 h-3.5 text-[#00E5A0] animate-spin" />
-              <span className="font-mono text-[10px] text-[#00E5A0]">
-                {agentStatus}
-              </span>
+            <div className="flex items-center gap-2 py-1.5 pl-7">
+              <LoadingState label="Churning" variant="Drive" />
             </div>
           )}
 
           <div ref={messagesEndRef} />
         </div>
 
-        {/* ── Reuse work card ── */}
-        <div className="px-2.5 pb-1.5">
-          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] text-white/70">
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="text-[#00E5A0]">@</span> Reuse work from other
-                projects
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setInput((prev) => prev + " @reference");
-                textareaRef.current?.focus();
-              }}
-              className="px-2.5 py-1 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-white/80 text-[10px] font-medium border border-white/[0.08] transition-all"
-            >
-              Add reference
-            </button>
-          </div>
-        </div>
-
         {/* ── Composer Card ── */}
-        <div className="p-2.5 pt-0">
+        <div className="p-2.5 pt-1">
           <form
             onSubmit={handleSubmit}
-            className="rounded-2xl bg-white/[0.04] border border-white/[0.08] focus-within:border-[#00E5A0]/40 transition-all p-2.5 space-y-2"
+            className="rounded-2xl bg-white/[0.04] border border-white/[0.08] focus-within:border-white/20 transition-all p-2.5 space-y-2"
           >
             <textarea
               ref={textareaRef}
@@ -466,10 +467,7 @@ export function WorkspaceLeftSidebar({
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="h-7 px-3 rounded-full flex items-center gap-1.5 text-black font-semibold text-[11px] disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 active:scale-95 transition-all shadow-sm"
-                  style={{
-                    background: "linear-gradient(135deg, #00E5A0, #059669)",
-                  }}
+                  className="h-7 px-3.5 rounded-full flex items-center gap-1.5 bg-white text-black font-semibold text-[11px] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 active:scale-95 transition-all shadow-sm cursor-pointer"
                 >
                   <PaperAirplaneIcon className="w-3 h-3" />
                   <span>Build</span>

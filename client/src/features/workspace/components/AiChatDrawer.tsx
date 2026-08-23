@@ -8,8 +8,8 @@ import {
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import StreamingText from "@/components/ui/streaming-text";
+import LoadingState from "@/components/ui/loading-state";
 import {
   runMoshAgent,
   MoshAgentMessage,
@@ -35,6 +35,9 @@ export function AiChatDrawer({
   const [isLoading, setIsLoading] = useState(false);
   const [isDesigning, setIsDesigning] = useState(false);
   const [agentStatus, setAgentStatus] = useState("Consulting Mosh...");
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
+    null,
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { setNodes, setEdges, fitView, getNodes, getEdges, getViewport } =
@@ -151,7 +154,9 @@ export function AiChatDrawer({
           setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
         }
 
-        setMessages((prev) => [...prev, agentResult.message]);
+        const newMsg = agentResult.message;
+        setStreamingMessageId(newMsg.id);
+        setMessages((prev) => [...prev, newMsg]);
       } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : "";
         let errorMessage = "An unexpected error occurred.";
@@ -326,45 +331,62 @@ export function AiChatDrawer({
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }}
-                  className="flex flex-col items-center justify-center text-center mt-8 mb-6 space-y-6"
+                  className="flex flex-col mt-6 mb-4"
                 >
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white/[0.02] border border-white/[0.05] shadow-lg">
-                    <CpuChipIcon className="w-8 h-8 text-[#00E5A0]" />
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-white/[0.06] border border-white/[0.08]">
+                      <CpuChipIcon className="w-3.5 h-3.5 text-white/70" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-medium text-white/90">
+                        Mosh
+                      </p>
+                      <p className="text-[11px] text-white/40">
+                        Describe your cloud infrastructure or ask me to modify
+                        the canvas.
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="text-white font-medium text-sm">
-                      I'm Meshwork AI. Let's design.
-                    </h3>
-                    <p className="text-white/40 text-xs max-w-[240px]">
-                      Describe your cloud infrastructure or ask me to modify the
-                      canvas.
-                    </p>
-                  </div>
-                  <div className="flex flex-col w-full gap-2 px-2 mt-4">
+
+                  {/* Suggestions as border-b list */}
+                  <div className="flex flex-col">
                     {isLoadingSuggestions
                       ? Array.from({ length: 4 }).map((_, i) => (
                           <div
                             key={i}
-                            className="h-[38px] w-full rounded-xl bg-white/[0.02] border border-white/[0.04] animate-pulse flex items-center px-3"
+                            className="flex items-center gap-2 border-b border-white/[0.06] py-2.5 px-1"
                           >
-                            <CpuChipIcon className="w-3.5 h-3.5 text-[#10B981]/30 mr-2 shrink-0" />
-                            <div className="h-3 bg-white/[0.06] rounded w-2/3" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-white/[0.08] shrink-0" />
+                            <div className="h-3 bg-white/[0.06] rounded w-2/3 animate-pulse" />
                           </div>
                         ))
                       : suggestions.map((s, i) => (
                           <motion.button
                             key={s}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.2 + i * 0.05 }}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.15 + i * 0.06 }}
                             onClick={() => {
                               setInput(s);
                               textareaRef.current?.focus();
                             }}
-                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] text-white/60 border border-white/[0.06] hover:border-[rgba(0,229,160,0.3)] hover:text-white/90 hover:bg-[rgba(0,229,160,0.08)] transition-all cursor-pointer text-left w-full group"
+                            className="flex items-center gap-2 border-b border-white/[0.06] py-2.5 px-1 text-left text-[12.5px] text-white/60 hover:bg-white/[0.04] hover:text-white/90 transition-colors duration-100 cursor-pointer rounded-sm"
                           >
-                            <CpuChipIcon className="w-3.5 h-3.5 text-[#00E5A0] group-hover:text-[#00E5A0] transition-colors shrink-0" />
-                            <span className="truncate">{s}</span>
+                            <svg
+                              width="11"
+                              height="11"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="shrink-0 text-white/30"
+                            >
+                              <path d="M9 10l-5 5 5 5" />
+                              <path d="M20 4v7a4 4 0 0 1-4 4H4" />
+                            </svg>
+                            <span>{s}</span>
                           </motion.button>
                         ))}
                   </div>
@@ -372,62 +394,70 @@ export function AiChatDrawer({
               )}
 
               {/* Messages */}
-              {messages.map((msg) => (
+              {messages.map((msg, idx) => (
                 <motion.div
                   key={msg.id}
-                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ type: "spring", stiffness: 400, damping: 35 }}
-                  className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  {msg.role === "assistant" && (
-                    <div
-                      className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center mt-0.5 border border-white/[0.06]"
-                      style={{
-                        background: "linear-gradient(145deg, #1E1E1E, #141414)",
-                      }}
-                    >
-                      <CpuChipIcon className="w-3.5 h-3.5 text-[#00E5A0]" />
+                  {msg.role === "user" ? (
+                    /* User bubble — stays as a pill */
+                    <div className="flex justify-end">
+                      <div
+                        className="max-w-[82%] rounded-2xl rounded-tr-sm px-4 py-3 text-[13px] text-white/90"
+                        style={{
+                          background: "rgba(255,255,255,0.08)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                        }}
+                      >
+                        <span className="whitespace-pre-wrap">
+                          {msg.content}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                  <div
-                    className={`max-w-[82%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${msg.role === "user" ? "rounded-tr-sm text-white/90" : "rounded-tl-sm text-white/80"}`}
-                    style={
-                      msg.role === "user"
-                        ? {
-                            background:
-                              "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.08))",
-                            border: "1px solid rgba(16,185,129,0.2)",
-                          }
-                        : {
-                            background: "rgba(255,255,255,0.03)",
-                            border: "1px solid rgba(255,255,255,0.055)",
-                          }
-                    }
-                  >
-                    {msg.role === "assistant" ? (
-                      <>
-                        <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-p:leading-relaxed prose-headings:text-white/90 prose-headings:font-semibold prose-headings:my-2 prose-ul:my-1.5 prose-li:my-0.5 prose-li:text-white/70 prose-strong:text-white/90 prose-code:text-[#00E5A0] prose-code:bg-white/[0.06] prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[12px] prose-code:font-mono">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {msg.content}
-                          </ReactMarkdown>
-                        </div>
+                  ) : (
+                    /* Assistant — NO bubble, just content inline */
+                    <div className="flex gap-3">
+                      <div
+                        className="w-6 h-6 rounded-lg shrink-0 flex items-center justify-center mt-0.5 border border-white/[0.08] text-white/70"
+                        style={{
+                          background:
+                            "linear-gradient(145deg, #1E1E1E, #141414)",
+                        }}
+                      >
+                        <CpuChipIcon className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <StreamingText
+                          content={msg.content}
+                          isStreaming={msg.id === streamingMessageId}
+                          onComplete={() => setStreamingMessageId(null)}
+                          onRetry={() => {
+                            const prevUserMsg = messages
+                              .slice(0, idx)
+                              .reverse()
+                              .find((m) => m.role === "user");
+                            if (prevUserMsg)
+                              void executePrompt(prevUserMsg.content);
+                          }}
+                        />
 
                         {msg.toolCalls && msg.toolCalls.length > 0 && (
-                          <div className="space-y-1.5 mt-2.5 pt-2.5 border-t border-white/[0.08]">
+                          <div className="space-y-1.5 mt-2.5 pt-2.5 border-t border-white/[0.06]">
                             {msg.toolCalls.map((tc) => (
                               <div
                                 key={tc.id}
-                                className="flex items-start gap-2 p-2 rounded-lg bg-[#00E5A0]/10 border border-[#00E5A0]/20 text-[11px] text-[#00E5A0] font-mono"
+                                className="flex items-start gap-2 p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] text-white/70 font-mono"
                               >
-                                <SparklesIcon className="w-4 h-4 mt-0.5 text-[#00E5A0] shrink-0" />
+                                <SparklesIcon className="w-3.5 h-3.5 mt-0.5 text-white/50 shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-semibold text-[#00E5A0]">
+                                  <div className="font-semibold text-white/80">
                                     {tc.name === "edit_canvas"
-                                      ? "🛠️ Canvas Action: edit_canvas"
+                                      ? "🛠️ Canvas Action"
                                       : `🛠️ ${tc.name}`}
                                   </div>
-                                  <div className="text-white/80 text-[11px] mt-0.5 whitespace-normal">
+                                  <div className="text-white/60 text-[10px] mt-0.5 whitespace-normal">
                                     {tc.result?.summary ||
                                       tc.args.explanation ||
                                       "Modified architecture components."}
@@ -439,51 +469,34 @@ export function AiChatDrawer({
                         )}
 
                         {msg.appliedToCanvas && !msg.toolCalls && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-white/[0.06]"
-                          >
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/80" />
-                            <span className="text-[11px] text-emerald-400/60 font-medium">
-                              Applied to canvas
-                            </span>
-                          </motion.div>
+                          <div className="flex items-center gap-1.5 mt-2 text-[10px] text-white/40 font-medium">
+                            <div className="w-1 h-1 rounded-full bg-white/40" />
+                            Applied to canvas
+                          </div>
                         )}
-                      </>
-                    ) : (
-                      <span className="whitespace-pre-wrap">{msg.content}</span>
-                    )}
-                  </div>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               ))}
 
-              {/* Loading */}
+              {/* Loading — shown while agent is running, before message arrives */}
               <AnimatePresence>
                 {isLoading && (
                   <motion.div
-                    initial={{ opacity: 0, y: 12 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 4 }}
+                    exit={{ opacity: 0 }}
                     className="flex gap-3"
                   >
                     <div
-                      className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center mt-0.5 border border-white/[0.06]"
+                      className="w-6 h-6 rounded-lg shrink-0 flex items-center justify-center mt-0.5 border border-white/[0.08]"
                       style={{
                         background: "linear-gradient(145deg, #1E1E1E, #141414)",
                       }}
-                    >
-                      <ArrowPathIcon className="w-3.5 h-3.5 text-[#10B981] animate-spin" />
-                    </div>
-                    <div
-                      className="px-4 py-3 rounded-2xl rounded-tl-sm flex w-full max-w-[82%]"
-                      style={{
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.055)",
-                      }}
-                    >
-                      <MoshLoadingIndicator isDesigning={isDesigning} />
+                    />
+                    <div className="pt-1">
+                      <LoadingState label="Churning" variant="Drive" />
                     </div>
                   </motion.div>
                 )}
@@ -514,24 +527,9 @@ export function AiChatDrawer({
                 <motion.button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="w-10 h-10 shrink-0 flex items-center justify-center mb-0.5 rounded-xl text-white transition-all cursor-pointer disabled:cursor-default"
-                  style={{
-                    background:
-                      input.trim() && !isLoading
-                        ? "linear-gradient(135deg, #00E5A0, #059669)"
-                        : "rgba(255,255,255,0.04)",
-                    boxShadow:
-                      input.trim() && !isLoading
-                        ? "0 4px 16px rgba(0,229,160,0.3)"
-                        : "none",
-                  }}
-                  whileHover={input.trim() && !isLoading ? { scale: 1.05 } : {}}
-                  whileTap={input.trim() && !isLoading ? { scale: 0.95 } : {}}
+                  className="w-10 h-10 shrink-0 flex items-center justify-center mb-0.5 rounded-xl bg-white text-black transition-all cursor-pointer disabled:opacity-20 disabled:cursor-default hover:bg-white/90 active:scale-95"
                 >
-                  <PaperAirplaneIcon
-                    className="w-4 h-4"
-                    style={{ opacity: input.trim() && !isLoading ? 1 : 0.25 }}
-                  />
+                  <PaperAirplaneIcon className="w-4 h-4" />
                 </motion.button>
               </form>
               <div className="flex items-center justify-center gap-1.5 mt-2.5">
@@ -572,7 +570,7 @@ function MoshLoadingIndicator({ isDesigning }: { isDesigning: boolean }) {
         {[0, 0.15, 0.3].map((delay, i) => (
           <motion.div
             key={i}
-            className="w-1.5 h-1.5 rounded-full bg-[#10B981]/60"
+            className="w-1.5 h-1.5 rounded-full bg-white/60"
             animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
             transition={{
               repeat: Infinity,
@@ -594,7 +592,7 @@ function MoshLoadingIndicator({ isDesigning }: { isDesigning: boolean }) {
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
-          className="text-[11px] text-[#10B981] font-mono tracking-tight"
+          className="text-[11px] text-white/80 font-mono tracking-tight"
         >
           {DESIGN_PHRASES[phraseIndex]}
         </motion.span>
@@ -604,7 +602,7 @@ function MoshLoadingIndicator({ isDesigning }: { isDesigning: boolean }) {
       </div>
       <div className="h-1.5 w-full bg-white/[0.05] rounded-full overflow-hidden relative">
         <motion.div
-          className="absolute top-0 bottom-0 w-1/3 bg-gradient-to-r from-transparent via-[#10B981] to-transparent"
+          className="absolute top-0 bottom-0 w-1/3 bg-gradient-to-r from-transparent via-white/50 to-transparent"
           animate={{ left: ["-30%", "100%"] }}
           transition={{
             duration: 1.5,

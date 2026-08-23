@@ -23,6 +23,7 @@ backups/
 # Build artifacts
 vite.config.ts.*
 *.tar.gz
+*.zip
 
 # Logs
 logs/

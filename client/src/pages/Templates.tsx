@@ -10,7 +10,7 @@ export default function Templates() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
       <Helmet>
-        <title>Templates — Meshwork Studio</title>
+        <title>Templates</title>
       </Helmet>
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}

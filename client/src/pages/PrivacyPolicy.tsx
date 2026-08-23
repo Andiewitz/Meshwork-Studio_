@@ -105,7 +105,7 @@ export default function PrivacyPolicy() {
       className="relative font-sans text-white min-h-screen flex flex-col bg-background"
     >
       <Helmet>
-        <title>Privacy Policy — Meshwork Studio</title>
+        <title>Privacy Policy</title>
         <meta
           name="description"
           content="Privacy Policy for Meshwork Studio. Learn how we collect, use, and protect your data."

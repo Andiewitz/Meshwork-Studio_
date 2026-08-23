@@ -13,7 +13,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { useCsrfTokenInitializer } from "@/lib/csrf-init";
-import { RedirectingScreen } from "@/components/ui/loading-screen";
+import { RedirectLoading } from "@/components/loading-states";
 import { MobileGate } from "@/components/ui/mobile-gate";
 import { AnimatePresence, motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -91,12 +91,12 @@ function ProtectedRoute({
 
   // Show full-screen loader only during initial auth verification or logout transition
   if ((isLoading && user === undefined) || isRedirecting) {
-    return <RedirectingScreen />;
+    return <RedirectLoading />;
   }
 
   if (!user && !isLoading) {
     window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(location)}`;
-    return <RedirectingScreen />;
+    return <RedirectLoading />;
   }
 
   if (isMobile) {
@@ -204,7 +204,7 @@ function App() {
                 <TooltipProvider>
                   <Toaster />
                   <ErrorBoundary>
-                    <Suspense fallback={<RedirectingScreen />}>
+                    <Suspense fallback={<RedirectLoading />}>
                       <Router />
                     </Suspense>
                   </ErrorBoundary>
