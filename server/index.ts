@@ -268,6 +268,53 @@ app.get("/admin/:secret", (req, res) => {
       await db.execute(
         sql`UPDATE workspaces SET updated_at = created_at WHERE updated_at > '2026-04-19 07:00:00' AND updated_at < '2026-04-19 08:30:00' AND created_at < '2026-04-19 07:00:00'`,
       );
+      await db.execute(
+        sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_normalized varchar(320)`,
+      );
+      await db.execute(
+        sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active boolean DEFAULT true`,
+      );
+      await db.execute(
+        sql`UPDATE users SET email_normalized = LOWER(TRIM(email)) WHERE email_normalized IS NULL`,
+      );
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS auth_identities (
+          id varchar(128) PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id varchar(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          provider varchar(32) NOT NULL,
+          provider_account_id varchar(255) NOT NULL,
+          created_at timestamp DEFAULT NOW()
+        )
+      `);
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS auth_sessions (
+          id_hash varchar(128) PRIMARY KEY,
+          user_id varchar(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          created_at timestamp DEFAULT NOW(),
+          last_seen_at timestamp DEFAULT NOW(),
+          expires_at timestamp NOT NULL,
+          revoked_at timestamp,
+          user_agent text,
+          ip_hash varchar(128)
+        )
+      `);
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS auth_csrf_secrets (
+          session_id_hash varchar(128) PRIMARY KEY,
+          secret_hash varchar(128) NOT NULL,
+          expires_at timestamp NOT NULL
+        )
+      `);
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS login_attempts (
+          id varchar(128) PRIMARY KEY DEFAULT gen_random_uuid(),
+          email varchar(320) NOT NULL,
+          failed integer NOT NULL DEFAULT 0,
+          last_attempt timestamp NOT NULL DEFAULT NOW(),
+          locked_until timestamp,
+          created_at timestamp NOT NULL DEFAULT NOW()
+        )
+      `);
       log.info("Database migrations applied successfully");
     } catch (dbErr) {
       log.warn(
