@@ -2,7 +2,7 @@ import type { Express, RequestHandler, Request } from "express";
 import { workspaceStorage } from "../db/storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { csrfProtection } from "@server/middleware/csrf";
+import { AuthService } from "@services/auth";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
 import { canEditWorkspace, canDeleteWorkspace } from "@server/lib/permissions";
@@ -33,7 +33,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
   app.post(
     "/api/v1/collections",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -74,7 +74,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
   app.put(
     "/api/v1/collections/:id",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const id = Number(req.params.id);
@@ -102,7 +102,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
   app.delete(
     "/api/v1/collections/:id",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const id = Number(req.params.id);
@@ -156,7 +156,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
   app.post(
     api.workspaces.create.path,
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -182,7 +182,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
   app.put(
     api.workspaces.update.path,
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -216,7 +216,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
   app.delete(
     api.workspaces.delete.path,
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const id = Number(req.params.id);
@@ -246,7 +246,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
   app.post(
     api.workspaces.duplicate.path,
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const id = Number(req.params.id);

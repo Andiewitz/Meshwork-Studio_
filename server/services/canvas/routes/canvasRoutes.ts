@@ -1,7 +1,7 @@
 import type { Express, RequestHandler } from "express";
 import { canvasStorage } from "../db/storage";
 import { api } from "@shared/routes";
-import { csrfProtection } from "@server/middleware/csrf";
+import { AuthService } from "@services/auth";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
 import type { IWorkspaceStorage } from "@services/workspace/db/storage";
@@ -41,7 +41,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
 
   app.post(
     api.workspaces.syncCanvas.path,
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const id = Number(req.params.id);
@@ -66,7 +66,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
   // Duplicate canvas data when duplicating workspace
   app.post(
     "/api/v1/workspaces/:id/duplicate-canvas",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const id = Number(req.params.id);

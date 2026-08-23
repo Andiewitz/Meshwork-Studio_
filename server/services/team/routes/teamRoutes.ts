@@ -1,7 +1,7 @@
 import type { Express, RequestHandler, Request } from "express";
 import { teamStorage } from "../db/storage";
 import { joinTeamSchema, updateMemberRoleSchema } from "../db/schema";
-import { csrfProtection } from "@server/middleware/csrf";
+import { AuthService } from "@services/auth";
 import { z } from "zod";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
@@ -25,7 +25,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Create a team ────────────────────────────────────────────────
   app.post(
     "/api/v1/teams",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -77,7 +77,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Join team via invite code ────────────────────────────────────
   app.post(
     "/api/v1/teams/join",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -101,7 +101,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Leave / remove member ────────────────────────────────────────
   app.delete(
     "/api/v1/teams/:id/members/:userId",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const teamId = Array.isArray(req.params.id)
@@ -133,7 +133,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Share workspace with team ────────────────────────────────────
   app.post(
     "/api/v1/teams/:id/workspaces",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -186,7 +186,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Unshare workspace ────────────────────────────────────────────
   app.delete(
     "/api/v1/teams/:id/workspaces/:workspaceId",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const teamId = Array.isArray(req.params.id)
@@ -214,7 +214,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Regenerate invite code (owner only) ──────────────────────────
   app.post(
     "/api/v1/teams/:id/regenerate-code",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const teamId = Array.isArray(req.params.id)
@@ -236,7 +236,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Delete team (owner only) ─────────────────────────────────────
   app.delete(
     "/api/v1/teams/:id",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const teamId = Array.isArray(req.params.id)
@@ -258,7 +258,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Update member role (owner/admin only) ────────────────────────
   app.patch(
     "/api/v1/teams/:id/members/:userId/role",
-    csrfProtection,
+    AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
       const teamId = Array.isArray(req.params.id)

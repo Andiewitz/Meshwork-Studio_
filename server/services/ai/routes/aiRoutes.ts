@@ -12,7 +12,8 @@ import {
   aiChatRequestsTotal,
   aiChatDurationSeconds,
 } from "@server/lib/metrics";
-import { csrfProtection } from "@server/middleware/csrf";
+import { AuthService } from "@services/auth";
+
 import { aiChatLimiter, aiFreeTierLimiter } from "../rate-limit/rateLimit";
 import {
   resolveProviderForRequest,
@@ -61,11 +62,9 @@ export function createAIRoutes(context: AppContext) {
   const isAuthenticated =
     context.registry.get<RequestHandler>("isAuthenticated");
 
-  const csrfEnabled =
-    process.env.ENABLE_CSRF === "true" || process.env.NODE_ENV === "production";
-  const conditionalCsrf = csrfEnabled
-    ? csrfProtection
-    : (_req: Request, _res: Response, next: () => void) => next();
+  // Use the new session-bound CSRF guard from the auth rewrite
+  const conditionalCsrf = AuthService.csrf.protect;
+
 
   // List keys
   router.get("/keys", isAuthenticated, async (req: Request, res: Response) => {
