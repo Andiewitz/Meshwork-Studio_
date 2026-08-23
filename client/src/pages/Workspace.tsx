@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
+import { DefaultLoading } from "@/components/loading-states";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -54,7 +55,6 @@ import { useParams, Link, useLocation } from "wouter";
 import {
   ArrowDownTrayIcon as Download,
   DocumentCheckIcon as Save,
-  ArrowPathIcon as Loader2,
   PlayIcon as Play,
   ChevronLeftIcon as ChevronLeft,
   Squares2X2Icon as LayersIcon,
@@ -1481,11 +1481,7 @@ function WorkspaceView() {
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId) || null;
 
   if (isLoading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#000000]">
-        <Loader2 className="w-8 h-8 animate-spin text-white/10" />
-      </div>
-    );
+    return <DefaultLoading />;
   }
 
   if (isError || (!isLoading && !workspace)) {

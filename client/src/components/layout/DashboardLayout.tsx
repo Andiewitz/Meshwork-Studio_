@@ -1,4 +1,4 @@
-import { ReactNode, useState, useRef, useEffect, Suspense } from "react";
+import { ReactNode, useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -22,7 +22,6 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
-import { AnimatedSpinner } from "@/components/ui/animated-spinner";
 import Lenis from "lenis";
 import "lenis/dist/lenis.css";
 import {
@@ -345,20 +344,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* ── Main Canvas View Container — Curved rounded-[24px] box ── */}
       <main className="flex-1 rounded-[24px] overflow-hidden border border-white/[0.08] bg-[#0c0d14] relative min-h-[calc(100vh-20px)] shadow-2xl flex flex-col">
-        <Suspense
-          fallback={
-            <div className="flex flex-col items-center justify-center h-screen gap-6">
-              <div className="relative flex items-center justify-center">
-                <AnimatedSpinner size="4.5rem" />
-                <div className="absolute w-6 h-6 flex items-center justify-center pointer-events-none">
-                  <MeshworkLogo />
-                </div>
-              </div>
-            </div>
-          }
-        >
-          <PageErrorBoundary>{children}</PageErrorBoundary>
-        </Suspense>
+        <PageErrorBoundary>{children}</PageErrorBoundary>
       </main>
 
       {!onboardingComplete && <OnboardingFlow />}
