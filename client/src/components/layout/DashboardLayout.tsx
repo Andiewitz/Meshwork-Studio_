@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/onboarding-modal";
 import { MobileGate } from "@/components/ui/mobile-gate";
 import { PageErrorBoundary } from "@/components/ui/page-error-boundary";
+import { ActionSearchBar } from "@/components/ui/action-searchbar";
 import { preloadRoute } from "@/App";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
@@ -44,7 +45,25 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   const [isMobile, setIsMobile] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleOpen = () => setSearchOpen(true);
+    window.addEventListener("meshwork:open-search", handleOpen);
+    return () => window.removeEventListener("meshwork:open-search", handleOpen);
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -154,23 +173,18 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               </button>
             </Link>
 
-            <Link href="/workspaces">
-              <button
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-figma-pointer ${
-                  isProjects
-                    ? "bg-white/[0.08] text-white"
-                    : "text-white/50 hover:bg-white/[0.04] hover:text-white/80"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Search className="w-4 h-4" />
-                  <span>Search</span>
-                </div>
-                <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-white/40 border border-white/10">
-                  ⌘K
-                </kbd>
-              </button>
-            </Link>
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-figma-pointer text-white/50 hover:bg-white/[0.04] hover:text-white/80"
+            >
+              <div className="flex items-center gap-2.5">
+                <Search className="w-4 h-4" />
+                <span>Search</span>
+              </div>
+              <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-white/40 border border-white/10">
+                ⌘K
+              </kbd>
+            </button>
 
             <Link href="/dev">
               <button
@@ -348,6 +362,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       </main>
 
       {!onboardingComplete && <OnboardingFlow />}
+      <ActionSearchBar
+        isModal
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+      />
     </div>
   );
 }

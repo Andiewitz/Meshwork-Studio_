@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
 import { DefaultLoading } from "@/components/loading-states";
+import { ActionSearchBar } from "@/components/ui/action-searchbar";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -249,7 +250,25 @@ function WorkspaceView() {
   const [activeTab, setActiveTab] = useState<"layers" | "properties">("layers");
   const [isSimulating, setIsSimulating] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [snapToGrid, setSnapToGrid] = useState(true);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleOpen = () => setSearchOpen(true);
+    window.addEventListener("meshwork:open-search", handleOpen);
+    return () => window.removeEventListener("meshwork:open-search", handleOpen);
+  }, []);
 
   // Workspace Settings States
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -2239,6 +2258,12 @@ function WorkspaceView() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ActionSearchBar
+        isModal
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+      />
     </div>
   );
 }
