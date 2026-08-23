@@ -1,7 +1,8 @@
 import type { Node, Edge } from "@xyflow/react";
 
 /** Maps common AI hallucinations to valid Meshwork types */
-const TYPE_ALIASES: Record<string, string> = {
+/** Maps common AI hallucinations to valid Meshwork types */
+export const TYPE_ALIASES: Record<string, string> = {
   // database variants
   postgres: "database",
   postgresql: "database",
@@ -52,7 +53,7 @@ const TYPE_ALIASES: Record<string, string> = {
 };
 
 /** Exact sizes from dimensions.ts */
-const NODE_SIZES: Record<string, { w: number; h: number }> = {
+export const NODE_SIZES: Record<string, { w: number; h: number }> = {
   server: { w: 168, h: 96 },
   database: { w: 144, h: 120 },
   storage: { w: 144, h: 120 },
@@ -105,7 +106,7 @@ const NODE_SIZES: Record<string, { w: number; h: number }> = {
   api: { w: 168, h: 72 },
 };
 
-const VALID_TYPES = new Set(Object.keys(NODE_SIZES));
+export const VALID_TYPES = new Set(Object.keys(NODE_SIZES));
 
 /** Shape of a raw node as returned by the AI (loosely typed) */
 interface RawNode {

@@ -2,6 +2,9 @@ import type { Node, Edge } from "@xyflow/react";
 import {
   validateAndRepairCanvas,
   getSmartHandleIds,
+  NODE_SIZES,
+  TYPE_ALIASES,
+  VALID_TYPES,
 } from "@/lib/ai-canvas-utils";
 
 export interface EditCanvasNodeInput {
@@ -43,30 +46,112 @@ export interface CanvasExecutionResult {
   applied: boolean;
 }
 
-const DEFAULT_NODE_SIZES: Record<string, { w: number; h: number }> = {
-  server: { w: 168, h: 96 },
-  database: { w: 144, h: 120 },
-  storage: { w: 144, h: 120 },
-  microservice: { w: 168, h: 72 },
-  cache: { w: 144, h: 120 },
-  worker: { w: 168, h: 72 },
-  logic: { w: 120, h: 72 },
-  user: { w: 96, h: 96 },
-  app: { w: 168, h: 72 },
-  search: { w: 144, h: 120 },
-  gateway: { w: 192, h: 72 },
-  loadBalancer: { w: 192, h: 72 },
-  cdn: { w: 192, h: 72 },
-  bus: { w: 192, h: 72 },
-  queue: { w: 192, h: 72 },
-  route53: { w: 192, h: 72 },
-  vpc: { w: 408, h: 312 },
-  region: { w: 600, h: 408 },
-  "k8s-namespace": { w: 408, h: 312 },
-  "k8s-pod": { w: 144, h: 96 },
-  "k8s-deployment": { w: 192, h: 96 },
-  "k8s-service": { w: 168, h: 72 },
-};
+/**
+ * Categorizes a node type into a horizontal pipeline tier (0: Entry -> 1: Routing -> 2: Compute -> 3: Data/Queues)
+ */
+function getNodeTier(type: string): number {
+  const normalized = TYPE_ALIASES[type.toLowerCase()] || type.toLowerCase();
+  switch (normalized) {
+    case "user":
+    case "app":
+    case "route53":
+    case "cdn":
+    case "waf":
+      return 0; // Entry tier
+
+    case "gateway":
+    case "loadbalancer":
+    case "ingress":
+    case "k8s-ingress":
+      return 1; // Gateway & Traffic tier
+
+    case "microservice":
+    case "server":
+    case "worker":
+    case "logic":
+    case "k8s-pod":
+    case "k8s-deployment":
+    case "k8s-service":
+    case "auth0":
+    case "vault":
+    case "stripe":
+    case "twilio":
+      return 2; // Compute & Application tier
+
+    case "database":
+    case "cache":
+    case "storage":
+    case "search":
+    case "queue":
+    case "bus":
+    case "influxdb":
+    case "snowflake":
+    case "clickhouse":
+    case "nats":
+    case "socketio":
+    case "prometheus":
+    case "grafana":
+    case "datadog":
+      return 3; // Persistence & Async tier
+
+    default:
+      return 2;
+  }
+}
+
+/**
+ * Calculates tiered positions for a collection of nodes to eliminate overlapping boxes
+ */
+function computeTieredLayout(
+  nodes: EditCanvasNodeInput[],
+  origin: { x: number; y: number },
+): Map<number, { x: number; y: number }> {
+  const tierBuckets = new Map<number, number[]>([
+    [0, []],
+    [1, []],
+    [2, []],
+    [3, []],
+  ]);
+
+  nodes.forEach((n, idx) => {
+    const tier = getNodeTier(n.type);
+    tierBuckets.get(tier)!.push(idx);
+  });
+
+  const positions = new Map<number, { x: number; y: number }>();
+  const TIER_X_OFFSET = [0, 280, 580, 880]; // generous horizontal lane separation
+  const VERTICAL_GAP = 36;
+
+  tierBuckets.forEach((nodeIndices, tier) => {
+    if (nodeIndices.length === 0) return;
+
+    // Calculate total height of this tier column
+    const heights = nodeIndices.map((idx) => {
+      const type =
+        TYPE_ALIASES[nodes[idx].type?.toLowerCase()] ||
+        nodes[idx].type ||
+        "server";
+      return (NODE_SIZES[type] || { w: 168, h: 72 }).h;
+    });
+
+    const totalColumnHeight =
+      heights.reduce((sum, h) => sum + h, 0) +
+      (nodeIndices.length - 1) * VERTICAL_GAP;
+
+    let currentY = origin.y - totalColumnHeight / 2;
+    const tierX = origin.x + TIER_X_OFFSET[tier] - 380; // center around origin
+
+    nodeIndices.forEach((nodeIdx, i) => {
+      positions.set(nodeIdx, {
+        x: tierX,
+        y: Math.round(currentY),
+      });
+      currentY += heights[i] + VERTICAL_GAP;
+    });
+  });
+
+  return positions;
+}
 
 /**
  * Executes the `edit_canvas` tool call on current ReactFlow canvas state
@@ -86,14 +171,17 @@ export function executeEditCanvas(
 
   // 1. Full Replacement Action
   if (action === "replace_all") {
+    const layoutPositions = computeTieredLayout(rawNodes, viewportCenter);
+
     const rawPayload = {
       nodes: rawNodes.map((n, idx) => ({
         id: n.id || `node-${idx + 1}`,
-        type: n.type,
-        position: n.position || {
-          x: viewportCenter.x + (idx % 3) * 240 - 240,
-          y: viewportCenter.y + Math.floor(idx / 3) * 160 - 80,
-        },
+        type: TYPE_ALIASES[n.type?.toLowerCase()] || n.type,
+        position: n.position ||
+          layoutPositions.get(idx) || {
+            x: viewportCenter.x + (idx % 3) * 260 - 260,
+            y: viewportCenter.y + Math.floor(idx / 3) * 160 - 80,
+          },
         data: {
           label: n.label || n.type,
           description: n.description || "",
@@ -152,17 +240,26 @@ export function executeEditCanvas(
   const existingNodeMap = new Map(workingNodes.map((n) => [n.id, n]));
   const addedNodes: Node[] = [];
 
+  // Calculate placement baseline for newly added nodes avoiding collision
+  const maxX = workingNodes.reduce(
+    (max, n) =>
+      Math.max(max, n.position.x + ((n.style?.width as number) || 168)),
+    viewportCenter.x - 200,
+  );
+
   rawNodes.forEach((incoming, index) => {
     const existing = incoming.id ? existingNodeMap.get(incoming.id) : undefined;
+    const resolvedType =
+      TYPE_ALIASES[incoming.type?.toLowerCase()] || incoming.type || "server";
 
     if (existing && action !== "add") {
       // Update existing node
       const updated: Node = {
         ...existing,
-        type: incoming.type || existing.type,
+        type: resolvedType || existing.type,
         data: {
           ...existing.data,
-          label: incoming.label || existing.data?.label || incoming.type,
+          label: incoming.label || existing.data?.label || resolvedType,
           description:
             incoming.description !== undefined
               ? incoming.description
@@ -182,14 +279,13 @@ export function executeEditCanvas(
     } else {
       // Create new node
       const id = incoming.id || `node-${Date.now()}-${index}`;
-      const type = incoming.type || "server";
-      const dim = DEFAULT_NODE_SIZES[type] || { w: 168, h: 72 };
+      const type = VALID_TYPES.has(resolvedType) ? resolvedType : "server";
+      const dim = NODE_SIZES[type] || { w: 168, h: 72 };
 
-      // Calculate position relative to viewport or offset
-      const posX =
-        incoming.position?.x ?? viewportCenter.x + (index % 3) * 220 - 150;
+      // Calculate position relative to viewport or offset to the right of existing canvas
+      const posX = incoming.position?.x ?? maxX + 60;
       const posY =
-        incoming.position?.y ?? viewportCenter.y + Math.floor(index / 3) * 140;
+        incoming.position?.y ?? viewportCenter.y + index * (dim.h + 30) - 50;
 
       const newNode: Node = {
         id,
