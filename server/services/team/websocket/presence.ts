@@ -4,10 +4,9 @@ import type { Server as HttpServer } from "http";
 import type { IncomingMessage } from "http";
 import cookie from "cookie";
 import { teamStorage } from "../db/storage";
-import { db } from "@services/workspace/db/connection";
-import { users } from "@services/auth/db/schema";
-import { eq } from "drizzle-orm";
-import { verifyToken } from "@services/auth/jwt";
+import { DrizzleAuthStorage } from "@services/auth/db/storage";
+import { SessionService } from "@services/auth/services/session-service";
+import { authConfig } from "@services/auth/config";
 import { getRedis, createRedisClient } from "@server/lib/redis";
 import type { Redis as RedisType } from "ioredis";
 import {
@@ -15,6 +14,10 @@ import {
   websocketRoomsActive,
 } from "@server/lib/metrics";
 import crypto from "crypto";
+
+// Auth services for the new opaque session cookie architecture
+const authStorage = new DrizzleAuthStorage();
+const sessionService = new SessionService(authStorage, authConfig.sessionDays);
 
 const log = createChildLogger("team-websocket");
 
@@ -177,25 +180,22 @@ async function resolveSession(
   try {
     const cookieHeader = req.headers.cookie ?? "";
     const cookies = cookie.parse(cookieHeader);
-    const accessToken = cookies.access_token;
 
-    if (!accessToken) return null;
+    // New auth: opaque session token in HttpOnly cookie
+    const rawToken = cookies[authConfig.sessionCookieName];
+    if (!rawToken) return null;
 
-    const payload = verifyToken(accessToken, "access");
-    if (!payload) return null;
+    const session = await sessionService.validate(rawToken);
+    if (!session) return null;
 
-    const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        firstName: users.firstName,
-      })
-      .from(users)
-      .where(eq(users.id, payload.userId));
-
+    const user = await authStorage.findUserById(session.userId);
     if (!user) return null;
 
-    return user;
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+    };
   } catch (err: unknown) {
     log.error({ err }, "Session resolution error");
     return null;
