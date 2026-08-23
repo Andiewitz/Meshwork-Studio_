@@ -24,16 +24,18 @@ export const users = pgTable(
     lastName: varchar("last_name", { length: 120 }),
     profileImageUrl: text("profile_image_url"),
     passwordHash: text("password_hash"),
-    authProvider: varchar("auth_provider", { length: 32 }).notNull().default("email"),
+    authProvider: varchar("auth_provider", { length: 32 })
+      .notNull()
+      .default("email"),
     isActive: boolean("is_active").notNull().default(true),
     hasNotifiedTeam: boolean("has_notified_team").default(false),
-    readNotificationIds: jsonb("read_notification_ids").default(sql`'[]'::jsonb`),
+    readNotificationIds: jsonb("read_notification_ids").default(
+      sql`'[]'::jsonb`,
+    ),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
-  (table) => [
-    index("IDX_users_email_normalized").on(table.emailNormalized),
-  ],
+  (table) => [index("IDX_users_email_normalized").on(table.emailNormalized)],
 );
 
 // Provider-independent OAuth identities
@@ -47,7 +49,9 @@ export const authIdentities = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     provider: varchar("provider", { length: 32 }).notNull(),
-    providerAccountId: varchar("provider_account_id", { length: 255 }).notNull(),
+    providerAccountId: varchar("provider_account_id", {
+      length: 255,
+    }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

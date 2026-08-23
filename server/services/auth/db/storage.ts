@@ -248,7 +248,9 @@ export class DrizzleAuthStorage implements IAuthStorage {
         ),
       )
       .limit(1);
-    return row ? { secretHash: row.secretHash, expiresAt: row.expiresAt } : null;
+    return row
+      ? { secretHash: row.secretHash, expiresAt: row.expiresAt }
+      : null;
   }
 
   async getFailedAttempts(
@@ -300,9 +302,7 @@ export class DrizzleAuthStorage implements IAuthStorage {
 
   async resetFailedAttempts(email: string): Promise<void> {
     const normalized = normalizeEmail(email);
-    await db
-      .delete(loginAttempts)
-      .where(eq(loginAttempts.email, normalized));
+    await db.delete(loginAttempts).where(eq(loginAttempts.email, normalized));
   }
 
   // Legacy compatibility implementations
@@ -311,7 +311,9 @@ export class DrizzleAuthStorage implements IAuthStorage {
     return user;
   }
 
-  async upsertUser(userData: Partial<User> & { id: string; email: string }): Promise<User> {
+  async upsertUser(
+    userData: Partial<User> & { id: string; email: string },
+  ): Promise<User> {
     const [user] = await db
       .insert(users)
       .values(userData as UpsertUser)
@@ -329,10 +331,19 @@ export class DrizzleAuthStorage implements IAuthStorage {
 
 export class MemAuthStorage implements IAuthStorage {
   private users = new Map<string, User>();
-  private identities = new Map<string, { userId: string; provider: string; providerAccountId: string }>();
+  private identities = new Map<
+    string,
+    { userId: string; provider: string; providerAccountId: string }
+  >();
   private sessions = new Map<string, SessionRecord>();
-  private csrfSecrets = new Map<string, { secretHash: string; expiresAt: Date }>();
-  private attempts = new Map<string, { failed: number; lastAttempt: Date; lockedUntil: Date | null }>();
+  private csrfSecrets = new Map<
+    string,
+    { secretHash: string; expiresAt: Date }
+  >();
+  private attempts = new Map<
+    string,
+    { failed: number; lastAttempt: Date; lockedUntil: Date | null }
+  >();
 
   async findUserById(userId: string): Promise<PublicUser | null> {
     const user = this.users.get(userId);
@@ -387,14 +398,21 @@ export class MemAuthStorage implements IAuthStorage {
     return toPublicUser(updated);
   }
 
-  async findIdentity(provider: string, providerAccountId: string): Promise<PublicUser | null> {
+  async findIdentity(
+    provider: string,
+    providerAccountId: string,
+  ): Promise<PublicUser | null> {
     const key = `${provider}:${providerAccountId}`;
     const id = this.identities.get(key);
     if (!id) return null;
     return this.findUserById(id.userId);
   }
 
-  async linkIdentity(userId: string, provider: string, providerAccountId: string): Promise<void> {
+  async linkIdentity(
+    userId: string,
+    provider: string,
+    providerAccountId: string,
+  ): Promise<void> {
     const key = `${provider}:${providerAccountId}`;
     this.identities.set(key, { userId, provider, providerAccountId });
   }
@@ -435,7 +453,10 @@ export class MemAuthStorage implements IAuthStorage {
     if (s) s.revokedAt = new Date();
   }
 
-  async revokeAllUserSessions(userId: string, exceptIdHash?: string): Promise<void> {
+  async revokeAllUserSessions(
+    userId: string,
+    exceptIdHash?: string,
+  ): Promise<void> {
     const now = new Date();
     for (const [idHash, s] of this.sessions.entries()) {
       if (s.userId === userId && idHash !== exceptIdHash) {
@@ -493,7 +514,9 @@ export class MemAuthStorage implements IAuthStorage {
     return this.users.get(id);
   }
 
-  async upsertUser(userData: Partial<User> & { id: string; email: string }): Promise<User> {
+  async upsertUser(
+    userData: Partial<User> & { id: string; email: string },
+  ): Promise<User> {
     const now = new Date();
     const existing = this.users.get(userData.id);
     const user: User = {

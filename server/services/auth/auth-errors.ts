@@ -11,11 +11,17 @@ export class AuthError extends Error {
 
 export const publicAuthError = (error: unknown) => {
   if (error instanceof AuthError) {
-    return { status: error.status, body: { code: error.code, message: error.message } };
+    return {
+      status: error.status,
+      body: { code: error.code, message: error.message },
+    };
   }
   return {
     status: 500,
-    body: { code: "AUTH_INTERNAL_ERROR", message: "Authentication service unavailable" },
+    body: {
+      code: "AUTH_INTERNAL_ERROR",
+      message: "Authentication service unavailable",
+    },
   };
 };
 
