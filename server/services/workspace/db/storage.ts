@@ -30,14 +30,14 @@ export interface IWorkspaceStorage {
     userId: string,
     collectionId?: number | null,
   ): Promise<Workspace[]>;
-  getWorkspace(id: number): Promise<Workspace | undefined>;
+  getWorkspace(id: string): Promise<Workspace | undefined>;
   createWorkspace(workspace: InsertWorkspace): Promise<Workspace>;
   updateWorkspace(
-    id: number,
+    id: string,
     updates: Partial<InsertWorkspace>,
   ): Promise<Workspace>;
-  deleteWorkspace(id: number): Promise<void>;
-  duplicateWorkspace(id: number, newTitle?: string): Promise<Workspace>;
+  deleteWorkspace(id: string): Promise<void>;
+  duplicateWorkspace(id: string, newTitle?: string): Promise<Workspace>;
   deleteAllUserData(userId: string, tx?: DrizzleTx): Promise<void>;
 }
 
@@ -102,7 +102,7 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     const teamIds = memberships.map((m) => m.teamId);
 
     // 2. Get workspaces shared with those teams
-    let sharedWorkspaceIds: number[] = [];
+    let sharedWorkspaceIds: string[] = [];
     if (teamIds.length > 0) {
       const shared = await db
         .select({ workspaceId: teamWorkspaces.workspaceId })
@@ -132,7 +132,7 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
       .orderBy(desc(workspaces.createdAt));
   }
 
-  async getWorkspace(id: number): Promise<Workspace | undefined> {
+  async getWorkspace(id: string): Promise<Workspace | undefined> {
     const [workspace] = await db
       .select()
       .from(workspaces)
@@ -149,7 +149,7 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
   }
 
   async updateWorkspace(
-    id: number,
+    id: string,
     updates: Partial<InsertWorkspace>,
   ): Promise<Workspace> {
     const [workspace] = await db
@@ -160,11 +160,11 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     return workspace;
   }
 
-  async deleteWorkspace(id: number): Promise<void> {
+  async deleteWorkspace(id: string): Promise<void> {
     await db.delete(workspaces).where(eq(workspaces.id, id));
   }
 
-  async duplicateWorkspace(id: number, newTitle?: string): Promise<Workspace> {
+  async duplicateWorkspace(id: string, newTitle?: string): Promise<Workspace> {
     const existing = await this.getWorkspace(id);
     if (!existing) throw new Error("Workspace not found");
 
@@ -208,7 +208,6 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
   private collections: Collection[] = [];
   private workspaces: Workspace[] = [];
   private currentCollectionId = 1;
-  private currentWorkspaceId = 1;
 
   async getCollections(
     userId: string,
@@ -267,13 +266,13 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
       );
   }
 
-  async getWorkspace(id: number): Promise<Workspace | undefined> {
+  async getWorkspace(id: string): Promise<Workspace | undefined> {
     return this.workspaces.find((w) => w.id === id);
   }
 
   async createWorkspace(insertWorkspace: InsertWorkspace): Promise<Workspace> {
     const ws: Workspace = {
-      id: this.currentWorkspaceId++,
+      id: crypto.randomUUID(),
       title: insertWorkspace.title,
       type: insertWorkspace.type ?? "system",
       icon: insertWorkspace.icon ?? "box",
@@ -293,7 +292,7 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
   }
 
   async updateWorkspace(
-    id: number,
+    id: string,
     updates: Partial<InsertWorkspace>,
   ): Promise<Workspace> {
     const index = this.workspaces.findIndex((w) => w.id === id);
@@ -307,11 +306,11 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
     return updated;
   }
 
-  async deleteWorkspace(id: number): Promise<void> {
+  async deleteWorkspace(id: string): Promise<void> {
     this.workspaces = this.workspaces.filter((w) => w.id !== id);
   }
 
-  async duplicateWorkspace(id: number, newTitle?: string): Promise<Workspace> {
+  async duplicateWorkspace(id: string, newTitle?: string): Promise<Workspace> {
     const existing = await this.getWorkspace(id);
     if (!existing) throw new Error("Workspace not found");
     return this.createWorkspace({
@@ -323,8 +322,8 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
       description: existing.description,
       author: existing.author,
       aiContext: existing.aiContext,
-      groups: existing.groups || [],
-      tags: existing.tags || [],
+      groups: existing.groups ?? [],
+      tags: existing.tags ?? [],
     });
   }
 

@@ -35,7 +35,7 @@ function initRedisSub() {
     sub.on("message", (channel: string, message: string) => {
       if (!channel.startsWith("ws:room:")) return;
       try {
-        const workspaceId = parseInt(channel.split(":")[2]);
+        const workspaceId = channel.slice("ws:room:".length);
         const payload = JSON.parse(message);
         if (payload.originServerId === ORIGIN_SERVER_ID) return;
         broadcastToRoom(workspaceId, payload.data, payload.excludeUserId);
@@ -62,7 +62,7 @@ function getRedisPub() {
 }
 
 function publishToRoom(
-  workspaceId: number,
+  workspaceId: string,
   message: ServerMessage,
   excludeUserId?: string,
 ) {
@@ -99,7 +99,7 @@ interface ClientMessage {
     | "canvas-sync"
     | "nodes-change"
     | "edges-change";
-  workspaceId?: number;
+  workspaceId?: string;
   x?: number;
   y?: number;
   nodeId?: string;
@@ -125,10 +125,10 @@ interface ServerMessage {
   [key: string]: unknown;
 }
 
-const rooms = new Map<number, Map<string, PresenceUser>>();
+const rooms = new Map<string, Map<string, PresenceUser>>();
 
 function broadcastToRoom(
-  workspaceId: number,
+  workspaceId: string,
   message: ServerMessage,
   excludeUserId?: string,
 ) {
@@ -144,7 +144,7 @@ function broadcastToRoom(
   }
 }
 
-function getPresenceList(workspaceId: number): Omit<PresenceUser, "ws">[] {
+function getPresenceList(workspaceId: string): Omit<PresenceUser, "ws">[] {
   const room = rooms.get(workspaceId);
   if (!room) return [];
 
@@ -210,7 +210,7 @@ export function initializeWebSocket(httpServer: HttpServer) {
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     websocketConnectionsActive.inc();
     let currentUserId: string | undefined;
-    let currentWorkspaceId: number | undefined;
+    let currentWorkspaceId: string | undefined;
 
     let alive = true;
     ws.on("pong", () => {

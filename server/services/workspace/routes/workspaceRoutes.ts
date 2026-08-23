@@ -135,9 +135,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
   });
 
   app.get(api.workspaces.get.path, isAuthenticated, async (req, res) => {
-    const workspace = await workspaceStorage.getWorkspace(
-      Number(req.params.id),
-    );
+    const workspace = await workspaceStorage.getWorkspace(req.params.id);
     if (!workspace)
       return res.status(404).json({ message: "Workspace not found" });
 
@@ -187,7 +185,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     async (req, res) => {
       try {
         const input = api.workspaces.update.input.parse(req.body);
-        const id = Number(req.params.id);
+        const id = req.params.id;
         const existing = await workspaceStorage.getWorkspace(id);
         if (!existing) return res.status(404).json({ message: "Not found" });
 
@@ -206,7 +204,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
           return res.status(400).json({ message: err.errors[0].message });
         }
         log.error(
-          { err, userId: getUserId(req), workspaceId: Number(req.params.id) },
+          { err, userId: getUserId(req), workspaceId: req.params.id },
           "Failed to update workspace",
         );
         throw err;
@@ -219,7 +217,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
-      const id = Number(req.params.id);
+      const id = req.params.id;
       const existing = await workspaceStorage.getWorkspace(id);
       if (!existing) return res.status(404).json({ message: "Not found" });
 
@@ -249,7 +247,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
-      const id = Number(req.params.id);
+      const id = req.params.id;
       const existing = await workspaceStorage.getWorkspace(id);
       if (!existing) return res.status(404).json({ message: "Not found" });
 

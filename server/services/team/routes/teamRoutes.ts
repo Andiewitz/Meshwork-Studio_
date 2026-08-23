@@ -143,7 +143,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
         const userId = getUserId(req);
         const { workspaceId } = req.body as { workspaceId?: unknown };
 
-        if (!workspaceId || typeof workspaceId !== "number") {
+        if (!workspaceId || typeof workspaceId !== "string") {
           return res.status(400).json({ message: "workspaceId is required" });
         }
 
@@ -192,7 +192,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
       const teamId = Array.isArray(req.params.id)
         ? req.params.id[0]
         : req.params.id;
-      const workspaceId = Number(req.params.workspaceId);
+      const workspaceId = req.params.workspaceId;
       const userId = getUserId(req);
 
       const isMember = await teamStorage.isTeamMember(teamId, userId);
@@ -323,10 +323,10 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
 
   // ── Get user's role for a workspace ──────────────────────────────
   app.get("/api/v1/workspaces/:id/role", isAuthenticated, async (req, res) => {
-    const workspaceId = Number(req.params.id);
+    const workspaceId = req.params.id;
     const userId = getUserId(req);
 
-    if (isNaN(workspaceId))
+    if (!workspaceId)
       return res.status(400).json({ message: "Invalid workspace ID" });
 
     const role = await teamStorage.getWorkspaceRole(workspaceId, userId);
@@ -338,10 +338,10 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
     "/api/v1/workspaces/:id/members",
     isAuthenticated,
     async (req, res) => {
-      const workspaceId = Number(req.params.id);
+      const workspaceId = req.params.id;
       const userId = getUserId(req);
 
-      if (isNaN(workspaceId))
+      if (!workspaceId)
         return res.status(400).json({ message: "Invalid workspace ID" });
 
       const hasAccess = await teamStorage.canAccessWorkspace(

@@ -13,29 +13,29 @@ import type { DrizzleTx } from "@server/lib/events";
 
 export interface ICanvasStorage {
   // Canvas operations
-  getNodes(workspaceId: number): Promise<Node[]>;
-  getEdges(workspaceId: number): Promise<Edge[]>;
+  getNodes(workspaceId: string): Promise<Node[]>;
+  getEdges(workspaceId: string): Promise<Edge[]>;
   syncCanvas(
-    workspaceId: number,
+    workspaceId: string,
     nodes: InsertNode[],
     edges: InsertEdge[],
   ): Promise<void>;
   duplicateCanvas(
-    fromWorkspaceId: number,
-    toWorkspaceId: number,
+    fromWorkspaceId: string,
+    toWorkspaceId: string,
   ): Promise<void>;
   deleteAllUserData(userId: string, tx?: DrizzleTx): Promise<void>;
 }
 
 export class CanvasDatabaseStorage implements ICanvasStorage {
-  async getNodes(workspaceId: number): Promise<Node[]> {
+  async getNodes(workspaceId: string): Promise<Node[]> {
     return await db
       .select()
       .from(nodes)
       .where(eq(nodes.workspaceId, workspaceId));
   }
 
-  async getEdges(workspaceId: number): Promise<Edge[]> {
+  async getEdges(workspaceId: string): Promise<Edge[]> {
     return await db
       .select()
       .from(edges)
@@ -43,7 +43,7 @@ export class CanvasDatabaseStorage implements ICanvasStorage {
   }
 
   async syncCanvas(
-    workspaceId: number,
+    workspaceId: string,
     newNodes: InsertNode[],
     newEdges: InsertEdge[],
   ): Promise<void> {
@@ -156,8 +156,8 @@ export class CanvasDatabaseStorage implements ICanvasStorage {
   }
 
   async duplicateCanvas(
-    fromWorkspaceId: number,
-    toWorkspaceId: number,
+    fromWorkspaceId: string,
+    toWorkspaceId: string,
   ): Promise<void> {
     await db.transaction(async (tx) => {
       const nodesList = await tx
@@ -219,7 +219,7 @@ export class CanvasMemStorage implements ICanvasStorage {
   private nodesMap = new Map<string, Node>();
   private edgesMap = new Map<string, Edge>();
 
-  getNodes(workspaceId: number): Promise<Node[]> {
+  getNodes(workspaceId: string): Promise<Node[]> {
     return Promise.resolve(
       Array.from(this.nodesMap.values()).filter(
         (n) => n.workspaceId === workspaceId,
@@ -227,7 +227,7 @@ export class CanvasMemStorage implements ICanvasStorage {
     );
   }
 
-  getEdges(workspaceId: number): Promise<Edge[]> {
+  getEdges(workspaceId: string): Promise<Edge[]> {
     return Promise.resolve(
       Array.from(this.edgesMap.values()).filter(
         (e) => e.workspaceId === workspaceId,
@@ -236,7 +236,7 @@ export class CanvasMemStorage implements ICanvasStorage {
   }
 
   syncCanvas(
-    workspaceId: number,
+    workspaceId: string,
     newNodes: InsertNode[],
     newEdges: InsertEdge[],
   ): Promise<void> {
@@ -262,8 +262,8 @@ export class CanvasMemStorage implements ICanvasStorage {
   }
 
   duplicateCanvas(
-    fromWorkspaceId: number,
-    toWorkspaceId: number,
+    fromWorkspaceId: string,
+    toWorkspaceId: string,
   ): Promise<void> {
     const nodesToDuplicate = Array.from(this.nodesMap.values()).filter(
       (n) => n.workspaceId === fromWorkspaceId,

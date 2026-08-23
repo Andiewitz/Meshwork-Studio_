@@ -19,7 +19,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
 
   // Canvas logic routes
   app.get(api.workspaces.getCanvas.path, isAuthenticated, async (req, res) => {
-    const id = Number(req.params.id);
+    const id = req.params.id;
     const workspace = await workspaceStorage.getWorkspace(id);
     if (!workspace)
       return res.status(404).json({ message: "Workspace not found" });
@@ -44,7 +44,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
-      const id = Number(req.params.id);
+      const id = req.params.id;
       const workspace = await workspaceStorage.getWorkspace(id);
       if (!workspace)
         return res.status(404).json({ message: "Workspace not found" });
@@ -69,7 +69,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     AuthService.csrf.protect,
     isAuthenticated,
     async (req, res) => {
-      const id = Number(req.params.id);
+      const id = req.params.id;
       const { toWorkspaceId } = req.body;
 
       const workspace = await workspaceStorage.getWorkspace(id);

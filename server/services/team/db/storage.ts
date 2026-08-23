@@ -57,12 +57,12 @@ export interface ITeamStorage {
   leaveTeam(teamId: string, userId: string): Promise<void>;
   deleteTeam(teamId: string): Promise<void>;
   regenerateInviteCode(teamId: string): Promise<Team>;
-  shareWorkspace(teamId: string, workspaceId: number): Promise<TeamWorkspace>;
-  unshareWorkspace(teamId: string, workspaceId: number): Promise<void>;
+  shareWorkspace(teamId: string, workspaceId: string): Promise<TeamWorkspace>;
+  unshareWorkspace(teamId: string, workspaceId: string): Promise<void>;
   getTeamWorkspaces(teamId: string): Promise<Workspace[]>;
   isTeamMember(teamId: string, userId: string): Promise<boolean>;
   isTeamOwner(teamId: string, userId: string): Promise<boolean>;
-  getTeamsForWorkspace(workspaceId: number): Promise<Team[]>;
+  getTeamsForWorkspace(workspaceId: string): Promise<Team[]>;
   updateMemberRole(
     teamId: string,
     targetUserId: string,
@@ -70,10 +70,10 @@ export interface ITeamStorage {
   ): Promise<TeamMember>;
   getMemberRole(teamId: string, userId: string): Promise<TeamRole | null>;
   getWorkspaceRole(
-    workspaceId: number,
+    workspaceId: string,
     userId: string,
   ): Promise<TeamRole | "workspace-owner" | null>;
-  canAccessWorkspace(userId: string, workspaceId: number): Promise<boolean>;
+  canAccessWorkspace(userId: string, workspaceId: string): Promise<boolean>;
   deleteAllUserData(userId: string, tx?: DrizzleTx): Promise<void>;
 }
 
@@ -220,7 +220,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
 
   async shareWorkspace(
     teamId: string,
-    workspaceId: number,
+    workspaceId: string,
   ): Promise<TeamWorkspace> {
     const [existing] = await db
       .select()
@@ -240,7 +240,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
     return tw;
   }
 
-  async unshareWorkspace(teamId: string, workspaceId: number): Promise<void> {
+  async unshareWorkspace(teamId: string, workspaceId: string): Promise<void> {
     await db
       .delete(teamWorkspaces)
       .where(
@@ -285,7 +285,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
     return team?.ownerId === userId;
   }
 
-  async getTeamsForWorkspace(workspaceId: number): Promise<Team[]> {
+  async getTeamsForWorkspace(workspaceId: string): Promise<Team[]> {
     const shared = await db
       .select({ teamId: teamWorkspaces.teamId })
       .from(teamWorkspaces)
@@ -306,7 +306,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
 
   async canAccessWorkspace(
     userId: string,
-    workspaceId: number,
+    workspaceId: string,
   ): Promise<boolean> {
     const [workspace] = await db
       .select()
@@ -367,7 +367,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
   }
 
   async getWorkspaceRole(
-    workspaceId: number,
+    workspaceId: string,
     userId: string,
   ): Promise<TeamRole | "workspace-owner" | null> {
     const [workspace] = await db
