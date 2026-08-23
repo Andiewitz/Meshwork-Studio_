@@ -29,13 +29,24 @@ function setSession(res: Response, sessionToken: string) {
   );
 }
 
+function getSessionToken(req: Request): string | undefined {
+  return (
+    req.cookies?.[authConfig.sessionCookieName] ||
+    req.cookies?.["__Host-meshwork_session"] ||
+    req.cookies?.meshwork_session
+  );
+}
+
 function clearSession(res: Response) {
-  res.clearCookie(authConfig.sessionCookieName, {
+  const options = {
     path: "/",
     httpOnly: true,
     secure: authConfig.cookieSecure,
     sameSite: authConfig.cookieSameSite,
-  });
+  };
+  res.clearCookie(authConfig.sessionCookieName, options);
+  res.clearCookie("__Host-meshwork_session", options);
+  res.clearCookie("meshwork_session", options);
 }
 
 export function registerAuthRoutes(
@@ -59,7 +70,7 @@ export function registerAuthRoutes(
     async (req: Request, res: Response) => {
       try {
         const input = registerSchema.parse(req.body);
-        const oldSessionToken = req.cookies?.[authConfig.sessionCookieName];
+        const oldSessionToken = getSessionToken(req);
         const result = await deps.auth.register(
           input,
           {
@@ -90,7 +101,7 @@ export function registerAuthRoutes(
     async (req: Request, res: Response) => {
       try {
         const input = credentialsSchema.parse(req.body);
-        const oldSessionToken = req.cookies?.[authConfig.sessionCookieName];
+        const oldSessionToken = getSessionToken(req);
         const result = await deps.auth.login(
           input,
           {
@@ -120,7 +131,7 @@ export function registerAuthRoutes(
     async (req: Request, res: Response) => {
       try {
         const auth = (req as AuthenticatedRequest).auth;
-        const rawToken = req.cookies?.[authConfig.sessionCookieName];
+        const rawToken = getSessionToken(req);
         const sessionRecord = rawToken
           ? await deps.sessions.validate(rawToken)
           : null;
@@ -149,7 +160,7 @@ export function registerAuthRoutes(
     deps.requireAuth,
     async (req: Request, res: Response) => {
       const auth = (req as AuthenticatedRequest).auth;
-      const rawToken = req.cookies?.[authConfig.sessionCookieName];
+      const rawToken = getSessionToken(req);
       const sessionRecord = rawToken
         ? await deps.sessions.validate(rawToken)
         : null;
@@ -195,7 +206,7 @@ export function registerAuthRoutes(
     deps.csrf.protect,
     async (req: Request, res: Response) => {
       try {
-        const rawToken = req.cookies?.[authConfig.sessionCookieName];
+        const rawToken = getSessionToken(req);
         if (rawToken) {
           await deps.sessions.revoke(rawToken);
         }

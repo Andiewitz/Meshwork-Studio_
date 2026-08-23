@@ -182,7 +182,10 @@ async function resolveSession(
     const cookies = cookie.parse(cookieHeader);
 
     // New auth: opaque session token in HttpOnly cookie
-    const rawToken = cookies[authConfig.sessionCookieName];
+    const rawToken =
+      cookies[authConfig.sessionCookieName] ||
+      cookies["__Host-meshwork_session"] ||
+      cookies.meshwork_session;
     if (!rawToken) return null;
 
     const session = await sessionService.validate(rawToken);

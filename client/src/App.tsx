@@ -13,14 +13,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { useCsrfTokenInitializer } from "@/lib/csrf-init";
-import { RedirectLoading } from "@/components/loading-states";
+import { DefaultLoading, RedirectLoading } from "@/components/loading-states";
 import { MobileGate } from "@/components/ui/mobile-gate";
 import { AnimatePresence, motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthModalProvider } from "@/components/auth/AuthModalContext";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { PageErrorBoundary } from "@/components/ui/page-error-boundary";
 
 // Route-level code splitting via React.lazy
 const lazyMap = {
@@ -89,14 +88,19 @@ function ProtectedRoute({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Show full-screen loader only during initial auth verification or logout transition
-  if ((isLoading && user === undefined) || isRedirecting) {
-    return <RedirectLoading />;
+  // Show default loader during initial auth verification
+  if (isLoading && user === undefined) {
+    return <DefaultLoading />;
+  }
+
+  // Redirecting state during logout transition or unauthenticated redirect
+  if (isRedirecting) {
+    return <RedirectLoading message="Redirecting..." />;
   }
 
   if (!user && !isLoading) {
     window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(location)}`;
-    return <RedirectLoading />;
+    return <RedirectLoading message="Redirecting to sign in..." />;
   }
 
   if (isMobile) {
@@ -137,7 +141,7 @@ function DashboardRoutes() {
 
 function Router() {
   const [location] = useLocation();
-  const { user, isLoading } = useAuth();
+  const { user } = useAuth();
 
   // Backwards compat: redirect old /auth/* routes
   if (location.startsWith("/auth/")) {
@@ -204,7 +208,7 @@ function App() {
                 <TooltipProvider>
                   <Toaster />
                   <ErrorBoundary>
-                    <Suspense fallback={<RedirectLoading />}>
+                    <Suspense fallback={<DefaultLoading />}>
                       <Router />
                     </Suspense>
                   </ErrorBoundary>

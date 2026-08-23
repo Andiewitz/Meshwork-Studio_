@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { NodeChange, EdgeChange } from "@xyflow/react";
-import { bootToLogin } from "./use-auth";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -152,14 +151,7 @@ export function usePresence(
           }
 
           case "error": {
-            console.warn("[Presence] Server error:", msg.message);
-            if (
-              msg.message === "Unauthorized" ||
-              msg.message?.toLowerCase().includes("unauthorized") ||
-              msg.message?.toLowerCase().includes("expired")
-            ) {
-              bootToLogin();
-            }
+            console.warn("[Presence] Server message:", msg.message);
             break;
           }
 

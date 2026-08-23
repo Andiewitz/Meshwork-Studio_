@@ -11,7 +11,10 @@ export function createAuthMiddleware(
 ) {
   const optionalAuth: RequestHandler = async (req, _res, next) => {
     try {
-      const rawToken = req.cookies?.[authConfig.sessionCookieName];
+      const rawToken =
+        req.cookies?.[authConfig.sessionCookieName] ||
+        req.cookies?.["__Host-meshwork_session"] ||
+        req.cookies?.meshwork_session;
       if (!rawToken) return next();
 
       const session = await sessions.validate(rawToken);
@@ -34,7 +37,10 @@ export function createAuthMiddleware(
 
   const requireAuth: RequestHandler = async (req, res, next) => {
     try {
-      const rawToken = req.cookies?.[authConfig.sessionCookieName];
+      const rawToken =
+        req.cookies?.[authConfig.sessionCookieName] ||
+        req.cookies?.["__Host-meshwork_session"] ||
+        req.cookies?.meshwork_session;
       if (!rawToken) {
         const error = unauthenticated();
         return res
