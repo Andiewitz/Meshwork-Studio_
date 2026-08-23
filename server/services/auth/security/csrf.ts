@@ -106,15 +106,23 @@ export function createCsrfMiddleware(storage: IAuthStorage) {
     const auth = (req as Request & { auth?: { sessionId: string } }).auth;
     if (auth?.sessionId) {
       const record = await storage.findCsrfSecret(digest(auth.sessionId));
-      if (
-        !record ||
-        record.expiresAt <= new Date() ||
-        !safeEqual(record.secretHash, digest(headerToken))
-      ) {
-        const error = csrfRejected();
-        return res
-          .status(error.status)
-          .json({ code: error.code, message: error.message });
+      if (record) {
+        if (
+          record.expiresAt <= new Date() ||
+          !safeEqual(record.secretHash, digest(headerToken))
+        ) {
+          const error = csrfRejected();
+          return res
+            .status(error.status)
+            .json({ code: error.code, message: error.message });
+        }
+      } else {
+        // Automatically bind this valid double-submit token to the authenticated session
+        await storage.saveCsrfSecret(
+          digest(auth.sessionId),
+          digest(headerToken),
+          new Date(Date.now() + 60 * 60 * 1000),
+        );
       }
     }
 
