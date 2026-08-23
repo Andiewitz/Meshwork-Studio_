@@ -8,8 +8,8 @@ export type DrizzleTx = PgTransaction<any, any, any>;
 
 // Define typed events
 export interface AppEvents {
-  "workspace.deleted": { id: number; tx?: DrizzleTx };
-  "workspace.duplicated": { originalId: number; newId: number; tx?: DrizzleTx };
+  "workspace.deleted": { id: string; tx?: DrizzleTx };
+  "workspace.duplicated": { originalId: string; newId: string; tx?: DrizzleTx };
   "user.deleted": { id: string; tx?: DrizzleTx };
 }
 

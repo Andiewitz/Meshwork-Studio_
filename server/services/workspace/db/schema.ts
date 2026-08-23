@@ -11,6 +11,8 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 
+import crypto from "node:crypto";
+
 export const collections = pgTable("collections", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -21,7 +23,9 @@ export const collections = pgTable("collections", {
 });
 
 export const workspaces = pgTable("workspaces", {
-  id: serial("id").primaryKey(),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   title: text("title").notNull(),
   type: text("type").notNull().default("system"),
   icon: text("icon").default("box"),

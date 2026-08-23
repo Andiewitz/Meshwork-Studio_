@@ -63,7 +63,7 @@ export const teamWorkspaces = pgTable(
     teamId: varchar("team_id")
       .notNull()
       .references(() => teams.id, { onDelete: "cascade" }),
-    workspaceId: integer("workspace_id")
+    workspaceId: varchar("workspace_id", { length: 128 })
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
     sharedAt: timestamp("shared_at").defaultNow(),

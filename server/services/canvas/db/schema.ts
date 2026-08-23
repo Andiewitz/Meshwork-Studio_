@@ -14,8 +14,8 @@ export const nodes = pgTable(
   "nodes",
   {
     id: text("id").notNull(),
-    workspaceId: integer("workspace_id")
-      .references(() => workspaces.id)
+    workspaceId: text("workspace_id")
+      .references(() => workspaces.id, { onDelete: "cascade" })
       .notNull(),
     type: text("type"),
     position: jsonb("position").$type<{ x: number; y: number }>().notNull(),
@@ -37,8 +37,8 @@ export const edges = pgTable(
   "edges",
   {
     id: text("id").notNull(),
-    workspaceId: integer("workspace_id")
-      .references(() => workspaces.id)
+    workspaceId: text("workspace_id")
+      .references(() => workspaces.id, { onDelete: "cascade" })
       .notNull(),
     source: text("source").notNull(),
     target: text("target").notNull(),

@@ -270,6 +270,38 @@ app.get("/admin/:secret", (req, res) => {
         sql`UPDATE workspaces SET updated_at = created_at WHERE updated_at > '2026-04-19 07:00:00' AND updated_at < '2026-04-19 08:30:00' AND created_at < '2026-04-19 07:00:00'`,
       );
 
+      // Migrate workspaces.id and related workspace_id foreign keys from integer to varchar/text UUIDs
+      await db.execute(sql`
+        DO $$ 
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'workspaces' AND column_name = 'id' AND data_type = 'integer'
+          ) THEN
+            -- 1. Drop old foreign key constraints
+            ALTER TABLE edges DROP CONSTRAINT IF EXISTS edges_workspace_id_workspaces_id_fk;
+            ALTER TABLE nodes DROP CONSTRAINT IF EXISTS nodes_workspace_id_workspaces_id_fk;
+            ALTER TABLE team_workspaces DROP CONSTRAINT IF EXISTS team_workspaces_workspace_id_workspaces_id_fk;
+
+            -- 2. Alter primary key and foreign key column types
+            ALTER TABLE workspaces ALTER COLUMN id TYPE varchar(128) USING id::text;
+            ALTER TABLE workspaces ALTER COLUMN id SET DEFAULT gen_random_uuid()::text;
+
+            ALTER TABLE edges ALTER COLUMN workspace_id TYPE varchar(128) USING workspace_id::text;
+            ALTER TABLE nodes ALTER COLUMN workspace_id TYPE varchar(128) USING workspace_id::text;
+            ALTER TABLE team_workspaces ALTER COLUMN workspace_id TYPE varchar(128) USING workspace_id::text;
+
+            -- 3. Re-add foreign key constraints
+            ALTER TABLE edges ADD CONSTRAINT edges_workspace_id_workspaces_id_fk 
+              FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+            ALTER TABLE nodes ADD CONSTRAINT nodes_workspace_id_workspaces_id_fk 
+              FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+            ALTER TABLE team_workspaces ADD CONSTRAINT team_workspaces_workspace_id_workspaces_id_fk 
+              FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+          END IF;
+        END $$;
+      `);
+
       const targetDbs = authDb === db ? [db] : [db, authDb];
 
       for (const target of targetDbs) {
