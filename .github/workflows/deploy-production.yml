@@ -74,9 +74,9 @@ jobs:
           script_stop: true
           script: |
             TARGET="/home/${{ secrets.EC2_USER }}/meshwork-studiov2"
-            chmod +x "$TARGET/deploy/deploy.sh"
+            chmod +x "$TARGET/scripts/deploy-remote.sh"
             cd "$TARGET"
-            ./deploy/deploy.sh
+            ./scripts/deploy-remote.sh
 
       - name: Install & Restart Auth Service via SSH
         uses: appleboy/ssh-action@v1.0.3

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * Database Backup Utility
- * 
+ *
  * Creates a timestamped JSON dump of all critical tables.
  * Run before deployments: npx tsx script/backup-db.ts
- * 
+ *
  * Backups are saved to ./backups/<timestamp>/
- * 
+ *
  * Usage:
  *   DATABASE_URL=postgres://... npx tsx script/backup-db.ts
  */
@@ -64,7 +64,10 @@ async function backup() {
     tables: TABLES_TO_BACKUP,
     databaseUrl: connectionString.replace(/\/\/.*@/, "//***@"), // redact creds
   };
-  fs.writeFileSync(path.join(backupDir, "_meta.json"), JSON.stringify(meta, null, 2));
+  fs.writeFileSync(
+    path.join(backupDir, "_meta.json"),
+    JSON.stringify(meta, null, 2),
+  );
 
   console.log(`\n[Backup] Complete! Saved to: ${backupDir}`);
   await pool.end();

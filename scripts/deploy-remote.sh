@@ -1,6 +1,7 @@
 #!/bin/bash
 # deploy.sh — run on EC2 after pre-built artifacts are synced from GitHub Actions
-# Usage: cd /home/ec2-user/app/meshwork-studio && ./deploy/deploy.sh
+# Usage (on the EC2 host): cd ~/meshwork-studiov2 && ./scripts/deploy-remote.sh
+# Invoked automatically by GitHub Actions after artifact sync.
 
 set -euo pipefail
 

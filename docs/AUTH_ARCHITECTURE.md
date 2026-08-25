@@ -76,5 +76,5 @@ The monolith's `/metrics` requires `Authorization: Bearer $METRICS_BEARER_TOKEN`
 
 - `.github/workflows/identity.yml`: golangci-lint, gosec, govulncheck,
   race-enabled tests, docker build.
-- `scripts/security/no-auth-bypass.sh` runs in the main pipeline and fails if
+- `scripts/no-auth-bypass.sh` runs in the main pipeline and fails if
   `E2E_BYPASS_AUTH` ever reappears in runtime code.

@@ -62,9 +62,9 @@ jobs:
           script_stop: true
           script: |
             TARGET="/home/${{ secrets.EC2_STAGING_USER }}/meshwork-studiov2"
-            chmod +x "$TARGET/deploy/deploy.sh"
+            chmod +x "$TARGET/scripts/deploy-remote.sh"
             cd "$TARGET"
-            ./deploy/deploy.sh
+            ./scripts/deploy-remote.sh
 
       - name: Staging Health Check
         run: |

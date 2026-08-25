@@ -41,7 +41,7 @@ Architecture details: [`../docs/AUTH_ARCHITECTURE.md`](../docs/AUTH_ARCHITECTURE
 1. Builds the client+monolith bundle (`npm run build`)
 2. Cross-compiles the Go auth binary (`linux/amd64`, migrations embedded)
 3. SCPs `dist/`, manifests and `meshwork-auth` to the instance
-4. Runs `deploy/deploy.sh` remotely (dist swap + PM2 reload)
+4. Runs `scripts/deploy-remote.sh` on the instance (dist swap + PM2 reload)
 5. Installs/restarts `meshwork-auth` under PM2, probes `127.0.0.1:8081/healthz`
 6. Health-gates the deploy, then runs Playwright `@smoke` E2E
 
