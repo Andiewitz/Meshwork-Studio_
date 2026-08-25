@@ -5,6 +5,7 @@ export interface PublicUser {
   lastName: string | null;
   profileImageUrl: string | null;
   authProvider: string;
+  mfaEnabled?: boolean;
   hasNotifiedTeam?: boolean | null;
   readNotificationIds?: unknown;
   createdAt?: Date | string | null;

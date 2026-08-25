@@ -18,11 +18,13 @@ import { Helmet } from "react-helmet-async";
 import ReCAPTCHA from "react-google-recaptcha";
 
 import { useAuth } from "@/hooks/use-auth";
+import { authClient } from "@/auth/auth-client";
 import type { User } from "@shared/schema";
 
 interface ApiLoginResponse {
   user: User;
   accessTokenExpiresAt: string;
+  mfaRequired?: boolean;
 }
 
 async function handlePendingPromptAndRedirect(
@@ -124,10 +126,11 @@ function LoginForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { notifyLoginSuccess } = useAuth();
-  const [step, setStep] = useState<"email" | "password">("email");
+  const [step, setStep] = useState<"email" | "password" | "mfa">("email");
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState({ email: false, password: false });
   const [formErrors, setFormErrors] = useState<{
@@ -205,11 +208,37 @@ function LoginForm() {
 
     setIsLoading(true);
     try {
+      // MFA step 2: exchange the ticket for a full session.
+      if (step === "mfa") {
+        const isBackup = mfaCode.trim().length > 8;
+        const result = await authClient.mfaChallenge(
+          isBackup ? "" : mfaCode.replace(/\s/g, ""),
+          isBackup ? mfaCode.trim().toLowerCase() : "",
+        );
+        toast({
+          title: "Welcome back!",
+          description: `Logged in as ${result.user.email}`,
+        });
+        notifyLoginSuccess(
+          result.user,
+          result.accessTokenExpiresAt ?? result.expiresAt,
+        );
+        await handlePendingPromptAndRedirect(setLocation);
+        return;
+      }
+
       const res = await apiRequest("POST", "/api/v1/auth/login", {
         email,
         password,
       });
       const data = (await res.json()) as ApiLoginResponse;
+
+      if (data.mfaRequired) {
+        setStep("mfa");
+        setMfaCode("");
+        return;
+      }
+
       // Sync a fresh CSRF token with the new server session to prevent
       // stale-token 403s (e.g. after server restart wipes the CSRF secret)
       await refreshCsrfToken();
@@ -223,7 +252,9 @@ function LoginForm() {
     } catch (err: unknown) {
       const userMessage = formatUserErrorMessage(
         err,
-        "Invalid credentials. Please check your email and password.",
+        step === "mfa"
+          ? "Invalid verification code. Try again or use a backup code."
+          : "Invalid credentials. Please check your email and password.",
       );
       setFormErrors({ general: userMessage });
     } finally {
@@ -276,7 +307,32 @@ function LoginForm() {
         </span>
       </div>
       <form onSubmit={handleFormSubmit} className="space-y-3.5">
-        {step === "email" ? (
+        {step === "mfa" ? (
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="login-mfa"
+              className="text-[11px] font-medium text-white/50"
+            >
+              Two-factor code
+            </Label>
+            <input
+              id="login-mfa"
+              type="text"
+              inputMode={mfaCode.length <= 8 ? "numeric" : "text"}
+              autoComplete="one-time-code"
+              placeholder="123456 or backup code"
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value)}
+              autoFocus
+              required
+              className={`${inputBase} tracking-[0.3em]`}
+            />
+            <p className="text-[10px] text-white/30 leading-relaxed">
+              Enter the 6-digit code from your authenticator app, or paste one
+              of your backup codes.
+            </p>
+          </div>
+        ) : step === "email" ? (
           <div className="space-y-1.5">
             <div className="flex justify-between">
               <Label
@@ -365,12 +421,24 @@ function LoginForm() {
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Signing in...
+              {step === "mfa" ? "Verifying..." : "Signing in..."}
             </>
+          ) : step === "mfa" ? (
+            "Verify code"
           ) : (
             "Sign in"
           )}
         </button>
+        {step !== "mfa" && (
+          <div className="flex justify-end -mt-1">
+            <a
+              href="/forgot-password"
+              className="text-[11px] text-white/35 hover:text-white/70 transition-colors"
+            >
+              Forgot password?
+            </a>
+          </div>
+        )}
       </form>
       <p className="mt-5 text-center text-[12px] text-white/35">
         {"Don't have an account? "}

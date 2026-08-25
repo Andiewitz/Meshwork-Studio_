@@ -35,6 +35,21 @@ const lazyMap = {
   TermsOfService: React.lazy(() => import("@/pages/TermsOfService")),
   PrivacyPolicy: React.lazy(() => import("@/pages/PrivacyPolicy")),
   AuthPage: React.lazy(() => import("@/pages/AuthPage")),
+  ForgotPasswordPage: React.lazy(() =>
+    import("@/pages/auth-recovery").then((m) => ({
+      default: m.ForgotPasswordPage,
+    })),
+  ),
+  ResetPasswordPage: React.lazy(() =>
+    import("@/pages/auth-recovery").then((m) => ({
+      default: m.ResetPasswordPage,
+    })),
+  ),
+  VerifyEmailPage: React.lazy(() =>
+    import("@/pages/auth-recovery").then((m) => ({
+      default: m.VerifyEmailPage,
+    })),
+  ),
 };
 
 const {
@@ -50,6 +65,9 @@ const {
   TermsOfService,
   PrivacyPolicy,
   AuthPage,
+  ForgotPasswordPage,
+  ResetPasswordPage,
+  VerifyEmailPage,
 } = lazyMap;
 
 // Preload route chunks on hover or intent
@@ -159,6 +177,13 @@ function Router() {
       <Route path="/register">
         {user ? <Redirect to="/home" /> : <AuthPage />}
       </Route>
+      <Route path="/forgot-password">
+        {user ? <Redirect to="/home" /> : <ForgotPasswordPage />}
+      </Route>
+      <Route path="/reset-password">
+        {user ? <Redirect to="/home" /> : <ResetPasswordPage />}
+      </Route>
+      <Route path="/verify-email" component={VerifyEmailPage} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/docs" component={Docs} />

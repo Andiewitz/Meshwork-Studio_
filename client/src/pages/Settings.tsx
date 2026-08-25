@@ -50,9 +50,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { validatePasswordStrength } from "@shared/auth";
+import { SecuritySection } from "@/components/settings/SecuritySection";
 
 type SettingsTab =
   | "account"
+  | "security"
   | "devices"
   | "workspace"
   | "plans"
@@ -67,7 +69,6 @@ type SettingsTab =
   | "git"
   | "mcp"
   | "domains"
-  | "security"
   | "security-center"
   | "audit-logs";
 
@@ -242,6 +243,11 @@ export default function Settings() {
         title: null,
         items: [
           { id: "account", label: userName, icon: UserIcon, isProfile: true },
+          {
+            id: "security",
+            label: "Security & devices",
+            icon: ShieldCheckIcon,
+          },
           { id: "devices", label: "Devices & apps", icon: ComputerDesktopIcon },
         ],
       },
@@ -434,6 +440,9 @@ export default function Settings() {
 
         {/* ── Main Content Area ── */}
         <main className="flex-1 overflow-y-auto p-8 sm:p-12 w-full min-w-0">
+          {/* Security tab */}
+          {activeTab === "security" && <SecuritySection />}
+
           {/* Account / Profile tab */}
           {activeTab === "account" && (
             <div className="space-y-8 animate-in fade-in duration-200">
