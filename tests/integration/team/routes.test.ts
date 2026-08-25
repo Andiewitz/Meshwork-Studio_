@@ -85,10 +85,6 @@ vi.mock("@services/auth", () => ({
   },
 }));
 
-vi.mock("@server/middleware/csrf", () => ({
-  csrfProtection: (_req: any, _res: any, next: any) => next(),
-}));
-
 // ─── Setup ───────────────────────────────────────────────────────────
 
 const setupApp = () => {
@@ -298,7 +294,10 @@ describe("Team Routes - Full Coverage", () => {
     it("shares workspace if user is member AND workspace owner", async () => {
       mockIsTeamMember.mockResolvedValue(true);
       mockGetWorkspace.mockResolvedValue({ id: "ws-1", userId: "u1" });
-      mockShareWorkspace.mockResolvedValue({ teamId: "t1", workspaceId: "ws-1" });
+      mockShareWorkspace.mockResolvedValue({
+        teamId: "t1",
+        workspaceId: "ws-1",
+      });
 
       const res = await request(app)
         .post("/api/v1/teams/t1/workspaces")
@@ -318,7 +317,10 @@ describe("Team Routes - Full Coverage", () => {
 
     it("blocks sharing workspace you do not own (IDOR)", async () => {
       mockIsTeamMember.mockResolvedValue(true);
-      mockGetWorkspace.mockResolvedValue({ id: "ws-1", userId: "someone_else" });
+      mockGetWorkspace.mockResolvedValue({
+        id: "ws-1",
+        userId: "someone_else",
+      });
       const res = await request(app)
         .post("/api/v1/teams/t1/workspaces")
         .set("x-test-user-id", "u1")

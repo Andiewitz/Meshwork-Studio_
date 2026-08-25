@@ -19,6 +19,11 @@ import crypto from "crypto";
 const authStorage = new DrizzleAuthStorage();
 const sessionService = new SessionService(authStorage, authConfig.sessionDays);
 
+// SECURITY: revocation fan-out. The Go identity service publishes revoked
+// session/user ids here; live sockets must die immediately on logout,
+// password change or ban — not at next natural disconnect.
+const SESSION_REVOCATION_CHANNEL = "identity:sessions:revoked";
+
 const log = createChildLogger("team-websocket");
 
 const ORIGIN_SERVER_ID = crypto.randomUUID();
@@ -127,6 +132,46 @@ interface ServerMessage {
 
 const rooms = new Map<string, Map<string, PresenceUser>>();
 
+// Per-connection auth state captured at the upgrade handshake.
+interface SocketAuth {
+  rawToken: string;
+  userId: string;
+  lastValidatedAt: number;
+}
+const socketAuth = new WeakMap<WebSocket, SocketAuth>();
+
+const SESSION_REVALIDATE_MS = 5 * 60 * 1000;
+
+// Role cache for mutation authorisation (60s TTL bounds stale-role window).
+interface RoleCacheEntry {
+  role: string | null;
+  at: number;
+}
+const roleCache = new Map<string, RoleCacheEntry>();
+const ROLE_CACHE_TTL = 60 * 1000;
+
+async function cachedWorkspaceRole(
+  userId: string,
+  workspaceId: string,
+): Promise<string | null> {
+  const key = `${userId}:${workspaceId}`;
+  const hit = roleCache.get(key);
+  if (hit && Date.now() - hit.at < ROLE_CACHE_TTL) return hit.role;
+  const role = await teamStorage.getWorkspaceRole(workspaceId, userId);
+  roleCache.set(key, { role, at: Date.now() });
+  return role;
+}
+
+function canMutateCanvas(role: string | null): boolean {
+  // owner/admin/editor may mutate; viewers and strangers may not.
+  return (
+    role === "owner" ||
+    role === "admin" ||
+    role === "editor" ||
+    role === "workspace-owner"
+  );
+}
+
 function broadcastToRoom(
   workspaceId: string,
   message: ServerMessage,
@@ -205,10 +250,103 @@ async function resolveSession(
   }
 }
 
-export function initializeWebSocket(httpServer: HttpServer) {
-  const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+// ─── Handshake helpers ──────────────────────────────────────────────────────
 
-  log.info("Presence server initialized on /ws");
+function rejectUpgrade(socket: import("net").Socket, reason: string): void {
+  socket.write(
+    `HTTP/1.1 401 Unauthorized\r\n` +
+      `Connection: close\r\n` +
+      `Content-Type: text/plain\r\n` +
+      `Content-Length: ${reason.length}\r\n` +
+      `\r\n${reason}`,
+  );
+  socket.destroy();
+}
+
+function sessionHashOf(rawToken: string): string {
+  return crypto.createHash("sha256").update(rawToken).digest("hex");
+}
+
+export function initializeWebSocket(httpServer: HttpServer) {
+  // SECURITY: noServer mode — the HTTP 'upgrade' event is authenticated
+  // BEFORE any socket is accepted. Anonymous sockets never exist.
+  const wss = new WebSocketServer({ noServer: true });
+
+  httpServer.on(
+    "upgrade",
+    async (
+      req: IncomingMessage,
+      socket: import("net").Socket,
+      head: Buffer,
+    ) => {
+      try {
+        const url = new URL(req.url || "/", "http://localhost");
+        if (url.pathname !== "/ws") {
+          socket.destroy();
+          return;
+        }
+        const cookies = cookie.parse(req.headers.cookie ?? "");
+        const rawToken =
+          cookies[authConfig.sessionCookieName] ||
+          cookies["__Host-meshwork_session"] ||
+          cookies.meshwork_session;
+        if (!rawToken) {
+          rejectUpgrade(socket, "Unauthorized");
+          return;
+        }
+        const session = await sessionService.validate(rawToken);
+        if (!session) {
+          rejectUpgrade(socket, "Unauthorized");
+          return;
+        }
+
+        wss.handleUpgrade(req, req.socket, head, (ws) => {
+          socketAuth.set(ws, {
+            rawToken,
+            userId: session.userId,
+            lastValidatedAt: Date.now(),
+          });
+          wss.emit("connection", ws, req);
+        });
+      } catch (err) {
+        log.error({ err }, "WS upgrade auth error");
+        rejectUpgrade(socket, "Unauthorized");
+      }
+    },
+  );
+
+  log.info("Presence server initialized on /ws (handshake-authenticated)");
+
+  // Revocation fan-out subscriber: close sockets of revoked sessions.
+  const sub = createRedisClient();
+  if (sub) {
+    sub
+      .subscribe(SESSION_REVOCATION_CHANNEL)
+      .then(() => log.info("Subscribed to session revocations"))
+      .catch((err: Error) => log.warn({ err }, "Revocation subscribe failed"));
+    sub.on("message", (_channel: string, message: string) => {
+      try {
+        const payload = JSON.parse(message) as {
+          userId?: string;
+          idHashes?: string[];
+        };
+        for (const [, room] of rooms.entries()) {
+          for (const [uid, user] of room.entries()) {
+            const auth = socketAuth.get(user.ws);
+            if (!auth) continue;
+            if (
+              (payload.userId && payload.userId === uid) ||
+              payload.idHashes?.includes(sessionHashOf(auth.rawToken))
+            ) {
+              user.ws.close(4001, "session revoked");
+            }
+          }
+        }
+      } catch (err) {
+        log.error({ err }, "Revocation message handling failed");
+      }
+    });
+  }
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     websocketConnectionsActive.inc();
@@ -229,6 +367,21 @@ export function initializeWebSocket(httpServer: HttpServer) {
       ws.ping();
     }, 30000);
 
+    // SECURITY: periodic re-validation of the session behind this socket.
+    const revalidator = setInterval(async () => {
+      const auth = socketAuth.get(ws);
+      if (!auth) return ws.close(4001, "session expired");
+      try {
+        const session = await sessionService.validate(auth.rawToken);
+        if (!session || session.userId !== auth.userId) {
+          return ws.close(4001, "session revoked");
+        }
+        auth.lastValidatedAt = Date.now();
+      } catch {
+        return ws.close(1011, "internal error");
+      }
+    }, SESSION_REVALIDATE_MS);
+
     ws.on("message", async (raw) => {
       try {
         const msg: ClientMessage = JSON.parse(raw.toString());
@@ -245,12 +398,22 @@ export function initializeWebSocket(httpServer: HttpServer) {
               return;
             }
 
-            const user = await resolveSession(req);
+            // Identity was established at the upgrade handshake; re-read it
+            // here (cheap) so a revoked socket cannot rejoin rooms.
+            const auth = socketAuth.get(ws);
+            if (!auth) {
+              ws.send(
+                JSON.stringify({ type: "error", message: "Unauthorized" }),
+              );
+              ws.close(4001, "session revoked");
+              return;
+            }
+            const user = await authStorage.findUserById(auth.userId);
             if (!user) {
               ws.send(
                 JSON.stringify({ type: "error", message: "Unauthorized" }),
               );
-              ws.close();
+              ws.close(4001, "session revoked");
               return;
             }
 
@@ -365,6 +528,8 @@ export function initializeWebSocket(httpServer: HttpServer) {
 
           case "node-move": {
             if (!currentUserId || !currentWorkspaceId || !msg.nodeId) return;
+            if (!(await mayMutate(currentUserId, currentWorkspaceId, ws)))
+              return;
             publishToRoom(
               currentWorkspaceId,
               {
@@ -380,8 +545,10 @@ export function initializeWebSocket(httpServer: HttpServer) {
             break;
           }
 
-          case "canvas-sync":
-            if (!currentWorkspaceId) return;
+          case "canvas-sync": {
+            if (!currentUserId || !currentWorkspaceId) return;
+            if (!(await mayMutate(currentUserId, currentWorkspaceId, ws)))
+              return;
             publishToRoom(
               currentWorkspaceId,
               {
@@ -393,9 +560,12 @@ export function initializeWebSocket(httpServer: HttpServer) {
               currentUserId,
             );
             break;
+          }
 
-          case "nodes-change":
-            if (!currentWorkspaceId) return;
+          case "nodes-change": {
+            if (!currentUserId || !currentWorkspaceId) return;
+            if (!(await mayMutate(currentUserId, currentWorkspaceId, ws)))
+              return;
             publishToRoom(
               currentWorkspaceId,
               {
@@ -406,9 +576,12 @@ export function initializeWebSocket(httpServer: HttpServer) {
               currentUserId,
             );
             break;
+          }
 
-          case "edges-change":
-            if (!currentWorkspaceId) return;
+          case "edges-change": {
+            if (!currentUserId || !currentWorkspaceId) return;
+            if (!(await mayMutate(currentUserId, currentWorkspaceId, ws)))
+              return;
             publishToRoom(
               currentWorkspaceId,
               {
@@ -419,21 +592,41 @@ export function initializeWebSocket(httpServer: HttpServer) {
               currentUserId,
             );
             break;
+          }
         }
       } catch (err: unknown) {
         log.error({ err }, "Message handling error");
       }
     });
 
+    // SECURITY: viewers and non-members must not broadcast canvas mutations.
+    async function mayMutate(
+      userId: string,
+      workspaceId: string,
+      sock: WebSocket,
+    ): Promise<boolean> {
+      const role = await cachedWorkspaceRole(userId, workspaceId);
+      if (canMutateCanvas(role)) return true;
+      sock.send(
+        JSON.stringify({
+          type: "error",
+          message: "Insufficient permissions for this action",
+        }),
+      );
+      return false;
+    }
+
     ws.on("close", () => {
       websocketConnectionsActive.dec();
       clearInterval(heartbeat);
+      clearInterval(revalidator);
       removeFromAllRooms(ws);
     });
 
     ws.on("error", (_err: unknown) => {
       websocketConnectionsActive.dec();
       clearInterval(heartbeat);
+      clearInterval(revalidator);
       removeFromAllRooms(ws);
     });
   });

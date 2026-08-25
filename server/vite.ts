@@ -22,7 +22,7 @@ export async function setupVite(server: Server, app: Express) {
       ...viteLogger,
       error: (msg, options) => {
         viteLogger.error(msg, options);
-        if (process.env.E2E_BYPASS_AUTH !== "true") {
+        if (process.env.NODE_ENV === "production") {
           process.exit(1);
         }
       },

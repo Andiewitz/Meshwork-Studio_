@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 import cookieParser from "cookie-parser";
-import { MemAuthStorage } from "@services/auth/db/storage";
+import { MemAuthStorage } from "../../helpers/mem-auth-storage";
 import { SessionService } from "@services/auth/services/session-service";
 import { AuthService } from "@services/auth/services/auth-service";
 import { createCsrfMiddleware } from "@services/auth/security/csrf";

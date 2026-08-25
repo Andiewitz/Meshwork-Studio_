@@ -22,24 +22,6 @@ vi.mock("bcrypt", () => ({
   },
 }));
 
-// Mock jsonwebtoken for token tests
-vi.mock("jsonwebtoken", () => ({
-  default: {
-    sign: vi
-      .fn()
-      .mockImplementation((payload: any, _secret: string, opts?: any) => {
-        return `mock.jwt.${JSON.stringify(payload)}.exp:${opts?.expiresIn || "none"}`;
-      }),
-    verify: vi.fn().mockImplementation((token: string, _secret: string) => {
-      if (token.startsWith("mock.jwt.")) {
-        const payloadStr = token.replace("mock.jwt.", "").split(".exp:")[0];
-        return JSON.parse(payloadStr);
-      }
-      throw new Error("Invalid token");
-    }),
-  },
-}));
-
 // Mock redis
 vi.mock("@server/lib/redis", () => ({
   getRedis: vi.fn().mockReturnValue(null),
@@ -235,65 +217,5 @@ describe("Change Password Schema Validation", () => {
       newPassword: "short",
     });
     expect(result.success).toBe(false);
-  });
-});
-
-describe("JWT Token Generation and Verification", () => {
-  let generateTokens: any;
-  let verifyToken: any;
-
-  beforeAll(async () => {
-    const mod = await import("@server/modules/auth/jwt");
-    generateTokens = mod.generateTokens;
-    verifyToken = mod.verifyToken;
-  });
-
-  it("should_generate_access_and_refresh_tokens", () => {
-    const result = generateTokens({ id: "user-123" });
-    expect(result.accessToken).toBeDefined();
-    expect(result.refreshToken).toBeDefined();
-    expect(result.accessJti).toBeDefined();
-    expect(result.refreshJti).toBeDefined();
-    expect(typeof result.accessToken).toBe("string");
-    expect(typeof result.refreshToken).toBe("string");
-  });
-
-  it("should_verify_access_token_with_correct_type", () => {
-    const { accessToken } = generateTokens({ id: "user-123" });
-    const payload = verifyToken(accessToken, "access");
-    expect(payload).not.toBeNull();
-    expect(payload!.userId).toBe("user-123");
-    expect(payload!.type).toBe("access");
-  });
-
-  it("should_verify_refresh_token_with_correct_type", () => {
-    const { refreshToken } = generateTokens({ id: "user-123" });
-    const payload = verifyToken(refreshToken, "refresh");
-    expect(payload).not.toBeNull();
-    expect(payload!.userId).toBe("user-123");
-    expect(payload!.type).toBe("refresh");
-  });
-
-  it("should_reject_access_token_when_expect_refresh", () => {
-    const { accessToken } = generateTokens({ id: "user-123" });
-    const payload = verifyToken(accessToken, "refresh");
-    expect(payload).toBeNull();
-  });
-
-  it("should_reject_refresh_token_when_expect_access", () => {
-    const { refreshToken } = generateTokens({ id: "user-123" });
-    const payload = verifyToken(refreshToken, "access");
-    expect(payload).toBeNull();
-  });
-
-  it("should_reject_invalid_token_string", () => {
-    const payload = verifyToken("not.a.valid.token", "access");
-    expect(payload).toBeNull();
-  });
-
-  it("should_include_jti_in_refresh_token", () => {
-    const { refreshToken, refreshJti } = generateTokens({ id: "user-123" });
-    const payload = verifyToken(refreshToken, "refresh");
-    expect(payload!.jti).toBe(refreshJti);
   });
 });

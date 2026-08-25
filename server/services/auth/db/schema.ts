@@ -28,6 +28,7 @@ export const users = pgTable(
       .notNull()
       .default("email"),
     isActive: boolean("is_active").notNull().default(true),
+    isAdmin: boolean("is_admin").notNull().default(false),
     hasNotifiedTeam: boolean("has_notified_team").default(false),
     readNotificationIds: jsonb("read_notification_ids").default(
       sql`'[]'::jsonb`,

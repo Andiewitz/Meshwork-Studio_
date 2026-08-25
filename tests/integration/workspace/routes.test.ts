@@ -60,10 +60,6 @@ vi.mock("@services/auth", () => ({
 }));
 
 // Mock CSRF middleware since we don't need real CSRF for route tests
-vi.mock("@server/middleware/csrf", () => ({
-  csrfProtection: (req: any, res: any, next: any) => next(),
-}));
-
 // Mock rate limiter
 vi.mock("@server/modules/rate-limit", () => ({
   apiLimiter: (req: any, res: any, next: any) => next(),
@@ -220,7 +216,9 @@ describe("Workspace Routes Integration Tests (IDOR & Zod)", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.isFavorite).toBe(true);
-      expect(mockUpdateWorkspace).toHaveBeenCalledWith("1", { isFavorite: true });
+      expect(mockUpdateWorkspace).toHaveBeenCalledWith("1", {
+        isFavorite: true,
+      });
     });
   });
 });

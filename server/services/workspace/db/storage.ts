@@ -333,7 +333,8 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
   }
 }
 
+// SECURITY: storage backend selection must never depend on an auth bypass
+// flag. In-memory storage is reserved for unit tests that construct it
+// explicitly.
 export const workspaceStorage: IWorkspaceStorage =
-  process.env.E2E_BYPASS_AUTH === "true"
-    ? new WorkspaceInMemoryStorage()
-    : new WorkspaceDatabaseStorage();
+  new WorkspaceDatabaseStorage();

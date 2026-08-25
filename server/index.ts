@@ -3,17 +3,10 @@ import { logger, createChildLogger } from "./lib/logger";
 const log = createChildLogger("server");
 log.info("Starting initialization phase 0...");
 
-if (
-  process.env.NODE_ENV === "production" &&
-  process.env.E2E_BYPASS_AUTH === "true"
-) {
-  throw new Error(
-    "FATAL SECURITY ERROR: E2E_BYPASS_AUTH must never be enabled in production!",
-  );
-}
 import express, { type Request, Response, NextFunction } from "express";
 import { db } from "./lib/db";
 import { db as authDb } from "./services/auth/db/connection";
+import { AuthService } from "./services/auth";
 import { sql } from "drizzle-orm";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -21,11 +14,6 @@ import { createServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import {
-  csrfProtection,
-  generateCsrfToken,
-  validateCsrfToken,
-} from "./middleware/csrf";
 import { apiLimiter } from "./middleware/rateLimit";
 import { isRedisAvailable } from "./lib/redis";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
@@ -217,8 +205,17 @@ app.get("/ready", (_req, res) => {
   }
 });
 
-// Prometheus Metrics Endpoint
-app.get("/metrics", async (_req, res) => {
+// SECURITY: Prometheus metrics require a bearer token (constant-time
+// compare). Scrape configs set `Authorization: Bearer <METRICS_BEARER_TOKEN>`.
+// When the token is unset the endpoint 404s entirely.
+const metricsBearer = process.env.METRICS_BEARER_TOKEN || "";
+app.get("/metrics", async (req, res) => {
+  if (
+    !metricsBearer ||
+    req.headers.authorization !== `Bearer ${metricsBearer}`
+  ) {
+    return res.status(404).send("Not Found");
+  }
   try {
     res.set("Content-Type", metricsRegistry.contentType);
     const metrics = await metricsRegistry.metrics();
@@ -229,22 +226,24 @@ app.get("/metrics", async (_req, res) => {
   }
 });
 
-// Admin Metrics Dashboard — secret URL, never exposed in logs/sitemaps
-const adminSecret = process.env.ADMIN_SECRET || "";
-app.get("/admin/:secret", (req, res) => {
-  if (!adminSecret || req.params.secret !== adminSecret) {
+// Admin dashboard: session-authenticated admin users only. The old
+// secret-in-URL gate leaked via logs/history/Referer and had no authz.
+const adminHtmlPath = path.resolve(__dirname, "admin.html");
+app.get("/admin", AuthService.middleware.isAuthenticated, (_req, res) => {
+  const user = (_req as { user?: { isAdmin?: boolean } }).user;
+  if (!user?.isAdmin) {
     return res.status(404).send("Not Found");
   }
   try {
-    const htmlPath = path.resolve(__dirname, "admin.html");
     // eslint-disable-next-line security/detect-non-literal-fs-filename
-    if (fs.existsSync(htmlPath)) {
+    if (fs.existsSync(adminHtmlPath)) {
       // eslint-disable-next-line security/detect-non-literal-fs-filename
-      res.type("html").send(fs.readFileSync(htmlPath, "utf-8"));
+      res.type("html").send(fs.readFileSync(adminHtmlPath, "utf-8"));
     } else {
       res.status(404).send("Admin dashboard not found");
     }
   } catch (err) {
+    log.error({ err }, "Admin dashboard load failed");
     res.status(500).send("Error loading dashboard");
   }
 });

@@ -7,7 +7,6 @@ import { AIService } from "@services/ai";
 import { TeamService, teamStorage } from "@services/team";
 import { MetricsService } from "@services/metrics";
 import { createChildLogger } from "./lib/logger";
-import { generateCsrfToken, csrfProtection } from "./middleware/csrf";
 import { AppRegistry } from "./lib/registry";
 import { eventBus } from "./lib/events";
 

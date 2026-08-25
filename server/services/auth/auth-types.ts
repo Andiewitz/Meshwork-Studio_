@@ -11,6 +11,7 @@ export interface PublicUser {
   profileImageUrl: string | null;
   authProvider: string;
   isActive: boolean | null;
+  isAdmin?: boolean;
   hasNotifiedTeam?: boolean | null;
   readNotificationIds?: unknown;
   createdAt?: Date | null;

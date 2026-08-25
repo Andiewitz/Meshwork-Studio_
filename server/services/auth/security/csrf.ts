@@ -10,6 +10,14 @@ function digest(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+function cookieTokenLookup(req: Request, names: string[]): string | undefined {
+  for (const name of names) {
+    const value = req.cookies?.[name];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return undefined;
+}
+
 function safeEqual(left: string, right: string): boolean {
   const a = Buffer.from(left);
   const b = Buffer.from(right);
@@ -20,59 +28,64 @@ function isValidOrigin(
   req: Request,
   originOrReferer: string | undefined,
 ): boolean {
-  if (!originOrReferer) return true; // If browser or non-browser client doesn't send Origin, rely on CSRF tokens
+  // SECURITY: exact-match allowlist ONLY. Substring/`includes()` matching was
+  // removed — it allowed origins like `https://meshwork.evil.com`.
+  if (!originOrReferer) return false;
 
+  let originUrl: URL;
   try {
-    const originUrl = new URL(originOrReferer);
-    const host = originUrl.host;
-
-    // 1. Same-origin match against current request Host or X-Forwarded-Host
-    const reqHost = req.get("host");
-    const forwardedHost = req.get("x-forwarded-host");
-    if (
-      reqHost &&
-      (reqHost === host || reqHost.split(":")[0] === host.split(":")[0])
-    ) {
-      return true;
-    }
-    if (
-      forwardedHost &&
-      (forwardedHost === host ||
-        forwardedHost.split(":")[0] === host.split(":")[0])
-    ) {
-      return true;
-    }
-
-    // 2. Allow localhost/127.0.0.1 in non-production
-    if (!authConfig.isProduction) {
-      if (
-        host.startsWith("localhost") ||
-        host.startsWith("127.0.0.1") ||
-        host.startsWith("0.0.0.0")
-      ) {
-        return true;
-      }
-    }
-
-    if (authConfig.frontendUrl) {
-      const allowedUrl = new URL(authConfig.frontendUrl);
-      if (originUrl.origin === allowedUrl.origin) return true;
-    }
-
-    if (process.env.APP_URL) {
-      const allowedAppUrl = new URL(process.env.APP_URL);
-      if (originUrl.origin === allowedAppUrl.origin) return true;
-    }
-
-    // 3. Allow known production domain patterns
-    if (host.includes("duckdns.org") || host.includes("meshwork")) {
-      return true;
-    }
-
-    return false;
+    originUrl = new URL(originOrReferer);
   } catch {
     return false;
   }
+  const candidate = `${originUrl.protocol}//${originUrl.host}`;
+
+  // 1. Same-origin: Origin must match the request's own Host exactly.
+  const reqHost = req.get("host");
+  if (reqHost && originUrl.host === reqHost) return true;
+
+  const forwardedHost = req.get("x-forwarded-host");
+  if (
+    forwardedHost &&
+    forwardedHost === reqHost &&
+    originUrl.host === forwardedHost
+  ) {
+    return true;
+  }
+
+  // 2. Explicit configured origins, compared as exact scheme+host strings.
+  const allowed = new Set<string>();
+  const addOrigin = (raw?: string | null) => {
+    if (!raw) return;
+    try {
+      const u = new URL(raw.trim());
+      if ((u.protocol === "https:" || u.protocol === "http:") && u.host) {
+        allowed.add(`${u.protocol}//${u.host}`);
+      }
+    } catch {
+      // ignore malformed configuration entries
+    }
+  };
+  addOrigin(authConfig.frontendUrl);
+  addOrigin(process.env.APP_URL);
+  if (authConfig.isProduction && authConfig.frontendUrl) {
+    addOrigin(authConfig.frontendUrl);
+  }
+
+  // 3. Localhost development origins (non-production only), exact hosts.
+  if (!authConfig.isProduction) {
+    for (const host of [
+      "localhost:5173",
+      "127.0.0.1:5173",
+      "localhost:5000",
+      "127.0.0.1:5000",
+    ]) {
+      allowed.add(`http://${host}`);
+      allowed.add(`https://${host}`);
+    }
+  }
+
+  return allowed.has(candidate);
 }
 
 export function createCsrfMiddleware(storage: IAuthStorage) {
@@ -101,8 +114,19 @@ export function createCsrfMiddleware(storage: IAuthStorage) {
     if (!MUTATING_METHODS.has(req.method)) return next();
 
     // 1. Origin & Referer Verification
+    // Fail closed: a cookie-bearing mutation with no Origin AND no Referer is
+    // treated as hostile (browsers always attach one of the two on POSTs).
     const origin = req.get("origin");
     const referer = req.get("referer");
+    const hasSessionCookie = Boolean(
+      cookieTokenLookup(req, ["__Host-meshwork_session", "meshwork_session"]),
+    );
+    if (!origin && !referer && hasSessionCookie) {
+      const error = csrfRejected();
+      return res
+        .status(error.status)
+        .json({ code: error.code, message: "Missing origin context" });
+    }
     if (origin && !isValidOrigin(req, origin)) {
       const error = csrfRejected();
       return res
@@ -118,9 +142,11 @@ export function createCsrfMiddleware(storage: IAuthStorage) {
 
     // 2. Double-Submit Cookie & Header Token Verification
     const cookieToken =
-      req.cookies?.[authConfig.csrfCookieName] ||
-      req.cookies?.["__Host-meshwork_csrf"] ||
-      req.cookies?.meshwork_csrf;
+      cookieTokenLookup(req, [
+        authConfig.csrfCookieName,
+        "__Host-meshwork_csrf",
+        "meshwork_csrf",
+      ]) || "";
     const headerToken = req.get("X-CSRF-Token") || req.get("x-csrf-token");
 
     if (!cookieToken || !headerToken || !safeEqual(cookieToken, headerToken)) {

@@ -5,7 +5,6 @@ import { authStorage } from "./db/storage";
 import { SessionService } from "./services/session-service";
 import { AuthService as AuthBusinessService } from "./services/auth-service";
 import { createCsrfMiddleware } from "./security/csrf";
-import { OAuthService } from "./oauth/oauth-service";
 import { authConfig } from "./config";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
@@ -13,10 +12,12 @@ import type { AppContext } from "@server/lib/registry";
 const log = createChildLogger("auth-service");
 
 const sessionService = new SessionService(authStorage, authConfig.sessionDays);
-const authBusinessService = new AuthBusinessService(authStorage, sessionService);
+const authBusinessService = new AuthBusinessService(
+  authStorage,
+  sessionService,
+);
 const csrfMiddleware = createCsrfMiddleware(authStorage);
 const authMiddleware = createAuthMiddleware(sessionService, authStorage);
-const oauthService = new OAuthService();
 
 export class AuthService {
   static async initialize(app: Express, context: AppContext) {
@@ -39,7 +40,6 @@ export class AuthService {
   static sessions = sessionService;
   static auth = authBusinessService;
   static csrf = csrfMiddleware;
-  static oauth = oauthService;
   static middleware = {
     requireAuth: authMiddleware.requireAuth,
     optionalAuth: authMiddleware.optionalAuth,
@@ -62,5 +62,4 @@ export * from "./config";
 export * from "./db";
 export * from "./services";
 export * from "./security";
-export * from "./oauth";
 export * from "./middleware";

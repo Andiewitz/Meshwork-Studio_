@@ -49,10 +49,6 @@ export const authConfig = {
   },
 };
 
-if (isProduction && process.env.E2E_BYPASS_AUTH === "true") {
-  throw new Error("E2E_BYPASS_AUTH must never be enabled in production");
-}
-
 export function sessionCookieOptions() {
   return {
     httpOnly: true,
