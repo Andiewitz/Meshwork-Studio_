@@ -2,7 +2,7 @@
 
 > A complete guide to every security layer protecting Meshwork Studio — from the browser to the database.
 
-**Last Updated:** April 2, 2026
+**Last Updated:** August 26, 2026 (rewritten for the Go auth service split)
 
 ## Table of Contents
 
@@ -49,45 +49,24 @@ Meshwork Studio implements a **defense-in-depth** security model. No single laye
 
 ## Authentication
 
-### Multi-Strategy Login
+Authentication is owned by a dedicated **Go auth service** (`services/auth`) —
+users, sessions, MFA, OAuth and the security audit trail live there. The Node
+monolith only validates sessions through a thin bridge. Full design:
+[AUTH_ARCHITECTURE.md](./AUTH_ARCHITECTURE.md).
 
-Users can authenticate via two methods, handled by [Passport.js](http://www.passportjs.org/):
-
-| Strategy             | How It Works                                          | When It's Used                |
-| -------------------- | ----------------------------------------------------- | ----------------------------- |
-| **Local**            | Email + password with bcrypt hashing (12 salt rounds) | Users who register directly   |
-| **Google OAuth 2.0** | Redirect to Google, receive profile back              | Users who prefer social login |
-
-### Session Management
-
-After authentication, a session is created and stored server-side:
-
-| Setting     | Value                                          | Why                                                                  |
-| ----------- | ---------------------------------------------- | -------------------------------------------------------------------- |
-| `httpOnly`  | `true`                                         | JavaScript cannot read the session cookie (prevents XSS token theft) |
-| `sameSite`  | `strict`                                       | Cookie only sent from the same origin (prevents CSRF)                |
-| `secure`    | `true` (production)                            | Cookie only sent over HTTPS                                          |
-| `maxAge`    | 7 days                                         | Balanced between convenience and security                            |
-| **Storage** | PostgreSQL (production) / Memory (development) | Sessions survive server restarts in production                       |
+| Aspect               | Implementation                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Password hashing** | Argon2id (64 MiB, t=3, p=2); legacy bcrypt hashes verify transparently and upgrade on next login           |
+| **Sessions**         | Opaque 256-bit tokens, stored SHA-256-hashed; rotated on every login; 14-day absolute + 7-day idle TTLs    |
+| **Google OAuth**     | PKCE + single-use state + mandatory `email_verified`; linking to an existing account requires its password |
+| **MFA**              | TOTP with AES-GCM-encrypted secrets and single-use hashed backup codes                                     |
+| **CAPTCHA**          | Server-verified on registration with Redis-backed replay protection                                        |
 
 ### Password Requirements
 
-- Minimum 12 characters
-- At least one uppercase letter, one lowercase letter, one number, one special character
-- Validated server-side in `server/modules/auth/password.ts`
-
-### CAPTCHA
-
-CAPTCHA is required for **registration only** — returning users shouldn't be punished for being loyal.
-
-The implementation includes enterprise features most apps skip:
-
-- **Replay protection**: Each CAPTCHA token can only be used once (tracked server-side)
-- **Token expiration**: Tokens expire after 5 minutes
-- **Score thresholds**: reCAPTCHA v3 scores below 0.5 are rejected
-- **Graceful degradation**: If no CAPTCHA keys are configured, verification is skipped in development
-
----
+- Minimum 8 characters, maximum 128 (NIST SP 800-63B — length over composition rules)
+- Screened against the HaveIBeenPwned breach corpus via k-anonymity
+  (only a 5-char SHA-1 prefix ever leaves the server)
 
 ## Authorization & Access Control
 
@@ -165,33 +144,27 @@ The CSRF token is intentionally tab-scoped. `sessionStorage` is cleared when the
 
 ## Brute-Force Protection
 
-### Account Lockout System
+### Account Lockout System (auth service)
 
-After too many failed login attempts, the account is temporarily locked with **progressive delays**:
+Atomic per-account counters in Postgres with a sliding 15-minute window:
 
-| Failed Attempts | What Happens                    |
-| --------------- | ------------------------------- |
-| 1–5             | Normal login allowed            |
-| 6               | Account locked for **1 minute** |
-| 7               | Locked for **5 minutes**        |
-| 8               | Locked for **15 minutes**       |
-| 9               | Locked for **30 minutes**       |
-| 10+             | Locked for **60 minutes**       |
+| Failed Attempts (in window) | What Happens                                 |
+| --------------------------- | -------------------------------------------- |
+| 1–5                         | Login allowed                                |
+| 6                           | Locked **15 minutes**                        |
+| each further failure        | Doubles: 30m → 60m → … capped at **8 hours** |
 
-- Lockout state is tracked per email in the `login_attempts` table
-- Successful login resets the counter to zero
-- Lockout expiration is checked automatically — users don't need to do anything except wait
+- The increment is a single UPSERT — concurrent failures can never under-count
+- Responses never reveal remaining lockout time (no brute-force progress oracle)
+- Per-IP sliding windows run in Redis and **fail closed** if Redis is down
 
 ### Rate Limiting
 
-Two tiers of rate limiting protect against automated attacks:
-
-| Limiter          | Scope                 | Limit        | Window     |
-| ---------------- | --------------------- | ------------ | ---------- |
-| **API Limiter**  | All `/api/` routes    | 100 requests | 1 minute   |
-| **Auth Limiter** | Login & register only | 10 requests  | 15 minutes |
-
-Both are implemented with `express-rate-limit` and return standard `429 Too Many Requests` responses.
+| Limiter        | Scope                             | Limit                   | Store                      |
+| -------------- | --------------------------------- | ----------------------- | -------------------------- |
+| API Limiter    | All `/api/` routes (monolith)     | 100 req / min           | in-memory per instance     |
+| Auth endpoints | login/register/reset (Go service) | IP-keyed sliding window | Redis (shared, atomic Lua) |
+| AI endpoints   | BYOK vs free-tier split           | 30 / 10 req/min         | keyed by user ID           |
 
 ---
 
@@ -353,18 +326,15 @@ The redaction function recursively traverses nested objects, so even deeply nest
 
 ### Required Variables
 
-| Variable         | Required In        | Purpose                                            |
-| ---------------- | ------------------ | -------------------------------------------------- |
-| `SESSION_SECRET` | Production         | Session cookie signing (server crashes without it) |
-| `ENCRYPTION_KEY` | When using BYOK AI | AES-256 master key for API key encryption          |
-| `DATABASE_URL`   | Production         | PostgreSQL connection string                       |
+Secrets are inventoried centrally in [`../important/SECRETS.md`](../important/SECRETS.md)
+— every variable, its consumer code, generation command and rotation story.
 
-### Fail-Safe Defaults
+Fail-safe defaults:
 
-- Missing `SESSION_SECRET` in production → **Server refuses to start** (hard crash with clear error)
-- Missing `SESSION_SECRET` in development → Warning logged, insecure default used
-- Missing `ENCRYPTION_KEY` → AI key storage throws error, but app continues running
-- Missing CAPTCHA keys → Verification skipped in development, enforced in production
+- Missing database URL → auth bridge refuses to boot (no silent stateless mode)
+- Missing `IDENTITY_IP_HASH_KEY` / `IDENTITY_ENCRYPTION_KEY` in production → Go service refuses to start
+- Redis configured but unreachable on sensitive routes → requests rejected (fail closed), not silently unprotected
+- No known-default secrets exist anywhere in either stack
 
 ### What's in `.gitignore`
 
@@ -428,16 +398,11 @@ app.put("/api/workspaces/:id", async (req, res) => {
 
 ## Key Files
 
-| File                                       | Purpose                                              |
-| ------------------------------------------ | ---------------------------------------------------- |
-| `server/modules/auth/authCore.ts`          | Session setup, Passport initialization               |
-| `server/modules/auth/strategies/local.ts`  | Email/password authentication                        |
-| `server/modules/auth/strategies/google.ts` | Google OAuth 2.0 authentication                      |
-| `server/modules/auth/lockout.ts`           | Brute-force protection with progressive delays       |
-| `server/modules/auth/captcha.ts`           | CAPTCHA verification with replay protection          |
-| `server/modules/auth/password.ts`          | Password hashing and strength validation             |
-| `server/modules/ai/encryption.ts`          | AES-256-GCM API key encryption                       |
-| `server/middleware/csrf.ts`                | CSRF token generation and validation                 |
-| `server/middleware/rateLimit.ts`           | API and auth rate limiters                           |
-| `server/types/express.d.ts`                | Global Express.User type augmentation                |
-| `server/index.ts`                          | Helmet headers, CORS, request logging, PII redaction |
+| File                             | Purpose                                                          |
+| -------------------------------- | ---------------------------------------------------------------- |
+| `services/auth/`                 | Go identity service: sessions, MFA, OAuth, audit (see its tests) |
+| `server/services/auth/`          | Monolith session bridge: middleware + CSRF only                  |
+| `server/middleware/rateLimit.ts` | API and auth rate limiters (monolith side)                       |
+| `server/types/express.d.ts`      | Express `Request.user` augmentation                              |
+| `server/index.ts`                | Helmet headers, CORS, metrics gate, admin route                  |
+| `docs/AUTH_ARCHITECTURE.md`      | Threat model and ownership map                                   |

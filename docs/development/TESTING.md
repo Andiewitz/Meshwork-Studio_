@@ -69,7 +69,7 @@ npx vitest run tests/unit
 npx vitest run tests/integration
 
 # Auth lockout tests specifically
-npm run test:lockout
+npm run test:auth
 
 # E2E tests (requires dev server running)
 npx playwright test

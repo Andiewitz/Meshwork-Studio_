@@ -39,7 +39,7 @@ Meshwork Studio lets you design system architecture diagrams by dragging infrast
 │   CLIENT LAYER     │     │   NGINX GATEWAY    │     │   API SERVER       │
 │   (React + Vite)   │◄───►│   (Port 80)        │◄───►│   (Express :5000)  │
 │                    │     │                    │     │                    │
-│ • React 18         │     │ • Reverse Proxy    │     │ • Passport.js Auth │
+│ • React 18         │     │ • Reverse Proxy    │     │ • Go Auth Service  │
 │ • React Flow       │     │ • Static Assets    │     │ • Drizzle ORM      │
 │ • TanStack Query   │     │ • Gzip + Caching   │     │ • Zod Validation   │
 │ • Tailwind + Radix │     │ • SPA Fallback     │     │ • AES-256 BYOK     │
@@ -81,10 +81,9 @@ docker-compose up -d
 
 ```bash
 npm install
-npm run dev
+npm run dev              # monolith + frontend on :5000
+make -C services/auth run  # auth service on :8081 (auth endpoints are Go)
 # Visit http://localhost:5000
-
-# Dev login:  test@example.com / Test123!@#
 ```
 
 ---
@@ -106,14 +105,15 @@ npm run dev
 
 ### Backend
 
-| Technology      | Purpose                           |
-| --------------- | --------------------------------- |
-| **Express 5**   | API server                        |
-| **Passport.js** | Multi-strategy authentication     |
-| **Drizzle ORM** | Type-safe PostgreSQL queries      |
-| **Zod**         | Runtime schema validation         |
-| **bcrypt**      | Password hashing (12 salt rounds) |
-| **AES-256-GCM** | API key encryption for BYOK AI    |
+| Technology      | Purpose                                        |
+| --------------- | ---------------------------------------------- |
+| **Express 5**   | Monolith API server                            |
+| **Go 1.24**     | Auth service: sessions, MFA, OAuth, audit      |
+| **Argon2id**    | Password hashing (transparent bcrypt upgrade)  |
+| **Drizzle ORM** | Type-safe PostgreSQL queries                   |
+| **Zod**         | Runtime schema validation                      |
+| **Redis**       | Session cache, rate limits, pub/sub revocation |
+| **AES-256-GCM** | API key encryption for BYOK AI + MFA secrets   |
 
 ### Infrastructure
 
@@ -131,22 +131,22 @@ npm run dev
 
 ```bash
 # Development
-npm run dev              # Start the dev server (API + frontend)
-npm run check            # TypeScript type checking (must pass with 0 errors)
+npm run dev                    # Monolith + frontend on :5000
+make -C services/auth run      # Auth service on :8081 (required — auth
+                               # endpoints are served by Go, not Express)
+npm run check                  # TypeScript type checking
 
 # Testing
 npm run test:run         # Run all tests
 npm run test:coverage    # Generate HTML coverage report
-npm run test:lockout     # Run auth lockout tests specifically
 
 # Production
 npm run build            # Bundle client + server
 npm run start            # Start production server
 
 # Database
-npm run db:generate      # Generate new migration files from schema changes
-npm run db:migrate       # Apply pending migrations to the database
-npm run db:push          # Push schema changes directly (dev shortcut, no migration files)
+npm run db:backup        # JSON dump of critical tables to ./backups/
+npm run diagnose         # Verify required config is present and valid
 
 # Docker
 docker-compose up -d     # Start full stack
@@ -160,22 +160,25 @@ docker-compose down -v   # Stop and remove volumes
 
 Every major system has its own deep-dive guide:
 
-| Document                                                           | What You'll Learn                                                                                               |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| **[Security Architecture](./docs/SECURITY.md)**                    | Auth flows, IDOR protection, brute-force lockouts, AES-256 encryption, CSRF, rate limiting, PII redaction       |
-| **[Canvas Engine](./docs/ENGINE.md)**                              | How drag-and-drop works, spatial containment logic, the Postgres upsert sync strategy                           |
-| **[Canvas Persistence](./docs/PERSISTENCE.md)**                    | The offline-first localStorage cache layer, debounced auto-save, and edge normalization fix                     |
-| **[Workspace & Collections API](./docs/WORKSPACES.md)**            | Full REST API reference for workspaces and collections, IDOR pattern, client hooks                              |
-| **[AI Engine Guide](./docs/AI_ENGINE.md)**                         | Bring-your-own-key AI integration, encryption flow, and API endpoints                                           |
-| **[Theming & Design System](./docs/THEMING.md)**                   | Dark/light/system modes, neo-brutalist CSS utilities, brand identity                                            |
-| **[Testing Strategy](./docs/TESTING.md)**                          | The testing pyramid, how to run tests, how to write new ones                                                    |
-| **[AWS Infrastructure (ECS/Terraform)](./docs/INFRASTRUCTURE.md)** | Production ECS/Fargate + ALB + RDS + Redis architecture via Terraform (with EC2 single-node emergency fallback) |
-| **[NGINX Architecture](./docs/NGINX_ARCHITECTURE.md)**             | Why NGINX sits in front of Express, SPA routing, caching                                                        |
-| **[Settings & Privacy](./docs/SETTINGS.md)**                       | User profile management, account deletion, data export                                                          |
-| **[Database Backup & Restore](./docs/BACKUP.md)**                  | How to back up both Postgres databases and restore from a dump                                                  |
-| **[Security Audit Report](./docs/AUDIT_REPORT.md)**                | The original security audit and critical fixes implemented during hardening                                     |
-| **[Post-Mortem Log](./docs/post-mortem.md)**                       | Every production bug we've found and fixed, with root cause analysis                                            |
+| Document                                                                          | What You'll Learn                                                                                         |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **[Security Architecture](./docs/SECURITY.md)**                                   | Auth flows, IDOR protection, brute-force lockouts, AES-256 encryption, CSRF, rate limiting, PII redaction |
+| **[Auth Architecture](./docs/AUTH_ARCHITECTURE.md)**                              | The Go identity service: sessions, MFA, OAuth, threat model, cutover/rollback                             |
+| **[Canvas Engine](./docs/architecture/ENGINE.md)**                                | How drag-and-drop works, spatial containment logic, the Postgres upsert sync strategy                     |
+| **[Canvas Schema](./docs/architecture/CANVAS_SCHEMA.md)**                         | ReactFlow node/edge structures and canvas data model                                                      |
+| **[Canvas Persistence](./docs/architecture/PERSISTENCE.md)**                      | PostgreSQL + Drizzle storage mechanisms and sync strategy                                                 |
+| **[Workspace & Collections API](./docs/features/WORKSPACES.md)**                  | REST API reference for workspaces and collections, IDOR pattern, client hooks                             |
+| **[AI Engine Guide](./docs/features/MOSH_AI.md)**                                 | Bring-your-own-key AI integration, encryption flow, and API endpoints                                     |
+| **[Theming & Design System](./docs/features/THEMING.md)**                         | Dark/light/system modes, CSS variables, brand identity                                                    |
+| **[Settings & Privacy](./docs/features/SETTINGS.md)**                             | User profile management, security settings, account controls                                              |
+| **[Testing Strategy](./docs/development/TESTING.md)**                             | The testing pyramid, how to run tests, how to write new ones                                              |
+| **[AWS Infrastructure (ECS/Terraform)](./docs/infrastructure/INFRASTRUCTURE.md)** | ECS/Fargate + ALB + RDS architecture via Terraform (with EC2 single-node path)                            |
+| **[Deployment Runbook](./important/DEPLOY.md)**                                   | Production deploy paths, verification checklist, rollback table                                           |
+| **[Secrets Inventory](./important/SECRETS.md)**                                   | Every secret: generation, consumers, rotation & blast radius                                              |
+| **[Post-Mortem Log](./docs/archive/process/post-mortem.md)**                      | Production bugs found and fixed, with root cause analysis                                                 |
 
+Historical documents (tickets, investigations, older audits) live in
+[`docs/archive/`](./docs/archive).
 ---
 
 ## Deployment Architectures
@@ -216,22 +219,21 @@ meshwork-studio/
 │       ├── hooks/               # React Query hooks
 │       ├── lib/                 # secureFetch, CSRF, query client
 │       └── pages/               # Route-level page components
-├── server/                      # Express backend
-│   ├── modules/
-│   │   ├── auth/                # Passport strategies, lockout, CAPTCHA
-│   │   ├── canvas/              # Node/edge storage with upsert sync
-│   │   ├── workspace/           # Workspace CRUD with IDOR checks
-│   │   └── ai/                  # BYOK encryption and AI proxy
-│   ├── middleware/              # CSRF, rate limiting
-│   └── types/                   # Express.User type augmentation
+├── services/
+│   └── auth/                    # Go identity service (sessions, MFA, OAuth)
+├── server/                      # Express monolith backend
+│   ├── modules/                 # Re-export shims per domain
+│   ├── services/                # Domain services (canvas, workspace,
+│   │                            #  team, ai, metrics + auth bridge)
+│   ├── middleware/              # Rate limiting
+│   └── types/                   # Express.Request.user augmentation
+├── client/src/                  # React frontend (also under client/)
 ├── terraform/                   # Production ECS/RDS/Redis/ALB IAC
-├── deploy/                      # Single-node EC2 deployment & NGINX scripts
-├── shared/                      # Drizzle schema + Zod validators
-├── tests/
-│   ├── unit/                    # Pure logic tests
-│   ├── integration/             # HTTP route tests with Supertest
-│   └── e2e/                     # Playwright browser tests
-├── docs/                        # Deep-dive documentation
+├── deploy/                      # Infra artifacts: nginx.conf, user-data, RDS notes
+├── important/                   # DEPLOY.md, SECRETS.md, ops guides
+├── scripts/                     # deploy.sh, build.ts, backup-db.ts, guards
+├── packages/contracts/          # OpenAPI source of truth for service APIs
+├── docs/                        # Deep-dive documentation (+ docs/archive/)
 ├── docker-compose.yml           # Full stack local orchestration
 ├── vitest.config.ts             # Test runner configuration
 ```
