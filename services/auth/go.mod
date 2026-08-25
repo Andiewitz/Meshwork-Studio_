@@ -1,4 +1,4 @@
-module github.com/meshwork-studio/identity
+module github.com/meshwork-studio/auth
 
 go 1.24
 

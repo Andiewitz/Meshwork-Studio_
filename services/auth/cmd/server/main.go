@@ -17,9 +17,9 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/meshwork-studio/identity/internal/config"
-	"github.com/meshwork-studio/identity/internal/httpapi"
-	"github.com/meshwork-studio/identity/internal/store"
+	"github.com/meshwork-studio/auth/internal/config"
+	"github.com/meshwork-studio/auth/internal/httpapi"
+	"github.com/meshwork-studio/auth/internal/store"
 )
 
 func main() {

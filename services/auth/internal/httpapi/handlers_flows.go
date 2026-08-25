@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/meshwork-studio/identity/internal/audit"
-	"github.com/meshwork-studio/identity/internal/password"
-	"github.com/meshwork-studio/identity/internal/store"
+	"github.com/meshwork-studio/auth/internal/audit"
+	"github.com/meshwork-studio/auth/internal/password"
+	"github.com/meshwork-studio/auth/internal/store"
 )
 
 const (

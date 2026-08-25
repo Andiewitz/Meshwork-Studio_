@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meshwork-studio/identity/internal/audit"
-	"github.com/meshwork-studio/identity/internal/csrf"
-	"github.com/meshwork-studio/identity/internal/password"
-	"github.com/meshwork-studio/identity/internal/session"
-	"github.com/meshwork-studio/identity/internal/store"
+	"github.com/meshwork-studio/auth/internal/audit"
+	"github.com/meshwork-studio/auth/internal/csrf"
+	"github.com/meshwork-studio/auth/internal/password"
+	"github.com/meshwork-studio/auth/internal/session"
+	"github.com/meshwork-studio/auth/internal/store"
 )
 
 // ─── Shared response shapes (contract-compatible with the legacy API) ───────

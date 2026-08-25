@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/meshwork-studio/identity/internal/audit"
-	"github.com/meshwork-studio/identity/internal/store"
+	"github.com/meshwork-studio/auth/internal/audit"
+	"github.com/meshwork-studio/auth/internal/store"
 )
 
 // consumeBackupCode marks a backup code used; returns 1 when valid.

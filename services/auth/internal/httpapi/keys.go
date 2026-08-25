@@ -4,8 +4,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/meshwork-studio/identity/internal/csrf"
-	"github.com/meshwork-studio/identity/internal/session"
+	"github.com/meshwork-studio/auth/internal/csrf"
+	"github.com/meshwork-studio/auth/internal/session"
 )
 
 // ipKey builds the per-IP rate-limit key for a route family.

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/meshwork-studio/identity/internal/audit"
-	"github.com/meshwork-studio/identity/internal/csrf"
+	"github.com/meshwork-studio/auth/internal/audit"
+	"github.com/meshwork-studio/auth/internal/csrf"
 )
 
 // Adapter: store.DB implements csrf.SecretStore.

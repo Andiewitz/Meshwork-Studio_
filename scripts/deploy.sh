@@ -4,14 +4,16 @@
 # ==============================================================================
 # Workflow:
 #   1. Runs local production build (`npm run build`)
+#   1b. Builds the Go auth service binary (linux/amd64)
 #   2. Locates EC2 instance / SSH key
-#   3. Syncs fresh `dist/` directory to remote EC2 server
-#   4. Swaps dist atomically and restarts/reloads PM2 process
-#   5. Runs health checks to confirm zero-downtime deployment
+#   3. Syncs fresh `dist/` directory + auth binary to remote EC2 server
+#   4. Swaps both atomically and restarts/reloads PM2 processes
+#   5. Runs health checks (monolith :5000 + auth :8081)
 #
 # Usage:
-#   ./scripts/deploy.sh              # Build locally & deploy dist to EC2
-#   ./scripts/deploy.sh --skip-build # Deploy existing local dist without rebuilding
+#   ./scripts/deploy.sh               # Build everything & deploy
+#   ./scripts/deploy.sh --skip-build  # Deploy existing local dist without rebuilding
+#   ./scripts/deploy.sh --skip-auth   # Skip the Go auth service build/upload
 # ==============================================================================
 
 set -euo pipefail
@@ -47,10 +49,15 @@ echo -e "${BOLD}${CYAN}======================================================${N
 
 # Parse flags
 SKIP_BUILD=false
+SKIP_AUTH=false
 for arg in "$@"; do
   case $arg in
     --skip-build|-s)
       SKIP_BUILD=true
+      shift
+      ;;
+    --skip-auth|-a)
+      SKIP_AUTH=true
       shift
       ;;
   esac
@@ -58,12 +65,12 @@ done
 
 # Step 1: Run Local Build
 if [ "$SKIP_BUILD" = false ]; then
-  echo -e "${BLUE}▶ [1/4] Building production bundle locally...${NC}"
+  echo -e "${BLUE}▶ [1/5] Building production bundle locally...${NC}"
   cd "$REPO_DIR"
   npm run build
   echo -e "${GREEN}✓ Local build complete!${NC}"
 else
-  echo -e "${YELLOW}⚡ [1/4] Skipping build step (--skip-build). Using existing dist/...${NC}"
+  echo -e "${YELLOW}⚡ [1/5] Skipping build step (--skip-build). Using existing dist/...${NC}"
 fi
 
 # Verify local dist exists
@@ -71,6 +78,21 @@ if [ ! -d "$REPO_DIR/dist" ] || [ ! -f "$REPO_DIR/dist/index.cjs" ]; then
   echo -e "${RED}❌ Error: Local dist directory or dist/index.cjs is missing.${NC}"
   echo -e "   Please run 'npm run build' first."
   exit 1
+fi
+
+# Step 1b: Build Go auth service (linux/amd64)
+AUTH_BIN="$REPO_DIR/services/auth/meshwork-auth"
+if [ "$SKIP_AUTH" = false ]; then
+  echo -e "${BLUE}▶ [1b/5] Building Go auth service (linux/amd64)...${NC}"
+  if ! command -v go &>/dev/null; then
+    echo -e "${RED}❌ Error: Go toolchain not found. Install Go ≥1.24 or pass --skip-auth.${NC}"
+    exit 1
+  fi
+  (cd "$REPO_DIR/services/auth" && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o meshwork-auth ./cmd/server)
+  echo -e "${GREEN}✓ Auth binary built: services/auth/meshwork-auth${NC}"
+else
+  echo -e "${YELLOW}⚡ [1b/5] Skipping auth service build (--skip-auth).${NC}"
 fi
 
 # Step 2: Locate SSH Key & Target Host
@@ -141,7 +163,7 @@ REMOTE_APP_DIR=$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" '
 echo -e "${GREEN}✓${NC} Remote application directory: ${REMOTE_APP_DIR}"
 
 # Step 3: Transfer & Swap dist
-echo -e "${BLUE}▶ [3/4] Uploading dist bundle to remote server...${NC}"
+echo -e "${BLUE}▶ [3/5] Uploading dist bundle to remote server...${NC}"
 
 # Upload dist directly into dist.new
 ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "mkdir -p '$REMOTE_APP_DIR/dist.new'"
@@ -158,13 +180,24 @@ fi
 
 echo -e "${GREEN}✓ Upload complete.${NC}"
 
-# Step 4: Swap dist and reload process
-echo -e "${BLUE}▶ [4/4] Performing atomic dist swap & reloading application...${NC}"
+# Step 3b: Upload auth binary
+AUTH_REMOTE_PATH="$REMOTE_APP_DIR/meshwork-auth"
+if [ "$SKIP_AUTH" = false ] && [ -f "$AUTH_BIN" ]; then
+  echo -e "${BLUE}▶ [3b/5] Uploading Go auth service binary...${NC}"
+  ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" \
+    "mkdir -p '$REMOTE_APP_DIR/auth.staging'"
+  scp -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new \
+    "$AUTH_BIN" "$SSH_USER@$HOST_TARGET:$REMOTE_APP_DIR/auth.staging/meshwork-auth.new"
+  echo -e "${GREEN}✓ Auth binary uploaded.${NC}"
+fi
 
-ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" bash -s "$REMOTE_APP_DIR" << 'REMOTE_SCRIPT'
+# Step 4: Swap dist and reload processes
+echo -e "${BLUE}▶ [4/5] Performing atomic swaps & reloading applications...${NC}"
+
+ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" SKIP_AUTH="$SKIP_AUTH" bash -s "$REMOTE_APP_DIR" << 'REMOTE_SCRIPT'
   set -euo pipefail
   TARGET_DIR="$1"
-  
+
   # Atomic swap: backup current dist, move dist.new to dist
   if [ -d "$TARGET_DIR/dist" ]; then
     rm -rf "$TARGET_DIR/dist.old" 2>/dev/null || true
@@ -181,6 +214,23 @@ ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" bash -s "$REMOTE_APP_DIR" << 'REMOTE_
     pm2 start "$TARGET_DIR/dist/index.cjs" --name meshwork --cwd "$TARGET_DIR"
   fi
 
+  # Atomic swap + restart for the Go auth service
+  if [ "${SKIP_AUTH:-false}" != "true" ] && [ -f "$TARGET_DIR/auth.staging/meshwork-auth.new" ]; then
+    chmod +x "$TARGET_DIR/auth.staging/meshwork-auth.new"
+    if [ -f "$TARGET_DIR/meshwork-auth" ]; then
+      mv "$TARGET_DIR/meshwork-auth" "$TARGET_DIR/meshwork-auth.old"
+    fi
+    mv "$TARGET_DIR/auth.staging/meshwork-auth.new" "$TARGET_DIR/meshwork-auth"
+    rmdir "$TARGET_DIR/auth.staging" 2>/dev/null || true
+
+    echo "  ⚡ Reloading PM2 meshwork-auth process..."
+    if pm2 describe meshwork-auth >/dev/null 2>&1; then
+      pm2 restart meshwork-auth --update-env
+    else
+      pm2 start "$TARGET_DIR/meshwork-auth" --name meshwork-auth --cwd "$TARGET_DIR"
+    fi
+  fi
+
   pm2 save >/dev/null 2>&1 || true
 
   # Reload NGINX if active
@@ -190,10 +240,16 @@ ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" bash -s "$REMOTE_APP_DIR" << 'REMOTE_
 REMOTE_SCRIPT
 
 # Verification / Health Check
-echo -e "${BLUE}▶ Verifying application health...${NC}"
+echo -e "${BLUE}▶ [5/5] Verifying application health...${NC}"
 sleep 2
 
 HEALTH_STATUS=$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "curl -sf http://localhost:5000/health 2>/dev/null || curl -sf http://localhost/health 2>/dev/null || echo 'UNKNOWN'")
+
+AUTH_HEALTH="skipped"
+if [ "$SKIP_AUTH" = false ]; then
+  AUTH_HEALTH=$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" \
+    "curl -sf http://127.0.0.1:8081/healthz 2>/dev/null || echo 'UNAVAILABLE'")
+fi
 
 echo ""
 echo -e "${BOLD}${GREEN}======================================================${NC}"
@@ -201,6 +257,7 @@ echo -e "${BOLD}${GREEN}   🎉 Deployment successfully completed!             $
 echo -e "${BOLD}${GREEN}======================================================${NC}"
 echo -e "  🌐 ${BOLD}Live App:${NC}      https://${DOMAIN}"
 echo -e "  📡 ${BOLD}Target Host:${NC}   ${HOST_TARGET}"
-echo -e "  📊 ${BOLD}Health Check:${NC}  ${HEALTH_STATUS}"
+echo -e "  📊 ${BOLD}Monolith:${NC}      ${HEALTH_STATUS}"
+echo -e "  🔐 ${BOLD}Auth Service:${NC}  ${AUTH_HEALTH}"
 echo -e "  🕒 ${BOLD}Deployed At:${NC}   $(date)"
 echo ""

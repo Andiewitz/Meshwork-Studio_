@@ -83,11 +83,11 @@ services:
       emnesh-redis:
         condition: service_healthy
 
-  # ─── Identity service (Go) — owns users/sessions/MFA/OAuth/audit ──────────
+  # ─── Auth service (Go) — owns users/sessions/MFA/OAuth/audit ──────────
   emnesh-identity:
     container_name: emnesh-identity
     build:
-      context: ./services/identity
+      context: ./services/auth
       dockerfile: Dockerfile
     restart: always
     environment:

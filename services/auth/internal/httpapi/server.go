@@ -15,17 +15,17 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 
-	"github.com/meshwork-studio/identity/internal/audit"
-	"github.com/meshwork-studio/identity/internal/captcha"
-	"github.com/meshwork-studio/identity/internal/config"
-	"github.com/meshwork-studio/identity/internal/csrf"
-	"github.com/meshwork-studio/identity/internal/email"
-	"github.com/meshwork-studio/identity/internal/iphash"
-	"github.com/meshwork-studio/identity/internal/lockout"
-	"github.com/meshwork-studio/identity/internal/mfa"
-	"github.com/meshwork-studio/identity/internal/ratelimit"
-	"github.com/meshwork-studio/identity/internal/session"
-	"github.com/meshwork-studio/identity/internal/store"
+	"github.com/meshwork-studio/auth/internal/audit"
+	"github.com/meshwork-studio/auth/internal/captcha"
+	"github.com/meshwork-studio/auth/internal/config"
+	"github.com/meshwork-studio/auth/internal/csrf"
+	"github.com/meshwork-studio/auth/internal/email"
+	"github.com/meshwork-studio/auth/internal/iphash"
+	"github.com/meshwork-studio/auth/internal/lockout"
+	"github.com/meshwork-studio/auth/internal/mfa"
+	"github.com/meshwork-studio/auth/internal/ratelimit"
+	"github.com/meshwork-studio/auth/internal/session"
+	"github.com/meshwork-studio/auth/internal/store"
 )
 
 type Server struct {

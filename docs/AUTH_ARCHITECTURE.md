@@ -1,13 +1,13 @@
 # Authentication & Authorization Architecture
 
 > Status: implemented on `feat/go-identity-service`. The Go identity service
-> (`services/identity`) owns identity; the Node monolith serves everything else.
+> (`services/auth`) owns identity; the Node monolith serves everything else.
 
 ## Ownership map
 
 | Concern                                                                     | Owner                                                            | Storage              |
 | --------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------- |
-| Users, sessions, CSRF secrets, lockout, MFA, OAuth identities, audit events | **Go identity service** (`services/identity`)                    | `auth_db` (Postgres) |
+| Users, sessions, CSRF secrets, lockout, MFA, OAuth identities, audit events | **Go identity service** (`services/auth`)                        | `auth_db` (Postgres) |
 | Workspace / canvas / teams / AI / metrics                                   | Node monolith (`server/`)                                        | workspace DB         |
 | WebSocket presence                                                          | Node monolith, handshake-authenticated against identity sessions | —                    |
 

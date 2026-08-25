@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meshwork-studio/identity/internal/audit"
-	"github.com/meshwork-studio/identity/internal/config"
+	"github.com/meshwork-studio/auth/internal/audit"
+	"github.com/meshwork-studio/auth/internal/config"
 )
 
 // ─── Responses ──────────────────────────────────────────────────────────────

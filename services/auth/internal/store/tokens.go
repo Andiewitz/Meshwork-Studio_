@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/meshwork-studio/identity/internal/audit"
+	"github.com/meshwork-studio/auth/internal/audit"
 )
 
 // InsertAudit satisfies audit.Store.

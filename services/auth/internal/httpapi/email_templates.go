@@ -3,7 +3,7 @@ package httpapi
 import (
 	"fmt"
 
-	"github.com/meshwork-studio/identity/internal/email"
+	"github.com/meshwork-studio/auth/internal/email"
 )
 
 // Transactional email templates. Plain-text only: no HTML injection surface.
