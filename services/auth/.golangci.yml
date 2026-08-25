@@ -1,0 +1,29 @@
+run:
+  linters:
+    enable:
+      - errcheck
+      - govet
+      - staticcheck
+      - unused
+      - gosimple
+      - ineffassign
+      - gosec
+      - misspell
+      - revive
+      - gofmt
+      - bodyclose
+      - noctx
+      - sqlclosecheck
+      - rowserrcheck
+
+issues:
+  exclude-rules:
+    # Tests may ignore returned errors for readability.
+    - path: _test\.go
+      linters:
+        - errcheck
+
+linters-settings:
+  gosec:
+    excludes:
+      - G404 # rand usage reviewed manually where non-crypto

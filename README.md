@@ -232,7 +232,7 @@ meshwork-studio/
 ├── deploy/                      # Infra artifacts: nginx.conf, user-data, RDS notes
 ├── important/                   # DEPLOY.md, SECRETS.md, ops guides
 ├── scripts/                     # deploy.sh, build.ts, backup-db.ts, guards
-├── packages/contracts/          # OpenAPI source of truth for service APIs
+├── services/auth/api/           # OpenAPI contract (source of truth)
 ├── docs/                        # Deep-dive documentation (+ docs/archive/)
 ├── docker-compose.yml           # Full stack local orchestration
 ├── vitest.config.ts             # Test runner configuration

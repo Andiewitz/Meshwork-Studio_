@@ -20,13 +20,13 @@ func setEnv(t *testing.T, kv map[string]string) {
 
 func TestProductionRequiresEverything(t *testing.T) {
 	setEnv(t, map[string]string{
-		"IDENTITY_APP_ENV":        "production",
+		"NODE_ENV":        "production",
 		"APP_PUBLIC_URL":          "https://app.example.com",
-		"IDENTITY_DATABASE_URL":   "postgres://db",
+		"AUTH_DATABASE_URL":   "postgres://db",
 		"SMTP_HOST":               "smtp.example.com",
 		"EMAIL_FROM":              "no-reply@example.com",
-		"IDENTITY_IP_HASH_KEY":    base6432(),
-		"IDENTITY_ENCRYPTION_KEY": base6432(),
+		"AUTH_IP_HASH_KEY":    base6432(),
+		"AUTH_ENCRYPTION_KEY": base6432(),
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -39,19 +39,19 @@ func TestProductionRequiresEverything(t *testing.T) {
 
 func TestProductionRejectsMissingKeys(t *testing.T) {
 	setEnv(t, map[string]string{
-		"IDENTITY_APP_ENV":      "production",
+		"NODE_ENV":      "production",
 		"APP_PUBLIC_URL":        "https://app.example.com",
-		"IDENTITY_DATABASE_URL": "postgres://db",
+		"AUTH_DATABASE_URL": "postgres://db",
 		"SMTP_HOST":             "smtp.example.com",
 		"EMAIL_FROM":            "no-reply@example.com",
 	})
-	os.Unsetenv("IDENTITY_IP_HASH_KEY")
-	os.Unsetenv("IDENTITY_ENCRYPTION_KEY")
+	os.Unsetenv("AUTH_IP_HASH_KEY")
+	os.Unsetenv("AUTH_ENCRYPTION_KEY")
 	_, err := Load()
 	if err == nil {
 		t.Fatal("production boot must fail without explicit keys")
 	}
-	for _, want := range []string{"IDENTITY_IP_HASH_KEY", "IDENTITY_ENCRYPTION_KEY"} {
+	for _, want := range []string{"AUTH_IP_HASH_KEY", "AUTH_ENCRYPTION_KEY"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error should mention %s: %v", want, err)
 		}
@@ -60,24 +60,24 @@ func TestProductionRejectsMissingKeys(t *testing.T) {
 
 func TestWrongKeyLengthRejected(t *testing.T) {
 	setEnv(t, map[string]string{
-		"IDENTITY_DATABASE_URL":   "postgres://db",
-		"IDENTITY_IP_HASH_KEY":    base64.StdEncoding.EncodeToString(make([]byte, 16)), // too short
-		"IDENTITY_ENCRYPTION_KEY": base6432(),
+		"AUTH_DATABASE_URL":   "postgres://db",
+		"AUTH_IP_HASH_KEY":    base64.StdEncoding.EncodeToString(make([]byte, 16)), // too short
+		"AUTH_ENCRYPTION_KEY": base6432(),
 	})
-	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "IDENTITY_IP_HASH_KEY") {
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "AUTH_IP_HASH_KEY") {
 		t.Fatalf("short key must be rejected with a named error, got %v", err)
 	}
 }
 
 func TestAllProblemsReportedAtOnce(t *testing.T) {
 	setEnv(t, map[string]string{
-		"IDENTITY_APP_ENV": "production",
+		"NODE_ENV": "production",
 		// everything else missing
 	})
-	os.Unsetenv("IDENTITY_IP_HASH_KEY")
-	os.Unsetenv("IDENTITY_ENCRYPTION_KEY")
+	os.Unsetenv("AUTH_IP_HASH_KEY")
+	os.Unsetenv("AUTH_ENCRYPTION_KEY")
 	os.Unsetenv("APP_PUBLIC_URL")
-	os.Unsetenv("IDENTITY_DATABASE_URL")
+	os.Unsetenv("AUTH_DATABASE_URL")
 	os.Unsetenv("SMTP_HOST")
 	os.Unsetenv("EMAIL_FROM")
 	_, err := Load()
@@ -92,8 +92,8 @@ func TestAllProblemsReportedAtOnce(t *testing.T) {
 
 func TestDevEphemeralKeysAreAllowed(t *testing.T) {
 	setEnv(t, map[string]string{
-		"IDENTITY_APP_ENV":      "development",
-		"IDENTITY_DATABASE_URL": "postgres://db",
+		"NODE_ENV":      "development",
+		"AUTH_DATABASE_URL": "postgres://db",
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -106,8 +106,8 @@ func TestDevEphemeralKeysAreAllowed(t *testing.T) {
 
 func TestAbsoluteTTLMustCoverIdleTTL(t *testing.T) {
 	setEnv(t, map[string]string{
-		"IDENTITY_APP_ENV":      "development",
-		"IDENTITY_DATABASE_URL": "postgres://db",
+		"NODE_ENV":      "development",
+		"AUTH_DATABASE_URL": "postgres://db",
 		"SESSION_ABSOLUTE_TTL":  "1h",
 		"SESSION_IDLE_TTL":      "2h",
 	})

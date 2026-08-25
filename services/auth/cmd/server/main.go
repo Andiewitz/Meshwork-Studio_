@@ -28,7 +28,7 @@ func main() {
 
 	if *healthcheck {
 		client := &http.Client{Timeout: 3 * time.Second}
-		resp, err := client.Get("http://127.0.0.1:" + envOr("IDENTITY_PORT", "8081") + "/healthz")
+		resp, err := client.Get("http://127.0.0.1:" + envOr("AUTH_PORT", "8081") + "/healthz")
 		if err != nil || resp.StatusCode != http.StatusOK {
 			fmt.Fprintln(os.Stderr, "healthcheck failed")
 			os.Exit(1)
@@ -99,7 +99,7 @@ func main() {
 			_ = client.Close()
 		}()
 	} else {
-		logger.Warn("IDENTITY_REDIS_URL not set — running without Redis; MFA and strict rate limits are DISABLED (development only)")
+		logger.Warn("AUTH_REDIS_URL not set — running without Redis; MFA and strict rate limits are DISABLED (development only)")
 	}
 
 	srv, err := httpapi.NewServer(cfg, db.Pool, rdb, logger)

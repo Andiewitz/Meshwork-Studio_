@@ -1,0 +1,222 @@
+openapi: 3.1.0
+info:
+  title: Meshwork Identity Service
+  version: 1.0.0
+  description: |
+    Owns users, sessions, MFA, OAuth and the security audit trail.
+    Session model: opaque bearer cookie (256-bit random, stored SHA-256-hashed),
+    rotated on every login, idle + absolute TTLs, revocable per device.
+servers:
+  - url: /api/v1
+tags:
+  - name: Auth
+  - name: MFA
+  - name: Sessions
+  - name: OAuth
+paths:
+  /auth/csrf-token:
+    get:
+      tags: [Auth]
+      summary: Issue a CSRF token (double-submit cookie + JSON body)
+      responses:
+        "200": { description: Token issued }
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Create an account and open a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8, maxLength: 128 }
+                firstName: { type: string }
+                lastName: { type: string }
+                captchaToken: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/AuthSuccess" }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Password step; returns session or an MFA challenge ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/AuthSuccess" }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /auth/mfa/challenge:
+    post:
+      tags: [MFA]
+      summary: Complete login with a TOTP or backup code
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string, pattern: '^[0-9]{6}$' }
+                backupCode: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/AuthSuccess" }
+        "401": { $ref: "#/components/responses/Error" }
+  /auth/logout:
+    post: { tags: [Auth], summary: Revoke the current session, responses: { "200": { description: OK } } }
+  /auth/logout-all:
+    post: { tags: [Auth], summary: Revoke every session of the caller, responses: { "200": { description: OK } } }
+  /auth/session:
+    get: { tags: [Auth], summary: Current user + expiry, responses: { "200": { $ref: "#/components/responses/AuthSuccess" } } }
+  /auth/me:
+    get: { tags: [Auth], summary: Public profile with verification/MFA flags, responses: { "200": { description: OK } } }
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change password; revokes ALL sessions everywhere
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string }
+      responses:
+        "200": { description: Requires re-login }
+        "401": { $ref: "#/components/responses/Error" }
+  /user/preferences:
+    patch:
+      tags: [Auth]
+      summary: Update whitelisted preference columns
+      responses:
+        "200": { description: Updated user }
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request a reset link (always 200; anti-enumeration)
+      responses:
+        "200": { description: Accepted }
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Consume reset token, set new password, revoke all sessions
+      responses:
+        "200": { description: Requires re-login }
+        "400": { $ref: "#/components/responses/Error" }
+  /auth/verify-email:
+    post:
+      tags: [Auth]
+      summary: Consume verification token
+      responses:
+        "200": { description: Verified }
+        "400": { $ref: "#/components/responses/Error" }
+  /auth/resend-verification:
+    post: { tags: [Auth], summary: Resend verification email (authenticated), responses: { "200": { description: Sent } } }
+  /auth/sessions:
+    get:
+      tags: [Sessions]
+      summary: List active sessions/devices
+      responses:
+        "200":
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        fullHash: { type: string }
+                        current: { type: boolean }
+                        createdAt: { type: string, format: date-time }
+                        lastSeenAt: { type: string, format: date-time }
+                        userAgent: { type: [string, "null"] }
+  /auth/sessions/{idHash}:
+    delete:
+      tags: [Sessions]
+      summary: Revoke one session by hash
+      parameters: [{ name: idHash, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Revoked }
+        "404": { $ref: "#/components/responses/Error" }
+  /auth/mfa/enroll:
+    post:
+      tags: [MFA]
+      summary: Begin TOTP enrollment (returns secret + otpauth URI)
+      responses:
+        "200": { description: Enrollment started }
+        "409": { $ref: "#/components/responses/Error" }
+  /auth/mfa/activate:
+    post:
+      tags: [MFA]
+      summary: Confirm enrollment with a code; returns one-shot backup codes
+      responses:
+        "200": { description: Activated }
+        "400": { $ref: "#/components/responses/Error" }
+  /auth/mfa/disable:
+    post:
+      tags: [MFA]
+      summary: Disable MFA (password + current factor required)
+      responses:
+        "200": { description: Disabled }
+        "401": { $ref: "#/components/responses/Error" }
+  /auth/google:
+    get:
+      tags: [OAuth]
+      summary: Start Google OAuth 2.0 + PKCE flow
+      responses:
+        "302": { description: Redirect to Google }
+  /auth/google/callback:
+    get:
+      tags: [OAuth]
+      summary: Google callback; requires verified email; never merges accounts silently
+      responses:
+        "302": { description: Redirect into app or to link-confirm page }
+  /auth/google/link:
+    post:
+      tags: [OAuth]
+      summary: Confirm linking a Google identity to an existing password account
+      responses:
+        "200": { $ref: "#/components/responses/AuthSuccess" }
+        "401": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    AuthSuccess:
+      description: User + session expiry
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user: { type: object }
+              expiresAt: { type: string, format: date-time }
+              accessTokenExpiresAt: { type: string, format: date-time, deprecated: true }
+    Error:
+      description: Error envelope
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code: { type: string }
+              message: { type: string }
+security: []

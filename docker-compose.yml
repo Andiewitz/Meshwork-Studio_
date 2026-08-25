@@ -91,14 +91,14 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
-      IDENTITY_APP_ENV: production
-      IDENTITY_PORT: 8081
+      NODE_ENV: production
+      AUTH_PORT: 8081
       APP_PUBLIC_URL: ${APP_URL:-http://localhost:5000}
       EXTRA_ALLOWED_ORIGINS: ${EXTRA_ALLOWED_ORIGINS:-}
-      IDENTITY_DATABASE_URL: postgresql://user:password@emnesh-auth-db:5432/emnesh_auth
-      IDENTITY_REDIS_URL: redis://emnesh-redis:6379
-      IDENTITY_IP_HASH_KEY: ${IDENTITY_IP_HASH_KEY:?IDENTITY_IP_HASH_KEY required}
-      IDENTITY_ENCRYPTION_KEY: ${IDENTITY_ENCRYPTION_KEY:?IDENTITY_ENCRYPTION_KEY required}
+      AUTH_DATABASE_URL: postgresql://user:password@emnesh-auth-db:5432/emnesh_auth
+      AUTH_REDIS_URL: redis://emnesh-redis:6379
+      AUTH_IP_HASH_KEY: ${AUTH_IP_HASH_KEY:?AUTH_IP_HASH_KEY required}
+      AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY:?AUTH_ENCRYPTION_KEY required}
       SESSION_ABSOLUTE_TTL: 336h
       SESSION_IDLE_TTL: 168h
       SMTP_HOST: ${SMTP_HOST:-}

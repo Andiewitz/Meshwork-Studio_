@@ -12,7 +12,7 @@ import (
 )
 
 // Config is the complete, validated runtime configuration of the identity
-// service. Every variable it needs lives in its own IDENTITY_* namespace so
+// service. Every variable it needs lives in its own AUTH_* namespace so
 // the service can be deployed with strict per-service environment isolation.
 type Config struct {
 	Port      string
@@ -71,7 +71,7 @@ func str(key string) string {
 func required(key string) string {
 	v := str(key)
 	if v == "" {
-		collectedErrors = append(collectedErrors, fmt.Sprintf("IDENTITY config: %s is required", key))
+		collectedErrors = append(collectedErrors, fmt.Sprintf("AUTH config: %s is required", key))
 	}
 	return v
 }
@@ -83,7 +83,7 @@ func duration(key string, def time.Duration) time.Duration {
 	}
 	d, err := time.ParseDuration(v)
 	if err != nil || d <= 0 {
-		collectedErrors = append(collectedErrors, fmt.Sprintf("IDENTITY config: %s must be a positive duration (e.g. 30m), got %q", key, v))
+		collectedErrors = append(collectedErrors, fmt.Sprintf("AUTH config: %s must be a positive duration (e.g. 30m), got %q", key, v))
 		return def
 	}
 	return d
@@ -96,7 +96,7 @@ func decodeKey(key string, size int) []byte {
 	}
 	b, err := base64.StdEncoding.DecodeString(v)
 	if err != nil || len(b) != size {
-		collectedErrors = append(collectedErrors, fmt.Sprintf("IDENTITY config: %s must be base64 of exactly %d bytes (openssl rand -base64 %d)", key, size, size))
+		collectedErrors = append(collectedErrors, fmt.Sprintf("AUTH config: %s must be base64 of exactly %d bytes (openssl rand -base64 %d)", key, size, size))
 		return nil
 	}
 	return b
@@ -118,11 +118,11 @@ func Load() (*Config, error) {
 	collectedErrors = nil
 
 	cfg := &Config{
-		Port:            str("IDENTITY_PORT"),
-		AppEnv:          str("IDENTITY_APP_ENV"),
+		Port:            str("AUTH_PORT"),
+		AppEnv:          str("NODE_ENV"),
 		PublicURL:       strings.TrimSuffix(str("APP_PUBLIC_URL"), "/"),
-		DatabaseURL:     os.Getenv("IDENTITY_DATABASE_URL"),
-		RedisURL:        str("IDENTITY_REDIS_URL"),
+		DatabaseURL:     os.Getenv("AUTH_DATABASE_URL"),
+		RedisURL:        str("AUTH_REDIS_URL"),
 		SMTPHost:        str("SMTP_HOST"),
 		SMTPPort:        587,
 		SMTPUser:        str("SMTP_USER"),
@@ -140,7 +140,7 @@ func Load() (*Config, error) {
 		cfg.AppEnv = "development"
 	}
 	fail(cfg.AppEnv != "production" && cfg.AppEnv != "development" && cfg.AppEnv != "test",
-		"IDENTITY_APP_ENV must be production|development|test, got %q", cfg.AppEnv)
+		"NODE_ENV must be production|development|test, got %q", cfg.AppEnv)
 
 	cfg.CookieSecure = cfg.AppEnv == "production"
 	if cfg.CookieSecure {
@@ -163,7 +163,7 @@ func Load() (*Config, error) {
 	isProd := cfg.AppEnv == "production"
 
 	fail(isProd && cfg.PublicURL == "", "APP_PUBLIC_URL is required in production")
-	fail(cfg.DatabaseURL == "", "IDENTITY_DATABASE_URL is required")
+	fail(cfg.DatabaseURL == "", "AUTH_DATABASE_URL is required")
 
 	for _, o := range strings.Split(str("EXTRA_ALLOWED_ORIGINS"), ",") {
 		if o = strings.TrimSpace(o); o != "" {
@@ -172,21 +172,21 @@ func Load() (*Config, error) {
 	}
 
 	// Keys: explicit in production, ephemeral-but-loud in development.
-	ipRaw := str("IDENTITY_IP_HASH_KEY")
-	encRaw := str("IDENTITY_ENCRYPTION_KEY")
+	ipRaw := str("AUTH_IP_HASH_KEY")
+	encRaw := str("AUTH_ENCRYPTION_KEY")
 	switch {
 	case ipRaw != "":
-		cfg.IPHashKey = decodeKey("IDENTITY_IP_HASH_KEY", 32)
+		cfg.IPHashKey = decodeKey("AUTH_IP_HASH_KEY", 32)
 	case isProd:
-		collectedErrors = append(collectedErrors, "IDENTITY config: IDENTITY_IP_HASH_KEY is required in production")
+		collectedErrors = append(collectedErrors, "AUTH config: AUTH_IP_HASH_KEY is required in production")
 	default:
 		cfg.IPHashKey = randomKey(32)
 	}
 	switch {
 	case encRaw != "":
-		cfg.EncryptionKey = decodeKey("IDENTITY_ENCRYPTION_KEY", 32)
+		cfg.EncryptionKey = decodeKey("AUTH_ENCRYPTION_KEY", 32)
 	case isProd:
-		collectedErrors = append(collectedErrors, "IDENTITY config: IDENTITY_ENCRYPTION_KEY is required in production")
+		collectedErrors = append(collectedErrors, "AUTH config: AUTH_ENCRYPTION_KEY is required in production")
 	default:
 		cfg.EncryptionKey = randomKey(32)
 	}
@@ -205,7 +205,7 @@ func Load() (*Config, error) {
 	if p := str("SMTP_PORT"); p != "" {
 		n, err := strconv.Atoi(p)
 		if err != nil || n <= 0 || n > 65535 {
-			collectedErrors = append(collectedErrors, fmt.Sprintf("IDENTITY config: SMTP_PORT invalid: %q", p))
+			collectedErrors = append(collectedErrors, fmt.Sprintf("AUTH config: SMTP_PORT invalid: %q", p))
 		} else {
 			cfg.SMTPPort = n
 		}
@@ -222,7 +222,7 @@ func Load() (*Config, error) {
 	if s := str("CAPTCHA_MIN_SCORE"); s != "" {
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil || f < 0 || f > 1 {
-			collectedErrors = append(collectedErrors, fmt.Sprintf("IDENTITY config: CAPTCHA_MIN_SCORE must be within [0,1], got %q", s))
+			collectedErrors = append(collectedErrors, fmt.Sprintf("AUTH config: CAPTCHA_MIN_SCORE must be within [0,1], got %q", s))
 		} else {
 			cfg.CaptchaMinScore = f
 		}
@@ -238,7 +238,7 @@ func Load() (*Config, error) {
 	if v := str("LOGIN_RATE_LIMIT_PER_IP"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 {
-			collectedErrors = append(collectedErrors, fmt.Sprintf("IDENTITY config: LOGIN_RATE_LIMIT_PER_IP must be a positive integer, got %q", v))
+			collectedErrors = append(collectedErrors, fmt.Sprintf("AUTH config: LOGIN_RATE_LIMIT_PER_IP must be a positive integer, got %q", v))
 		} else {
 			cfg.LoginWindowPerIP = n
 		}
