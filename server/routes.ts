@@ -16,8 +16,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express,
 ): Promise<Server> {
-  // CSRF token endpoints — both /api/v1/csrf-token and /api/v1/auth/csrf-token supported
-  app.get("/api/v1/csrf-token", AuthService.csrf.issue);
+  // NOTE: /api/v1/auth/* and /api/v1/user/* are served by the Go auth
+  // service (services/auth) — routed there by NGINX. The monolith only
+  // validates sessions via the auth bridge below.
 
   // Setup Service Registry and Event Bus
   const registry = new AppRegistry();
@@ -28,7 +29,7 @@ export async function registerRoutes(
 
   const context = { registry, eventBus };
 
-  // Initialize Auth Service first (as other services might depend on its middleware)
+  // Initialize Auth bridge first (other services depend on its middleware)
   await AuthService.initialize(app, context);
   registry.register("isAuthenticated", AuthService.middleware.isAuthenticated);
 
