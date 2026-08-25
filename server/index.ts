@@ -10,7 +10,7 @@ import { AuthService } from "./services/auth";
 import { sql } from "drizzle-orm";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
-import { createServer } from "http";
+import { createServer, request as httpRequest } from "http";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -19,6 +19,9 @@ import { isRedisAvailable } from "./lib/redis";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import { metricsRegistry } from "./lib/metrics";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import fs from "fs";
 
 let isAppReady = false;
@@ -133,6 +136,43 @@ app.use((req, res, next) => {
   next();
 });
 
+// DEV ONLY: proxy the Go auth service surface. In production NGINX routes
+// these paths straight to :8081 and Express never sees them; locally there
+// is no NGINX, so mirror that split here. Registered BEFORE body parsers so
+// requests stream through untouched (cookies + raw body preserved).
+if (process.env.NODE_ENV !== "production") {
+  const AUTH_UPSTREAM_HOST = process.env.AUTH_DEV_HOST || "127.0.0.1";
+  const AUTH_UPSTREAM_PORT = process.env.AUTH_DEV_PORT || "8081";
+  app.use((req, res, next) => {
+    if (!/^\/api\/v1\/(auth|user)\//.test(req.url)) return next();
+
+    const upstream = httpRequest(
+      {
+        host: AUTH_UPSTREAM_HOST,
+        port: AUTH_UPSTREAM_PORT,
+        path: req.url,
+        method: req.method,
+        headers: {
+          ...req.headers,
+          host: `${AUTH_UPSTREAM_HOST}:${AUTH_UPSTREAM_PORT}`,
+        },
+      },
+      (upRes) => {
+        res.writeHead(upRes.statusCode || 502, upRes.headers);
+        upRes.pipe(res);
+      },
+    );
+    upstream.on("error", () => {
+      res.status(502).json({
+        code: "AUTH_SERVICE_UNAVAILABLE",
+        message:
+          "Auth service is not running. Start it with: make -C services/auth run",
+      });
+    });
+    req.pipe(upstream);
+  });
+}
+
 // SECURITY: Add request size limits to prevent DoS
 app.use(
   express.json({
@@ -235,9 +275,7 @@ app.get("/admin", AuthService.middleware.isAuthenticated, (_req, res) => {
     return res.status(404).send("Not Found");
   }
   try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     if (fs.existsSync(adminHtmlPath)) {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
       res.type("html").send(fs.readFileSync(adminHtmlPath, "utf-8"));
     } else {
       res.status(404).send("Admin dashboard not found");
