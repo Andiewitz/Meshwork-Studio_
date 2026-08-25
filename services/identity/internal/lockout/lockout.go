@@ -108,11 +108,12 @@ func (s *Store) Reset(ctx context.Context, emailNormalized string) error {
 }
 
 // backoffMinutes: 6th failure → 15m, then doubling, capped at 8h.
+// At or below the threshold no lock applies (0 minutes).
 func backoffMinutes(failures int) int {
-	exponent := failures - maxFailures - 1
-	if exponent < 0 {
-		exponent = 0
+	if failures <= maxFailures {
+		return 0
 	}
+	exponent := failures - maxFailures - 1
 	minutes := baseLockMinutes << exponent
 	if minutes > maxLockMinutes || minutes <= 0 {
 		return maxLockMinutes

@@ -59,6 +59,7 @@ describe("Authentication Integration Tests", () => {
   it("should_register_new_user_and_issue_session_cookie", async () => {
     const res = await request(app)
       .post("/api/v1/auth/register")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({
@@ -85,6 +86,7 @@ describe("Authentication Integration Tests", () => {
     // 1. Register first user
     await request(app)
       .post("/api/v1/auth/register")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "user@example.com", password: "Password123!" });
@@ -92,6 +94,7 @@ describe("Authentication Integration Tests", () => {
     // 2. Try registering same email with different casing
     const res = await request(app)
       .post("/api/v1/auth/register")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "USER@EXAMPLE.COM", password: "Password123!" });
@@ -104,6 +107,7 @@ describe("Authentication Integration Tests", () => {
     // Register
     const regRes = await request(app)
       .post("/api/v1/auth/register")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "login@example.com", password: "Password123!" });
@@ -113,6 +117,7 @@ describe("Authentication Integration Tests", () => {
     // Login with existing cookie to test rotation
     const loginRes = await request(app)
       .post("/api/v1/auth/login")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", [csrfCookie, regCookie].join("; "))
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "login@example.com", password: "Password123!" });
@@ -128,12 +133,14 @@ describe("Authentication Integration Tests", () => {
   it("should_reject_login_with_invalid_password_generically", async () => {
     await request(app)
       .post("/api/v1/auth/register")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "login@example.com", password: "Password123!" });
 
     const res = await request(app)
       .post("/api/v1/auth/login")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "login@example.com", password: "WrongPassword" });
@@ -145,6 +152,7 @@ describe("Authentication Integration Tests", () => {
   it("should_verify_active_session_and_return_real_expiry", async () => {
     const regRes = await request(app)
       .post("/api/v1/auth/register")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "session@example.com", password: "Password123!" });
@@ -172,6 +180,7 @@ describe("Authentication Integration Tests", () => {
   it("should_logout_and_revoke_session", async () => {
     const regRes = await request(app)
       .post("/api/v1/auth/register")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "logout@example.com", password: "Password123!" });
@@ -181,6 +190,7 @@ describe("Authentication Integration Tests", () => {
     // Logout
     const logoutRes = await request(app)
       .post("/api/v1/auth/logout")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", [csrfCookie, sessionCookie].join("; "))
       .set("X-CSRF-Token", csrfToken);
 
@@ -198,6 +208,7 @@ describe("Authentication Integration Tests", () => {
   it("should_change_password_and_revoke_all_sessions", async () => {
     const regRes = await request(app)
       .post("/api/v1/auth/register")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "pwd@example.com", password: "OldPassword123!" });
@@ -206,6 +217,7 @@ describe("Authentication Integration Tests", () => {
 
     const changeRes = await request(app)
       .post("/api/v1/auth/change-password")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", [csrfCookie, sessionCookie].join("; "))
       .set("X-CSRF-Token", csrfToken)
       .send({
@@ -225,6 +237,7 @@ describe("Authentication Integration Tests", () => {
     // Login with new password should succeed
     const loginRes = await request(app)
       .post("/api/v1/auth/login")
+      .set("Origin", "http://localhost:5173")
       .set("Cookie", csrfCookie)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: "pwd@example.com", password: "NewPassword123!" });

@@ -61,7 +61,7 @@ func NewAllowlist(publicURL string, extra []string) *Allowlist {
 }
 
 func (a *Allowlist) Contains(origin string) bool {
-	_, ok := a.origins[origin]
+	_, ok := a.origins[strings.TrimSuffix(origin, "/")]
 	return ok
 }
 
