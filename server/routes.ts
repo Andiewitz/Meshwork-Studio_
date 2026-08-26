@@ -1,6 +1,15 @@
-import type { Express, Request, Response } from "express";
+import type { Express } from "express";
 import type { Server } from "http";
 import { initAuth, optionalAuth, requireAuth } from "./auth";
+import { ensureSchema } from "./lib/migrate";
+import { pool as workspacePool } from "@services/workspace/db/connection";
+import { MIGRATIONS as workspaceMigrations } from "@services/workspace/db/migrations";
+import { pool as teamPool } from "@services/team/db/connection";
+import { MIGRATIONS as teamMigrations } from "@services/team/db/migrations";
+import { pool as aiPool } from "@services/ai/db/connection";
+import { MIGRATIONS as aiMigrations } from "@services/ai/db/migrations";
+import { pool as metricsPool } from "@services/metrics/db/connection";
+import { MIGRATIONS as metricsMigrations } from "@services/metrics/db/migrations";
 import { WorkspaceService, workspaceStorage } from "@services/workspace";
 import { CanvasService, canvasStorage } from "@services/canvas";
 import { AIService } from "@services/ai";
@@ -30,6 +39,14 @@ export async function registerRoutes(
   registry.register("canvasStorage", canvasStorage);
 
   const context = { registry, eventBus };
+
+  // Apply every domain service's schema migrations BEFORE mounting routes.
+  await Promise.all([
+    ensureSchema("workspace", workspacePool, workspaceMigrations),
+    ensureSchema("team", teamPool, teamMigrations),
+    ensureSchema("ai", aiPool, aiMigrations),
+    ensureSchema("metrics", metricsPool, metricsMigrations),
+  ]);
 
   // Populate req.user early when a valid assertion cookie exists
   app.use(optionalAuth);

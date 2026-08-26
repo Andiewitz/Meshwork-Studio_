@@ -3,6 +3,14 @@ import path from "path";
 
 export default defineConfig({
   test: {
+    env: {
+      WORKSPACE_DATABASE_URL: "postgresql://test@localhost:5434/workspace_db",
+      TEAM_DATABASE_URL: "postgresql://test@localhost:5434/team_db",
+      AI_DATABASE_URL: "postgresql://test@localhost:5434/ai_db",
+      METRICS_DATABASE_URL: "postgresql://test@localhost:5434/metrics_db",
+      CANVAS_DATABASE_URL: "postgresql://test@localhost:5434/workspace_db",
+      NODE_ENV: "test",
+    },
     globals: true,
     environment: "node",
     include: ["tests/**/*.test.ts"],

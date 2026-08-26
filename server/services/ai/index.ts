@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createAIRoutes } from "./routes/aiRoutes";
+import { pool } from "./db/connection";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
 

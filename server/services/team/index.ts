@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { teamStorage } from "./db/storage";
 import { registerTeamRoutes } from "./routes/teamRoutes";
+import { pool } from "./db/connection";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
 

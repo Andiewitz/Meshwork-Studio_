@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { workspaceStorage } from "./db/storage";
 import { registerWorkspaceRoutes } from "./routes/workspaceRoutes";
+import { pool } from "./db/connection";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
 

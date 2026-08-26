@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import type { AppContext } from "@server/lib/registry";
-import { createMetricsTable } from "./db/connection";
+import { ensureSchema } from "@server/lib/migrate";
+import { MIGRATIONS } from "./db/migrations";
+import { pool } from "./db/connection";
 import { startCollector } from "./collector/collector";
 import { registerMetricsRoutes } from "./routes/metricsRoutes";
 import { createChildLogger } from "@server/lib/logger";
@@ -10,13 +12,14 @@ const log = createChildLogger("metrics-service");
 export class MetricsService {
   static async initialize(app: Express, _context: AppContext) {
     try {
-      await createMetricsTable();
+      await ensureSchema("metrics", pool, MIGRATIONS);
       startCollector(30000);
     } catch (err) {
-      log.warn(
+      log.error(
         { err },
-        "Failed to initialize metrics table, skipping collector",
+        "Metrics schema migration failed — collector disabled",
       );
+      throw err;
     }
 
     registerMetricsRoutes(app);
