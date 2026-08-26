@@ -67,6 +67,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useToast } from "@/hooks/use-toast";
 import { CookieBanner } from "@/components/ui/cookie-banner";
+import { RATE_LIMITING_COPY } from "@/content/platform-copy";
 
 interface BlogPost {
   id: number;
@@ -151,7 +152,7 @@ State-changing requests require CSRF double-submit validation. Request bodies ar
 
 ## Rate Limiting & Lockouts
 
-API endpoints enforce sliding-window rate limits (e.g., 100 requests / 15 min). Sensitive endpoints (e.g., \`/api/v1/auth/login\`) use a Redis-backed progressive timeout. Successive failures trigger exponential lockout periods mapped to both the requester's IP and the target username to mitigate credential stuffing and brute-force attacks.
+{RATE_LIMITING_COPY}
 
 ## Log Sanitization
 
