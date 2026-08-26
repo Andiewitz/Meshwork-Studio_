@@ -18,7 +18,6 @@ import { MobileGate } from "@/components/ui/mobile-gate";
 import { AnimatePresence, motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { HelmetProvider } from "react-helmet-async";
-import { AuthModalProvider } from "@/components/auth/AuthModalContext";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 // Route-level code splitting via React.lazy
@@ -229,16 +228,14 @@ function App() {
         <AuthProvider>
           <ThemeProvider>
             <WouterRouter>
-              <AuthModalProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <ErrorBoundary>
-                    <Suspense fallback={<DefaultLoading />}>
-                      <Router />
-                    </Suspense>
-                  </ErrorBoundary>
-                </TooltipProvider>
-              </AuthModalProvider>
+              <TooltipProvider>
+                <Toaster />
+                <ErrorBoundary>
+                  <Suspense fallback={<DefaultLoading />}>
+                    <Router />
+                  </Suspense>
+                </ErrorBoundary>
+              </TooltipProvider>
             </WouterRouter>
           </ThemeProvider>
         </AuthProvider>
