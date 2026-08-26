@@ -131,6 +131,7 @@ func (s *Server) handleMFAChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.setSessionCookie(w, raw)
+	s.issueAssertion(w, user.ID, rec.IDHash, user.IsAdmin)
 	clearCookie(w, s.cfg.MFACookieName)
 
 	s.auditor.Record(s.auditEntry(r, user.ID, user.Email, audit.LoginSuccess))

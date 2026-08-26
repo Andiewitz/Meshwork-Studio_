@@ -20,13 +20,15 @@ func setEnv(t *testing.T, kv map[string]string) {
 
 func TestProductionRequiresEverything(t *testing.T) {
 	setEnv(t, map[string]string{
-		"NODE_ENV":        "production",
-		"APP_PUBLIC_URL":          "https://app.example.com",
+		"NODE_ENV":            "production",
+		"APP_PUBLIC_URL":      "https://app.example.com",
 		"AUTH_DATABASE_URL":   "postgres://db",
-		"SMTP_HOST":               "smtp.example.com",
-		"EMAIL_FROM":              "no-reply@example.com",
+		"SMTP_HOST":           "smtp.example.com",
+		"EMAIL_FROM":          "no-reply@example.com",
 		"AUTH_IP_HASH_KEY":    base6432(),
 		"AUTH_ENCRYPTION_KEY": base6432(),
+
+		"AUTH_ASSERTION_PRIVATE_KEY": base6432(),
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -39,11 +41,11 @@ func TestProductionRequiresEverything(t *testing.T) {
 
 func TestProductionRejectsMissingKeys(t *testing.T) {
 	setEnv(t, map[string]string{
-		"NODE_ENV":      "production",
-		"APP_PUBLIC_URL":        "https://app.example.com",
+		"NODE_ENV":          "production",
+		"APP_PUBLIC_URL":    "https://app.example.com",
 		"AUTH_DATABASE_URL": "postgres://db",
-		"SMTP_HOST":             "smtp.example.com",
-		"EMAIL_FROM":            "no-reply@example.com",
+		"SMTP_HOST":         "smtp.example.com",
+		"EMAIL_FROM":        "no-reply@example.com",
 	})
 	os.Unsetenv("AUTH_IP_HASH_KEY")
 	os.Unsetenv("AUTH_ENCRYPTION_KEY")
@@ -92,7 +94,7 @@ func TestAllProblemsReportedAtOnce(t *testing.T) {
 
 func TestDevEphemeralKeysAreAllowed(t *testing.T) {
 	setEnv(t, map[string]string{
-		"NODE_ENV":      "development",
+		"NODE_ENV":          "development",
 		"AUTH_DATABASE_URL": "postgres://db",
 	})
 	cfg, err := Load()
@@ -106,10 +108,10 @@ func TestDevEphemeralKeysAreAllowed(t *testing.T) {
 
 func TestAbsoluteTTLMustCoverIdleTTL(t *testing.T) {
 	setEnv(t, map[string]string{
-		"NODE_ENV":      "development",
-		"AUTH_DATABASE_URL": "postgres://db",
-		"SESSION_ABSOLUTE_TTL":  "1h",
-		"SESSION_IDLE_TTL":      "2h",
+		"NODE_ENV":             "development",
+		"AUTH_DATABASE_URL":    "postgres://db",
+		"SESSION_ABSOLUTE_TTL": "1h",
+		"SESSION_IDLE_TTL":     "2h",
 	})
 	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "SESSION_ABSOLUTE_TTL") {
 		t.Fatalf("absolute < idle must be rejected, got %v", err)

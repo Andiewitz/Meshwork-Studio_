@@ -34,9 +34,13 @@ type Config struct {
 	IdleTTL     time.Duration // re-create session after this much inactivity
 	TouchEvery  time.Duration // throttle last_seen writes
 
-	IPHashKey      []byte // HMAC-SHA256 key for IP pseudonymisation
-	EncryptionKey  []byte // AES-256-GCM key for MFA secrets at rest
-	TrustedProxies []string
+	IPHashKey     []byte // HMAC-SHA256 key for IP pseudonymisation
+	EncryptionKey []byte // AES-256-GCM key for MFA secrets at rest
+
+	AssertionPrivateKey string   // ed25519 seed (b64) signing session assertions
+	AssertionPrevKeys   []string // previous public seeds accepted during rotation
+	AssertionTTL        time.Duration
+	TrustedProxies      []string
 
 	SMTPHost  string
 	SMTPPort  int
@@ -190,6 +194,16 @@ func Load() (*Config, error) {
 	default:
 		cfg.EncryptionKey = randomKey(32)
 	}
+
+	cfg.AssertionPrivateKey = str("AUTH_ASSERTION_PRIVATE_KEY")
+	fail(isProd && cfg.AssertionPrivateKey == "",
+		"AUTH_ASSERTION_PRIVATE_KEY is required in production (the monolith verifies these locally)")
+	for _, k := range strings.Split(str("AUTH_ASSERTION_PREVIOUS_KEYS"), ",") {
+		if k = strings.TrimSpace(k); k != "" {
+			cfg.AssertionPrevKeys = append(cfg.AssertionPrevKeys, k)
+		}
+	}
+	cfg.AssertionTTL = duration("AUTH_ASSERTION_TTL", 5*time.Minute)
 
 	tp := str("TRUSTED_PROXIES")
 	if tp == "" {

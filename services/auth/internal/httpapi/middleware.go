@@ -178,6 +178,7 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 			return
 		}
 		info := &AuthInfo{User: user, Session: rec, RawToken: raw}
+		s.refreshAssertion(w, r) // keep the monolith-side token fresh
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxAuth, info)))
 	})
 }

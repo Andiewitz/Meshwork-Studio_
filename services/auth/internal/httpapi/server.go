@@ -3,6 +3,8 @@ package httpapi
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -15,6 +17,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 
+	"github.com/meshwork-studio/auth/internal/assertion"
 	"github.com/meshwork-studio/auth/internal/audit"
 	"github.com/meshwork-studio/auth/internal/captcha"
 	"github.com/meshwork-studio/auth/internal/config"
@@ -42,6 +45,7 @@ type Server struct {
 	auditor   *audit.Writer
 	ipHasher  *iphash.Hasher
 	oauthCfg  *oauth2.Config
+	assert    *assertion.Signer
 	allow     *csrf.Allowlist
 	log       *slog.Logger
 	http      *http.Server
@@ -70,6 +74,25 @@ func NewServer(cfg *config.Config, pool *pgxpool.Pool, rdb redis.UniversalClient
 		}
 	}
 
+	var (
+		signer *assertion.Signer
+		err    error
+	)
+	if cfg.AssertionPrivateKey != "" {
+		signer, _, err = assertion.NewSigner(cfg.AssertionPrivateKey, cfg.AssertionTTL, cfg.AssertionPrevKeys)
+		if err != nil {
+			return nil, fmt.Errorf("assertion keys: %w", err)
+		}
+	} else if cfg.IsProduction() {
+		return nil, errors.New("AUTH_ASSERTION_PRIVATE_KEY is required in production")
+	} else {
+		signer, _, err = assertion.NewEphemeralSigner(cfg.AssertionTTL)
+		if err != nil {
+			return nil, err
+		}
+		log.Warn("using EPHEMERAL assertion key — monolith cannot verify across restarts (development only)")
+	}
+
 	s := &Server{
 		cfg:       cfg,
 		db:        db,
@@ -83,6 +106,7 @@ func NewServer(cfg *config.Config, pool *pgxpool.Pool, rdb redis.UniversalClient
 		captcha:   captcha.New(cfg.CaptchaSecret, captcha.Provider(cfg.CaptchaProvider), cfg.CaptchaMinScore, rdb),
 		ipHasher:  iphash.New(cfg.IPHashKey),
 		oauthCfg:  oauth,
+		assert:    signer,
 		log:       log,
 	}
 	s.auditor = audit.New(db, log)
