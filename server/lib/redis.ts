@@ -112,7 +112,16 @@ export function createRedisClient(): RedisType | null {
  * Used by the health check endpoint.
  */
 export async function isRedisAvailable(): Promise<boolean> {
-  if (!redis || !redisAvailable) return false;
+  getRedis();
+  if (!redis) return false;
+  if (redis.status === "wait") {
+    try {
+      await redis.connect();
+    } catch {
+      return false;
+    }
+  }
+  if (!redisAvailable) return false;
   try {
     const pong = await redis.ping();
     return pong === "PONG";

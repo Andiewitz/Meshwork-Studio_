@@ -20,7 +20,10 @@ import { metricsRegistry } from "./lib/metrics";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = (() => {
+  if (typeof __filename === "string") return path.dirname(__filename);
+  return path.dirname(fileURLToPath(import.meta.url));
+})();
 import fs from "fs";
 
 let isAppReady = false;
@@ -267,7 +270,7 @@ app.get("/metrics", async (req, res) => {
 
 // Admin dashboard: session-authenticated admin users only. The old
 // secret-in-URL gate leaked via logs/history/Referer and had no authz.
-const adminHtmlPath = path.resolve(__dirname, "admin.html");
+const adminHtmlPath = path.resolve(moduleDir, "admin.html");
 app.get("/admin", requireAuth, (_req, res) => {
   const user = (_req as { user?: { isAdmin?: boolean } }).user;
   if (!user?.isAdmin) {

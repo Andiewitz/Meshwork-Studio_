@@ -205,14 +205,13 @@ ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" SKIP_AUTH="$SKIP_AUTH" bash -s "$REMO
   fi
   mv "$TARGET_DIR/dist.new" "$TARGET_DIR/dist"
 
-  # Restart / Reload PM2 process
-  if pm2 describe meshwork >/dev/null 2>&1; then
-    echo "  ⚡ Reloading PM2 meshwork process..."
-    pm2 reload meshwork --update-env 2>/dev/null || pm2 restart meshwork --update-env
-  else
-    echo "  ⚡ Starting PM2 meshwork process..."
-    pm2 start "$TARGET_DIR/dist/index.cjs" --name meshwork --cwd "$TARGET_DIR"
-  fi
+  # Restart PM2 monolith (hard delete+start: guarantees fresh env from .env)
+  set -a
+  [ -f "$TARGET_DIR/.env" ] && . "$TARGET_DIR/.env"
+  set +a
+  echo "  ⚡ Restarting PM2 meshwork process..."
+  pm2 delete meshwork >/dev/null 2>&1 || true
+  pm2 start "$TARGET_DIR/dist/index.cjs" --name meshwork --cwd "$TARGET_DIR" >/dev/null
 
   # Atomic swap + restart for the Go auth service
   if [ "${SKIP_AUTH:-false}" != "true" ] && [ -f "$TARGET_DIR/auth.staging/meshwork-auth.new" ]; then
@@ -223,16 +222,12 @@ ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" SKIP_AUTH="$SKIP_AUTH" bash -s "$REMO
     mv "$TARGET_DIR/auth.staging/meshwork-auth.new" "$TARGET_DIR/meshwork-auth"
     rmdir "$TARGET_DIR/auth.staging" 2>/dev/null || true
 
-    echo "  ⚡ Reloading PM2 meshwork-auth process..."
-    # pm2 does not read .env files — export them into the process environment
+    echo "  ⚡ Restarting PM2 meshwork-auth process..."
     set -a
     [ -f "$TARGET_DIR/.env" ] && . "$TARGET_DIR/.env"
     set +a
-    if pm2 describe meshwork-auth >/dev/null 2>&1; then
-      pm2 restart meshwork-auth --update-env
-    else
-      pm2 start "$TARGET_DIR/meshwork-auth" --name meshwork-auth --cwd "$TARGET_DIR"
-    fi
+    pm2 delete meshwork-auth >/dev/null 2>&1 || true
+    pm2 start "$TARGET_DIR/meshwork-auth" --name meshwork-auth --cwd "$TARGET_DIR" >/dev/null
   fi
 
   pm2 save >/dev/null 2>&1 || true

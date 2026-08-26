@@ -3,8 +3,14 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// Works both under tsx (ESM) and the bundled CJS output.
+const moduleDir = (() => {
+  if (typeof __filename === "string") return path.dirname(__filename);
+  return path.dirname(fileURLToPath(import.meta.url));
+})();
+
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "public");
+  const distPath = path.resolve(moduleDir, "public");
   // eslint-disable-next-line security/detect-non-literal-fs-filename
   if (!fs.existsSync(distPath)) {
     throw new Error(
