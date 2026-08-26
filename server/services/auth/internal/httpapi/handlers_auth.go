@@ -90,10 +90,11 @@ func (s *Server) handleIssueCSRF(w http.ResponseWriter, r *http.Request) {
 // ─── Register ───────────────────────────────────────────────────────────────
 
 type registerBody struct {
-	Email     string  `json:"email"`
-	Password  string  `json:"password"`
-	FirstName *string `json:"firstName"`
-	LastName  *string `json:"lastName"`
+	Email        string  `json:"email"`
+	Password     string  `json:"password"`
+	FirstName    *string `json:"firstName"`
+	LastName     *string `json:"lastName"`
+	CaptchaToken string  `json:"captchaToken"`
 }
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
