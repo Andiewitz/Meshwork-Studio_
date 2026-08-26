@@ -29,6 +29,7 @@ func TestProductionRequiresEverything(t *testing.T) {
 		"AUTH_ENCRYPTION_KEY": base6432(),
 
 		"AUTH_ASSERTION_PRIVATE_KEY": base6432(),
+		"AUTH_INTERNAL_KEY":          "internal-test-key-32-chars-minimum!!",
 	})
 	cfg, err := Load()
 	if err != nil {

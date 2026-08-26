@@ -37,6 +37,8 @@ type Config struct {
 	IPHashKey     []byte // HMAC-SHA256 key for IP pseudonymisation
 	EncryptionKey []byte // AES-256-GCM key for MFA secrets at rest
 
+	InternalKey string // shared secret for server-to-server introspection
+
 	AssertionPrivateKey string   // ed25519 seed (b64) signing session assertions
 	AssertionPrevKeys   []string // previous public seeds accepted during rotation
 	AssertionTTL        time.Duration
@@ -194,6 +196,10 @@ func Load() (*Config, error) {
 	default:
 		cfg.EncryptionKey = randomKey(32)
 	}
+
+	cfg.InternalKey = str("AUTH_INTERNAL_KEY")
+	fail(isProd && cfg.InternalKey == "",
+		"AUTH_INTERNAL_KEY is required in production (monolith → auth introspection)")
 
 	cfg.AssertionPrivateKey = str("AUTH_ASSERTION_PRIVATE_KEY")
 	fail(isProd && cfg.AssertionPrivateKey == "",

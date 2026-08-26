@@ -67,6 +67,8 @@ services:
       # SECURITY: the monolith has NO auth_db access — it verifies Go-signed
       # assertion cookies locally with this public key only.
       AUTH_ASSERTION_PUBLIC_KEY: ${AUTH_ASSERTION_PUBLIC_KEY:?AUTH_ASSERTION_PUBLIC_KEY required}
+      AUTH_INTERNAL_KEY: ${AUTH_INTERNAL_KEY:?AUTH_INTERNAL_KEY required}
+      AUTH_SERVICE_URL: http://emnesh-auth:8081
       REDIS_URL: redis://emnesh-redis:6379
       NODE_ENV: production
       # SECURITY: secrets MUST come from the deployment environment (.env /
@@ -103,6 +105,7 @@ services:
       AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY:?AUTH_ENCRYPTION_KEY required}
       AUTH_ASSERTION_PRIVATE_KEY: ${AUTH_ASSERTION_PRIVATE_KEY:?AUTH_ASSERTION_PRIVATE_KEY required}
       AUTH_ASSERTION_TTL: 5m
+      AUTH_INTERNAL_KEY: ${AUTH_INTERNAL_KEY:?AUTH_INTERNAL_KEY required}
       SESSION_ABSOLUTE_TTL: 336h
       SESSION_IDLE_TTL: 168h
       SMTP_HOST: ${SMTP_HOST:-}

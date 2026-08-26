@@ -92,6 +92,8 @@ const SEED = generateSeed();
 
 process.env.AUTH_ASSERTION_PUBLIC_KEY = SEED;
 delete process.env.AUTH_ASSERTION_PREVIOUS_KEYS;
+process.env.AUTH_INTERNAL_KEY = "test-internal-key";
+process.env.AUTH_SERVICE_URL = "http://auth-service.test";
 
 // ─── app under test ────────────────────────────────────────────────────────
 
@@ -197,6 +199,106 @@ describe("assertion middleware", () => {
       .get("/api/v1/auth/session")
       .set("Cookie", authCookie(token));
     expect(res.status).toBe(401);
+  });
+
+  it("expired_assertion_with_valid_session_introspects_and_refreshes", async () => {
+    const freshAssertion = mint({ exp: Math.floor(Date.now() / 1000) + 240 });
+    const fetchMock = vi.fn(async (_url: any, opts: any) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        active: true,
+        sub: "user-1",
+        sid: "session-hash-1",
+        adm: false,
+        eml: "user@example.com",
+        nam: "User",
+        assertion: freshAssertion,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const expired = mint({ exp: Math.floor(Date.now() / 1000) - 60 });
+    const res = await request(app)
+      .get("/api/v1/auth/session")
+      .set(
+        "Cookie",
+        [
+          authCookie(expired),
+          "meshwork_session=opaque-session-token-value",
+        ].join("; "),
+      );
+
+    vi.unstubAllGlobals();
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.id).toBe("user-1");
+    // Fresh assertion relayed back to the browser:
+    const setCookie = ([] as string[])
+      .concat(res.headers["set-cookie"] ?? [])
+      .join(";");
+    expect(setCookie).toContain("meshwork_assertion=");
+    // Introspection carried the shared internal key:
+    expect(fetchMock.mock.calls[0][1].headers["X-Internal-Key"]).toBe(
+      "test-internal-key",
+    );
+  });
+
+  it("introspection_says_inactive → 401 (fail closed)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ active: false }),
+      })),
+    );
+
+    const expired = mint({ exp: Math.floor(Date.now() / 1000) - 60 });
+    const res = await request(app)
+      .get("/api/v1/auth/session")
+      .set(
+        "Cookie",
+        [authCookie(expired), "meshwork_session=revoked-opaque-token"].join(
+          "; ",
+        ),
+      );
+
+    vi.unstubAllGlobals();
+    expect(res.status).toBe(401);
+  });
+
+  it("introspection_transport_failure_fails_closed_401", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("ECONNREFUSED");
+      }),
+    );
+
+    const expired = mint({ exp: Math.floor(Date.now() / 1000) - 60 });
+    const res = await request(app)
+      .get("/api/v1/auth/session")
+      .set(
+        "Cookie",
+        [authCookie(expired), "meshwork_session=some-opaque-token"].join("; "),
+      );
+
+    vi.unstubAllGlobals();
+    expect(res.status).toBe(401);
+  });
+
+  it("valid_assertion_short_circuits_no_introspection_call", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await request(app)
+      .get("/api/v1/auth/session")
+      .set("Cookie", authCookie(mint()));
+
+    vi.unstubAllGlobals();
+    expect(res.status).toBe(200);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("optionalAuth_leaves_anonymous_requests_through_untouched", async () => {

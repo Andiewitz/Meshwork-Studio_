@@ -4,7 +4,11 @@ import type { Server as HttpServer } from "http";
 import type { IncomingMessage } from "http";
 import cookie from "cookie";
 import { teamStorage } from "../db/storage";
-import { verifyAssertionToken, revokedSessions } from "../../../auth";
+import {
+  authenticateUpgrade,
+  verifyAssertionToken,
+  revokedSessions,
+} from "../../../auth";
 import { getRedis, createRedisClient } from "@server/lib/redis";
 import type { Redis as RedisType } from "ioredis";
 import {
@@ -247,14 +251,30 @@ export function initializeWebSocket(httpServer: HttpServer) {
           socket.destroy();
           return;
         }
-        const cookies = cookie.parse(req.headers.cookie ?? "");
-        const assertion =
-          cookies["__Host-meshwork_assertion"] || cookies.meshwork_assertion;
-        const claims = verifyAssertionToken(assertion);
-        if (!claims) {
+        // Fast path: local assertion. Fallback: introspect the opaque
+        // session so reconnecting tabs don't bounce users to re-login just
+        // because their 5-minute assertion lapsed while idle.
+        const identity = await (async () => {
+          const cookies = cookie.parse(req.headers.cookie ?? "");
+          const direct = verifyAssertionToken(
+            cookies["__Host-meshwork_assertion"] || cookies.meshwork_assertion,
+          );
+          if (direct) return direct;
+          const viaService = await authenticateUpgrade(req);
+          return viaService
+            ? {
+                sub: viaService.user.id,
+                sid: viaService.user.sessionId,
+                eml: viaService.user.email ?? "",
+                nam: viaService.user.firstName ?? "",
+              }
+            : null;
+        })();
+        if (!identity) {
           rejectUpgrade(socket, "Unauthorized");
           return;
         }
+        const claims = identity;
 
         wss.handleUpgrade(req, req.socket, head, (ws) => {
           socketAuth.set(ws, {
@@ -420,7 +440,7 @@ export function initializeWebSocket(httpServer: HttpServer) {
             if (!room) return;
             room.set(user.id, {
               userId: user.id,
-              name: user.firstName || user.email.split("@")[0],
+              name: user.firstName || user.email.split("@")[0] || "Guest",
               color: memberColor,
               cursor: null,
               ws,
@@ -431,7 +451,7 @@ export function initializeWebSocket(httpServer: HttpServer) {
               {
                 type: "joined",
                 userId: user.id,
-                name: user.firstName ?? user.email.split("@")[0],
+                name: user.firstName ?? user.email.split("@")[0] ?? "Guest",
                 color: memberColor,
               },
               user.id,

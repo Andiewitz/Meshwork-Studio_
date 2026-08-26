@@ -32,23 +32,24 @@ import (
 )
 
 type Server struct {
-	cfg       *config.Config
-	db        *store.DB
-	sessions  *session.Store
-	lockouts  *lockout.Store
-	rdb       redis.UniversalClient
-	limiter   *ratelimit.Limiter
-	csrfStore csrf.SecretStore
-	mailer    *email.Mailer
-	mfa       *mfa.Manager
-	captcha   *captcha.Verifier
-	auditor   *audit.Writer
-	ipHasher  *iphash.Hasher
-	oauthCfg  *oauth2.Config
-	assert    *assertion.Signer
-	allow     *csrf.Allowlist
-	log       *slog.Logger
-	http      *http.Server
+	cfg         *config.Config
+	db          *store.DB
+	sessions    *session.Store
+	lockouts    *lockout.Store
+	rdb         redis.UniversalClient
+	limiter     *ratelimit.Limiter
+	csrfStore   csrf.SecretStore
+	mailer      *email.Mailer
+	mfa         *mfa.Manager
+	captcha     *captcha.Verifier
+	auditor     *audit.Writer
+	ipHasher    *iphash.Hasher
+	oauthCfg    *oauth2.Config
+	assert      *assertion.Signer
+	internalKey string
+	allow       *csrf.Allowlist
+	log         *slog.Logger
+	http        *http.Server
 }
 
 func NewServer(cfg *config.Config, pool *pgxpool.Pool, rdb redis.UniversalClient, log *slog.Logger) (*Server, error) {
@@ -94,22 +95,24 @@ func NewServer(cfg *config.Config, pool *pgxpool.Pool, rdb redis.UniversalClient
 	}
 
 	s := &Server{
-		cfg:       cfg,
-		db:        db,
-		sessions:  sessions,
-		lockouts:  lockout.New(pool),
-		rdb:       rdb,
-		limiter:   ratelimit.New(rdb),
-		csrfStore: db,
-		mailer:    email.New(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.EmailFrom, log),
-		mfa:       mfaMgr,
-		captcha:   captcha.New(cfg.CaptchaSecret, captcha.Provider(cfg.CaptchaProvider), cfg.CaptchaMinScore, rdb),
-		ipHasher:  iphash.New(cfg.IPHashKey),
-		oauthCfg:  oauth,
-		assert:    signer,
-		log:       log,
+		cfg:         cfg,
+		db:          db,
+		sessions:    sessions,
+		lockouts:    lockout.New(pool),
+		rdb:         rdb,
+		limiter:     ratelimit.New(rdb),
+		csrfStore:   db,
+		mailer:      email.New(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.EmailFrom, log),
+		mfa:         mfaMgr,
+		captcha:     captcha.New(cfg.CaptchaSecret, captcha.Provider(cfg.CaptchaProvider), cfg.CaptchaMinScore, rdb),
+		ipHasher:    iphash.New(cfg.IPHashKey),
+		oauthCfg:    oauth,
+		assert:      signer,
+		internalKey: cfg.InternalKey,
+		log:         log,
 	}
 	s.auditor = audit.New(db, log)
+	internalKeyValue = cfg.InternalKey
 	return s, nil
 }
 
@@ -184,6 +187,10 @@ func (s *Server) Router() http.Handler {
 	api.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "Method not allowed")
 	})
+
+	// Server-to-server surface. Never routed through NGINX; guarded by the
+	// shared internal key inside the handler itself.
+	r.Post("/internal/introspect", s.handleIntrospect)
 
 	r.Route("/api/v1", func(v1 chi.Router) { v1.Mount("/", api) })
 	r.Mount("/debug/pprof", pprofDisabled())

@@ -434,3 +434,14 @@ func displayName(u *store.User) string {
 	}
 	return u.Email
 }
+
+// assertionIdentity packs a user + session into assertion claims.
+func assertionIdentity(u *store.User, sessionIDHash string) assertion.Identity {
+	return assertion.Identity{
+		UserID:        u.ID,
+		SessionIDHash: sessionIDHash,
+		Admin:         u.IsAdmin,
+		Email:         u.Email,
+		Name:          displayName(u),
+	}
+}
