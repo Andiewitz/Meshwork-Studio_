@@ -1,38 +1,28 @@
 name: emnesh-studio
 
 services:
-  emnesh-workspace-db:
-    container_name: emnesh-postgres-workspace
+  # ─── Single Postgres instance, database-per-service ────────────────────
+  # Isolation = credentials: each service's user opens exactly its own DB.
+  # docker/postgres/init/01-databases.sh provisions them on first boot.
+  emnesh-postgres:
+    container_name: emnesh-postgres
     image: postgres:15-alpine
     restart: always
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: emnesh_workspace
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:?POSTGRES_SUPERUSER required}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?POSTGRES_SUPERUSER_PASSWORD required}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD required}
+      WORKSPACE_DB_PASSWORD: ${WORKSPACE_DB_PASSWORD:?WORKSPACE_DB_PASSWORD required}
+      TEAM_DB_PASSWORD: ${TEAM_DB_PASSWORD:?TEAM_DB_PASSWORD required}
+      AI_DB_PASSWORD: ${AI_DB_PASSWORD:?AI_DB_PASSWORD required}
+      METRICS_DB_PASSWORD: ${METRICS_DB_PASSWORD:?METRICS_DB_PASSWORD required}
     ports:
       - '5434:5432'
     volumes:
-      - pgdata_workspace:/var/lib/postgresql/data
+      - pgdata_postgres:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d emnesh_workspace"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  emnesh-auth-db:
-    container_name: emnesh-postgres-auth
-    image: postgres:15-alpine
-    restart: always
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: emnesh_auth
-    ports:
-      - '5433:5432'
-    volumes:
-      - pgdata_auth:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d emnesh_auth"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -62,8 +52,14 @@ services:
     ports:
       - '5000:5000'
     environment:
-      DATABASE_URL: postgresql://user:password@emnesh-workspace-db:5432/emnesh_workspace
-      WORKSPACE_DATABASE_URL: postgresql://user:password@emnesh-workspace-db:5432/emnesh_workspace
+      # Database-per-service: each domain service gets ONLY its own DSN.
+      WORKSPACE_DATABASE_URL: postgresql://workspace_app:${WORKSPACE_DB_PASSWORD}@emnesh-postgres:5432/workspace_db
+      TEAM_DATABASE_URL: postgresql://team_app:${TEAM_DB_PASSWORD}@emnesh-postgres:5432/team_db
+      AI_DATABASE_URL: postgresql://ai_app:${AI_DB_PASSWORD}@emnesh-postgres:5432/ai_db
+      METRICS_DATABASE_URL: postgresql://metrics_app:${METRICS_DB_PASSWORD}@emnesh-postgres:5432/metrics_db
+      # TRANSITIONAL: canvas moves to DynamoDB; until then its tables still
+      # live in workspace_db from the pre-split era.
+      CANVAS_DATABASE_URL: postgresql://workspace_app:${WORKSPACE_DB_PASSWORD}@emnesh-postgres:5432/workspace_db
       # SECURITY: the monolith has NO auth_db access — it verifies Go-signed
       # assertion cookies locally with this public key only.
       AUTH_ASSERTION_PUBLIC_KEY: ${AUTH_ASSERTION_PUBLIC_KEY:?AUTH_ASSERTION_PUBLIC_KEY required}
@@ -80,16 +76,14 @@ services:
       APP_URL: ${APP_URL:-http://localhost:5000}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
     depends_on:
-      emnesh-workspace-db:
-        condition: service_healthy
-      emnesh-auth-db:
+      emnesh-postgres:
         condition: service_healthy
       emnesh-redis:
         condition: service_healthy
 
   # ─── Auth service (Go) — owns users/sessions/MFA/OAuth/audit ──────────
-  emnesh-identity:
-    container_name: emnesh-identity
+  emnesh-auth:
+    container_name: emnesh-auth
     build:
       context: ./server/services/auth
       dockerfile: Dockerfile
@@ -99,7 +93,7 @@ services:
       AUTH_PORT: 8081
       APP_PUBLIC_URL: ${APP_URL:-http://localhost:5000}
       EXTRA_ALLOWED_ORIGINS: ${EXTRA_ALLOWED_ORIGINS:-}
-      AUTH_DATABASE_URL: postgresql://user:password@emnesh-auth-db:5432/emnesh_auth
+      AUTH_DATABASE_URL: postgresql://auth_app:${AUTH_DB_PASSWORD}@emnesh-postgres:5432/auth_db
       AUTH_REDIS_URL: redis://emnesh-redis:6379
       AUTH_IP_HASH_KEY: ${AUTH_IP_HASH_KEY:?AUTH_IP_HASH_KEY required}
       AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY:?AUTH_ENCRYPTION_KEY required}
@@ -119,7 +113,7 @@ services:
       CAPTCHA_SECRET: ${CAPTCHA_SECRET:-}
       BOOTSTRAP_ADMIN_EMAILS: ${BOOTSTRAP_ADMIN_EMAILS:-}
     depends_on:
-      emnesh-auth-db:
+      emnesh-postgres:
         condition: service_healthy
       emnesh-redis:
         condition: service_healthy
@@ -135,9 +129,8 @@ services:
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - emnesh-backend
-      - emnesh-identity
+      - emnesh-auth
 
 volumes:
-  pgdata_workspace:
-  pgdata_auth:
+  pgdata_postgres:
   redis_data:

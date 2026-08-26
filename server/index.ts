@@ -4,7 +4,7 @@ const log = createChildLogger("server");
 log.info("Starting initialization phase 0...");
 
 import express, { type Request, Response, NextFunction } from "express";
-import { db } from "./lib/db";
+import { db as workspaceDb } from "./services/workspace/db/connection";
 import { sql } from "drizzle-orm";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -202,9 +202,9 @@ app.get(["/health", "/healthz"], async (_req, res) => {
       redis: false,
     };
 
-    // Check Postgres
+    // Check Postgres (workspace is the primary monolith database)
     try {
-      await db.execute(sql`SELECT 1`);
+      await workspaceDb.execute(sql`SELECT 1`);
       checks.postgres = true;
     } catch (err) {
       log.error({ err }, "Postgres health check failed");
@@ -297,56 +297,8 @@ app.get("/admin", requireAuth, (_req, res) => {
   });
 
   try {
-    log.info("Starting database migrations...");
-    try {
-      await db.execute(
-        sql`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS updated_at timestamp DEFAULT CURRENT_TIMESTAMP`,
-      );
-      await db.execute(
-        sql`UPDATE workspaces SET updated_at = created_at WHERE updated_at > '2026-04-19 07:00:00' AND updated_at < '2026-04-19 08:30:00' AND created_at < '2026-04-19 07:00:00'`,
-      );
-
-      // Migrate workspaces.id and related workspace_id foreign keys from integer to varchar/text UUIDs
-      await db.execute(sql`
-        DO $$ 
-        BEGIN
-          IF EXISTS (
-            SELECT 1 FROM information_schema.columns 
-            WHERE table_name = 'workspaces' AND column_name = 'id' AND data_type = 'integer'
-          ) THEN
-            -- 1. Drop old foreign key constraints
-            ALTER TABLE edges DROP CONSTRAINT IF EXISTS edges_workspace_id_workspaces_id_fk;
-            ALTER TABLE nodes DROP CONSTRAINT IF EXISTS nodes_workspace_id_workspaces_id_fk;
-            ALTER TABLE team_workspaces DROP CONSTRAINT IF EXISTS team_workspaces_workspace_id_workspaces_id_fk;
-
-            -- 2. Alter primary key and foreign key column types
-            ALTER TABLE workspaces ALTER COLUMN id TYPE varchar(128) USING id::text;
-            ALTER TABLE workspaces ALTER COLUMN id SET DEFAULT gen_random_uuid()::text;
-
-            ALTER TABLE edges ALTER COLUMN workspace_id TYPE varchar(128) USING workspace_id::text;
-            ALTER TABLE nodes ALTER COLUMN workspace_id TYPE varchar(128) USING workspace_id::text;
-            ALTER TABLE team_workspaces ALTER COLUMN workspace_id TYPE varchar(128) USING workspace_id::text;
-
-            -- 3. Re-add foreign key constraints
-            ALTER TABLE edges ADD CONSTRAINT edges_workspace_id_workspaces_id_fk 
-              FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-            ALTER TABLE nodes ADD CONSTRAINT nodes_workspace_id_workspaces_id_fk 
-              FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-            ALTER TABLE team_workspaces ADD CONSTRAINT team_workspaces_workspace_id_workspaces_id_fk 
-              FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-          END IF;
-        END $$;
-      `);
-
-      // Auth tables (users/auth_*/one_time_tokens/audit_events) are owned
-      // and migrated by server/services/auth at ITS boot — never here.
-      log.info("Database migrations applied successfully");
-    } catch (dbErr) {
-      log.warn(
-        { err: dbErr },
-        "Failed to apply DB migrations, might already exist or DB is unavailable",
-      );
-    }
+    // Database schema is owned per-service: server/services/<svc>/db/migrations
+    // is applied by each service during registerRoutes. Nothing here.
 
     log.info("Starting module initialization...");
     await registerRoutes(httpServer, app);

@@ -44,10 +44,24 @@ const isProd = process.env.NODE_ENV === "production";
 // ─── Monolith ────────────────────────────────────────────────────────────────
 
 check("NODE_ENV", has("NODE_ENV"), `= ${process.env.NODE_ENV ?? "(unset)"}`);
+for (const key of [
+  "WORKSPACE_DATABASE_URL",
+  "TEAM_DATABASE_URL",
+  "AI_DATABASE_URL",
+  "METRICS_DATABASE_URL",
+]) {
+  check(
+    key,
+    has(key),
+    has(key) ? "DSN present" : "database-per-service: required at boot",
+  );
+}
 check(
-  "DATABASE_URL",
-  has("DATABASE_URL"),
-  has("DATABASE_URL") ? "workspace DB DSN present" : "required by the monolith",
+  "CANVAS_DATABASE_URL",
+  true,
+  has("CANVAS_DATABASE_URL")
+    ? "transitional (canvas → DynamoDB)"
+    : "already on DynamoDB",
 );
 check(
   "REDIS_URL",
