@@ -259,16 +259,27 @@ export function initializeWebSocket(httpServer: HttpServer) {
           const direct = verifyAssertionToken(
             cookies["__Host-meshwork_assertion"] || cookies.meshwork_assertion,
           );
-          if (direct) return direct;
+          if (direct) {
+            log.debug({ userId: direct.sub }, "WS upgrade: assertion verified");
+            return direct;
+          }
           const viaService = await authenticateUpgrade(req);
-          return viaService
-            ? {
-                sub: viaService.user.id,
-                sid: viaService.user.sessionId,
-                eml: viaService.user.email ?? "",
-                nam: viaService.user.firstName ?? "",
-              }
-            : null;
+          if (viaService) {
+            log.debug(
+              { userId: viaService.user.id },
+              "WS upgrade: introspection verified",
+            );
+            return {
+              sub: viaService.user.id,
+              sid: viaService.user.sessionId,
+              eml: viaService.user.email ?? "",
+              nam: viaService.user.firstName ?? "",
+            };
+          }
+          log.debug(
+            "WS upgrade: auth failed (no assertion, introspection null)",
+          );
+          return null;
         })();
         if (!identity) {
           rejectUpgrade(socket, "Unauthorized");
@@ -328,6 +339,11 @@ export function initializeWebSocket(httpServer: HttpServer) {
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     websocketConnectionsActive.inc();
+    const auth = socketAuth.get(ws);
+    log.info(
+      { userId: auth?.userId, sidHash: auth?.sidHash },
+      "WS connection opened",
+    );
     let currentUserId: string | undefined;
     let currentWorkspaceId: string | undefined;
 
@@ -338,6 +354,10 @@ export function initializeWebSocket(httpServer: HttpServer) {
 
     const heartbeat = setInterval(() => {
       if (!alive) {
+        log.debug(
+          { userId: auth?.userId },
+          "WS heartbeat timeout — terminating",
+        );
         ws.terminate();
         return;
       }
@@ -589,10 +609,14 @@ export function initializeWebSocket(httpServer: HttpServer) {
       return false;
     }
 
-    ws.on("close", () => {
+    ws.on("close", (code, reason) => {
       websocketConnectionsActive.dec();
       clearInterval(heartbeat);
       clearInterval(revalidator);
+      log.debug(
+        { userId: auth?.userId, code, reason: reason?.toString() },
+        "WS connection closed",
+      );
       removeFromAllRooms(ws);
     });
 

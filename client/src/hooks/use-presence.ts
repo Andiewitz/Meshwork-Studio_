@@ -44,6 +44,11 @@ interface ServerMessage {
 
 const MAX_BACKOFF_MS = 30_000;
 const INITIAL_BACKOFF_MS = 1_000;
+/** Only retry on abnormal/protocol close; clean close (1000) and
+ *  going-away (1001) are intentional — don't reconnect. */
+const RETRYABLE_CLOSE_CODES = new Set([
+  1002, 1003, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015,
+]);
 
 // ─── Hook ────────────────────────────────────────────────────────────
 
@@ -61,6 +66,7 @@ export function usePresence(
 ) {
   const { isAuthenticated } = useAuth();
   const wsRef = useRef<WebSocket | null>(null);
+  const connectingRef = useRef(false);
   const onNodeMoveRef = useRef(onNodeMove);
   onNodeMoveRef.current = onNodeMove;
   const onCanvasSyncRef = useRef(onCanvasSync);
@@ -75,10 +81,27 @@ export function usePresence(
   const [isConnected, setIsConnected] = useState(false);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
   const backoffRef = useRef(INITIAL_BACKOFF_MS);
-  const stoppedRef = useRef(false);
 
   const connect = useCallback(() => {
-    if (!workspaceId || !isAuthenticated || stoppedRef.current) return;
+    if (!workspaceId || !isAuthenticated) return;
+    // Prevent duplicate connections
+    const existing = wsRef.current;
+    if (
+      existing &&
+      (existing.readyState === WebSocket.CONNECTING ||
+        existing.readyState === WebSocket.OPEN)
+    ) {
+      return;
+    }
+    // Clean up any lingering socket in CLOSING/CLOSED state
+    if (existing) {
+      existing.onclose = null;
+      existing.onerror = null;
+      existing.onopen = null;
+      existing.onmessage = null;
+      wsRef.current = null;
+    }
+    connectingRef.current = true;
 
     // Build WS URL from current location
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -93,6 +116,7 @@ export function usePresence(
     wsRef.current = ws;
 
     ws.onopen = () => {
+      connectingRef.current = false;
       setIsConnected(true);
       backoffRef.current = INITIAL_BACKOFF_MS;
       // Authenticate and join the workspace room
@@ -202,12 +226,19 @@ export function usePresence(
     };
 
     ws.onclose = (event) => {
-      setIsConnected(false);
+      connectingRef.current = false;
       wsRef.current = null;
-      // Server closed with 4001 = session revoked/expired — stop reconnecting
-      if (event.code === 4001 || !isAuthenticated || stoppedRef.current) {
-        return;
-      }
+      setIsConnected(false);
+
+      // Session revoked / expired — stop reconnecting
+      if (event.code === 4001) return;
+
+      // Clean close or intentional navigation — don't reconnect
+      if (!RETRYABLE_CLOSE_CODES.has(event.code)) return;
+
+      // Auth lost — stop reconnecting
+      if (!isAuthenticated) return;
+
       // Exponential backoff with cap
       const delay = backoffRef.current;
       backoffRef.current = Math.min(delay * 2, MAX_BACKOFF_MS);
@@ -219,50 +250,33 @@ export function usePresence(
     };
   }, [workspaceId, isAuthenticated]);
 
-  // Reset backoff and reconnect when auth state changes to authenticated
+  // Single effect: connect / disconnect lifecycle
   useEffect(() => {
-    if (isAuthenticated && workspaceId && !stoppedRef.current) {
-      backoffRef.current = INITIAL_BACKOFF_MS;
-      // Only connect if not already connected
-      if (!wsRef.current || wsRef.current.readyState > WebSocket.OPEN) {
-        connect();
-      }
-    }
-  }, [isAuthenticated, workspaceId, connect]);
+    if (!isAuthenticated || !workspaceId) return;
 
-  // Stop reconnecting when auth is lost
-  useEffect(() => {
-    if (!isAuthenticated) {
-      stoppedRef.current = true;
-      clearTimeout(reconnectTimer.current);
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-      setIsConnected(false);
-    } else {
-      stoppedRef.current = false;
-    }
-  }, [isAuthenticated]);
-
-  // Connect on mount, disconnect on unmount
-  useEffect(() => {
-    if (isAuthenticated) {
-      connect();
-    }
+    connect();
 
     return () => {
-      stoppedRef.current = true;
       clearTimeout(reconnectTimer.current);
-      if (wsRef.current) {
-        wsRef.current.send(JSON.stringify({ type: "leave" }));
-        wsRef.current.close();
+      const ws = wsRef.current;
+      if (ws) {
+        ws.onclose = null; // prevent backoff reconnect on cleanup
+        ws.onerror = null;
+        ws.onopen = null;
+        ws.onmessage = null;
+        try {
+          ws.send(JSON.stringify({ type: "leave" }));
+        } catch {
+          // socket may already be closed
+        }
+        ws.close(1000, "unmount");
         wsRef.current = null;
       }
       setCollaborators(new Map());
       setIsConnected(false);
+      connectingRef.current = false;
     };
-  }, [connect, isAuthenticated]);
+  }, [isAuthenticated, workspaceId, connect]);
 
   // Send cursor position (throttled by caller)
   const sendCursor = useCallback((x: number, y: number) => {
