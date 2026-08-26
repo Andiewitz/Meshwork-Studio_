@@ -8,15 +8,12 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { workspaces } from "@services/workspace/db/schema";
 
 export const nodes = pgTable(
   "nodes",
   {
     id: text("id").notNull(),
-    workspaceId: text("workspace_id")
-      .references(() => workspaces.id, { onDelete: "cascade" })
-      .notNull(),
+    workspaceId: text("workspace_id").notNull(), // plain col
     type: text("type"),
     position: jsonb("position").$type<{ x: number; y: number }>().notNull(),
     data: jsonb("data").$type<any>().notNull(),
@@ -37,9 +34,7 @@ export const edges = pgTable(
   "edges",
   {
     id: text("id").notNull(),
-    workspaceId: text("workspace_id")
-      .references(() => workspaces.id, { onDelete: "cascade" })
-      .notNull(),
+    workspaceId: text("workspace_id").notNull(), // plain col
     source: text("source").notNull(),
     target: text("target").notNull(),
     sourceHandle: text("source_handle"),
@@ -63,3 +58,10 @@ export type Node = typeof nodes.$inferSelect;
 export type InsertNode = z.infer<typeof insertNodeSchema>;
 export type Edge = typeof edges.$inferSelect;
 export type InsertEdge = z.infer<typeof insertEdgeSchema>;
+
+export type CanvasNode = typeof nodes.$inferSelect;
+export type CanvasEdge = typeof edges.$inferSelect;
+export { insertNodeSchema as insertCanvasNodeSchema };
+export { insertEdgeSchema as insertCanvasEdgeSchema };
+export type { InsertNode as InsertCanvasNode };
+export type { InsertEdge as InsertCanvasEdge };

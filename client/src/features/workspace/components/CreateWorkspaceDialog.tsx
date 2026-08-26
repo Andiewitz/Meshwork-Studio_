@@ -6,7 +6,12 @@ import { z } from "zod";
 import { insertWorkspaceSchema } from "@shared/schema";
 import { useCreateWorkspace, useWorkspaces } from "@/hooks/use-workspaces";
 import { useAuth } from "@/hooks/use-auth";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   ArrowPathIcon,
   ServerIcon,
@@ -84,7 +89,6 @@ export function CreateWorkspaceDialog({
       {
         ...values,
         type: "system",
-        userId: user.id,
         icon: selectedIcon,
         groups: [],
         tags: [],

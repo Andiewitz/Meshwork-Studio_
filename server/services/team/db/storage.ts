@@ -10,7 +10,6 @@ import {
   type TeamRole,
 } from "./schema";
 import { workspaces, type Workspace } from "@services/workspace/db/schema";
-import { users } from "@shared/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import type { DrizzleTx } from "@server/lib/events";
 import crypto from "crypto";
@@ -43,13 +42,10 @@ export interface ITeamStorage {
   createTeam(name: string, ownerId: string): Promise<Team>;
   getTeamsByUser(userId: string): Promise<(Team & { memberCount: number })[]>;
   getTeam(teamId: string): Promise<Team | undefined>;
-  getTeamMembers(teamId: string): Promise<
-    (TeamMember & {
-      email: string;
-      firstName: string | null;
-      profileImageUrl: string | null;
-    })[]
-  >;
+  // Profile enrichment (email/name/avatar) happens at the route layer via
+  // the auth service's internal profiles endpoint — users are not queryable
+  // from team_db.
+  getTeamMembers(teamId: string): Promise<TeamMember[]>;
   joinTeam(
     inviteCode: string,
     userId: string,
@@ -146,12 +142,8 @@ export class TeamDatabaseStorage implements ITeamStorage {
         role: teamMembers.role,
         color: teamMembers.color,
         joinedAt: teamMembers.joinedAt,
-        email: users.email,
-        firstName: users.firstName,
-        profileImageUrl: users.profileImageUrl,
       })
       .from(teamMembers)
-      .innerJoin(users, eq(teamMembers.userId, users.id))
       .where(eq(teamMembers.teamId, teamId));
 
     return members;

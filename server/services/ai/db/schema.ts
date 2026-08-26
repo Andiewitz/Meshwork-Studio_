@@ -10,7 +10,6 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
-import { users } from "@shared/schema";
 
 export const userApiKeys = pgTable(
   "user_api_keys",
@@ -18,9 +17,7 @@ export const userApiKeys = pgTable(
     id: varchar("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-    userId: varchar("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: varchar("user_id").notNull(), // plain col: users live in auth_db
     provider: varchar("provider").notNull(),
     encryptedKey: text("encrypted_key").notNull(),
     iv: text("iv").notNull(),

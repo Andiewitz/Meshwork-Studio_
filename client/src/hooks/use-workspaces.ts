@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import {
-  type CreateWorkspaceRequest,
+  type InsertWorkspace,
   type UpdateWorkspaceRequest,
 } from "@shared/schema";
 import { secureFetch } from "../lib/secure-fetch";
@@ -78,7 +78,7 @@ export function useCreateWorkspace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateWorkspaceRequest) => {
+    mutationFn: async (data: InsertWorkspace) => {
       const res = await secureFetch(getApiUrl(api.workspaces.create.path), {
         method: api.workspaces.create.method,
         headers: { "Content-Type": "application/json" },

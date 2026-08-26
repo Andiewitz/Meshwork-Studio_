@@ -9,8 +9,6 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
-import { users } from "@shared/schema";
-import { workspaces } from "@services/workspace/db/schema";
 
 export const teams = pgTable(
   "teams",
@@ -20,9 +18,7 @@ export const teams = pgTable(
       .default(sql`gen_random_uuid()`),
     name: varchar("name", { length: 64 }).notNull(),
     inviteCode: varchar("invite_code", { length: 8 }).unique().notNull(),
-    ownerId: varchar("owner_id")
-      .notNull()
-      .references(() => users.id),
+    ownerId: varchar("owner_id").notNull(), // plain col: users live in auth_db
     createdAt: timestamp("created_at").defaultNow(),
   },
   (table) => [
@@ -40,9 +36,7 @@ export const teamMembers = pgTable(
     teamId: varchar("team_id")
       .notNull()
       .references(() => teams.id, { onDelete: "cascade" }),
-    userId: varchar("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: varchar("user_id").notNull(), // plain col: cross-db integrity is app-side
     role: varchar("role", { length: 16 }).notNull().default("editor"),
     color: varchar("color", { length: 7 }).notNull(),
     joinedAt: timestamp("joined_at").defaultNow(),
@@ -63,9 +57,7 @@ export const teamWorkspaces = pgTable(
     teamId: varchar("team_id")
       .notNull()
       .references(() => teams.id, { onDelete: "cascade" }),
-    workspaceId: varchar("workspace_id", { length: 128 })
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+    workspaceId: varchar("workspace_id", { length: 128 }).notNull(), // plain col
     sharedAt: timestamp("shared_at").defaultNow(),
   },
   (table) => [

@@ -1,10 +1,6 @@
 import { z } from "zod";
-import {
-  insertWorkspaceSchema,
-  workspaces,
-  collections,
-  insertCollectionSchema,
-} from "./schema";
+import { insertWorkspaceSchema } from "./schema";
+import type { Collection, Workspace } from "./schema";
 
 export const errorSchemas = {
   validation: z.object({
@@ -28,7 +24,7 @@ export const api = {
       method: "GET" as const,
       path: "/api/v1/workspaces" as const,
       responses: {
-        200: z.array(z.custom<typeof workspaces.$inferSelect>()),
+        200: z.array(z.custom<Workspace>()),
         401: errorSchemas.unauthorized,
       },
     },
@@ -37,7 +33,7 @@ export const api = {
       path: "/api/v1/workspaces" as const,
       input: insertWorkspaceSchema,
       responses: {
-        201: z.custom<typeof workspaces.$inferSelect>(),
+        201: z.custom<Workspace>(),
         400: errorSchemas.validation,
         401: errorSchemas.unauthorized,
       },
@@ -46,7 +42,7 @@ export const api = {
       method: "GET" as const,
       path: "/api/v1/workspaces/:id" as const,
       responses: {
-        200: z.custom<typeof workspaces.$inferSelect>(),
+        200: z.custom<Workspace>(),
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
       },
@@ -56,7 +52,7 @@ export const api = {
       path: "/api/v1/workspaces/:id" as const,
       input: insertWorkspaceSchema.partial(),
       responses: {
-        200: z.custom<typeof workspaces.$inferSelect>(),
+        200: z.custom<Workspace>(),
         400: errorSchemas.validation,
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
@@ -76,7 +72,7 @@ export const api = {
       path: "/api/v1/workspaces/:id/duplicate" as const,
       input: z.object({ title: z.string().optional() }),
       responses: {
-        201: z.custom<typeof workspaces.$inferSelect>(),
+        201: z.custom<Workspace>(),
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
       },
