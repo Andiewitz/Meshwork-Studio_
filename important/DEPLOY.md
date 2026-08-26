@@ -105,6 +105,9 @@ on-instance containers. After first boot:
 
 1. Clone the repo to `~/meshwork-studiov2`
 2. Create `.env` from the inventory in [`SECRETS.md`](./SECRETS.md)
+   ⚠️ Database cutover note: the consolidated Postgres starts EMPTY.
+   Run `npx tsx scripts/provision-dynamodb.ts` for the canvas table.
+   Existing canvas/team/ai rows are NOT migrated (fresh start).
    (generate every key listed there — no defaults exist). The auth
    service's `AUTH_ASSERTION_PRIVATE_KEY` and the monolith's
    `AUTH_ASSERTION_PUBLIC_KEY` must be generated as one keypair.
