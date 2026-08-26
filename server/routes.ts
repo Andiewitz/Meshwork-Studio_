@@ -17,7 +17,7 @@ export async function registerRoutes(
   app: Express,
 ): Promise<Server> {
   // NOTE: /api/v1/auth/* and /api/v1/user/* are served by the Go auth
-  // service (services/auth) — routed there by NGINX. The monolith only
+  // service (server/services/auth) — routed there by NGINX. The monolith only
   // validates sessions via the auth bridge below.
 
   // Auth: verify the Go-signed assertion locally (no auth_db access).

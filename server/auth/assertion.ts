@@ -1,6 +1,6 @@
 // Local verification of Go-issued session assertions.
 //
-// The auth service (services/auth) signs short-lived ed25519 tokens; this
+// The auth service (server/services/auth) signs short-lived ed25519 tokens; this
 // module verifies them with Node's built-in crypto. The monolith has NO
 // access to auth_db — identity lives entirely behind the assertion.
 //

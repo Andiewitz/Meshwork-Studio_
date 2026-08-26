@@ -45,10 +45,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-          cache-dependency-path: services/auth/go.sum
+          cache-dependency-path: server/services/auth/go.sum
 
       - name: Build Auth Service (linux/amd64)
-        working-directory: services/auth
+        working-directory: server/services/auth
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
             go build -ldflags="-s -w" -o meshwork-auth ./cmd/server
@@ -60,7 +60,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          source: "dist,package.json,package-lock.json,drizzle.config.ts,deploy,migrations,shared,services/auth/meshwork-auth"
+          source: "dist,package.json,package-lock.json,drizzle.config.ts,deploy,migrations,shared,server/services/auth/meshwork-auth"
           target: "/home/${{ secrets.EC2_USER }}/meshwork-studiov2"
           rm: false
 
@@ -88,8 +88,8 @@ jobs:
           script_stop: true
           script: |
             TARGET="/home/${{ secrets.EC2_USER }}/meshwork-studiov2"
-            chmod +x "$TARGET/services/auth/meshwork-auth"
-            mv "$TARGET/services/auth/meshwork-auth" "$TARGET/meshwork-auth"
+            chmod +x "$TARGET/server/services/auth/meshwork-auth"
+            mv "$TARGET/server/services/auth/meshwork-auth" "$TARGET/meshwork-auth"
             if pm2 describe meshwork-auth > /dev/null 2>&1; then
               pm2 restart meshwork-auth --update-env
             else

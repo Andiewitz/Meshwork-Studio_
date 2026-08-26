@@ -28,7 +28,7 @@ Docker: emnesh-postgres-workspace (:5434), emnesh-postgres-auth (:5433),
         emnesh-redis (:6379)
 ```
 
-The **Go auth service** (`services/auth`) owns users, sessions, MFA, OAuth and
+The **Go auth service** (`server/services/auth`) owns users, sessions, MFA, OAuth and
 audit. The monolith only validates sessions through its auth bridge.
 Architecture details: [`../docs/AUTH_ARCHITECTURE.md`](../docs/AUTH_ARCHITECTURE.md).
 

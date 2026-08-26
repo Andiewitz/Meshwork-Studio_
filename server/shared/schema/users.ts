@@ -1,4 +1,4 @@
-// Canonical mirror of the `users` table owned by services/auth
+// Canonical mirror of the `users` table owned by server/services/auth
 // (see its migrations/). This definition exists ONLY so other domains can
 // declare foreign-key relationships and the client can share row types —
 // no monolith code may query auth tables directly.

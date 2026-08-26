@@ -51,14 +51,14 @@ npm run dev                  # terminal 2 — proxies /api/v1/(auth|user)/* here
 Every variable lives in the `AUTH_*` namespace and is validated at boot —
 the service refuses to start on any problem and reports all of them at once.
 Full inventory (including the monolith-side variables): see
-[`important/SECRETS.md`](../../important/SECRETS.md).
+[`important/SECRETS.md`](../../../important/SECRETS.md).
 
 ## Deployment
 
 Ships as a distroless container (`Dockerfile`) or a bare binary
 (`CGO_ENABLED=0 go build`). Migrations are embedded and applied before the
 HTTP listener opens; a failed migration aborts boot. CI:
-[`.github/workflows/auth.yml`](../../.github/workflows/auth.yml).
+[`.github/workflows/auth.yml`](../../../.github/workflows/auth.yml).
 
 ## Session model (what the monolith relies on)
 

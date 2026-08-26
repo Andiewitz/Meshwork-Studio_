@@ -91,7 +91,7 @@ services:
   emnesh-identity:
     container_name: emnesh-identity
     build:
-      context: ./services/auth
+      context: ./server/services/auth
       dockerfile: Dockerfile
     restart: always
     environment:

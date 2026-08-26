@@ -16,7 +16,7 @@ void publicKeyFromSeed;
 /**
  * Auth middleware contract tests.
  *
- * Identity is owned by the Go service (services/auth + its Go tests). These
+ * Identity is owned by the Go service (server/services/auth + its Go tests). These
  * suites pin what the MONOLITH enforces locally:
  *   - ed25519 assertion verification (signature, expiry, tamper, rotation)
  *   - revocation denylist

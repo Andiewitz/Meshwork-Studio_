@@ -4,11 +4,11 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - "services/auth/**"
+      - "server/services/auth/**"
       - ".github/workflows/identity.yml"
   pull_request:
     paths:
-      - "services/auth/**"
+      - "server/services/auth/**"
       - ".github/workflows/identity.yml"
 
 concurrency:
@@ -17,7 +17,7 @@ concurrency:
 
 defaults:
   run:
-    working-directory: services/auth
+    working-directory: server/services/auth
 
 env:
   GO_VERSION: "1.24"
@@ -31,10 +31,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: services/auth/go.sum
+          cache-dependency-path: server/services/auth/go.sum
       - uses: golangci/golangci-lint-action@v6
         with:
-          working-directory: services/auth
+          working-directory: server/services/auth
 
   security:
     name: Security Scan (gosec + govulncheck)
@@ -44,11 +44,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: services/auth/go.sum
+          cache-dependency-path: server/services/auth/go.sum
       - name: gosec
         uses: securego/gosec@master
         with:
-          workdir: services/auth
+          workdir: server/services/auth
           args: ./...
       - name: govulncheck
         run: |
@@ -63,7 +63,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: services/auth/go.sum
+          cache-dependency-path: server/services/auth/go.sum
       - run: go test ./... -race -count=1 -coverprofile=cover.out
       - run: go tool cover -func=cover.out | tail -1
 

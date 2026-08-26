@@ -81,16 +81,16 @@ if [ ! -d "$REPO_DIR/dist" ] || [ ! -f "$REPO_DIR/dist/index.cjs" ]; then
 fi
 
 # Step 1b: Build Go auth service (linux/amd64)
-AUTH_BIN="$REPO_DIR/services/auth/meshwork-auth"
+AUTH_BIN="$REPO_DIR/server/services/auth/meshwork-auth"
 if [ "$SKIP_AUTH" = false ]; then
   echo -e "${BLUE}▶ [1b/5] Building Go auth service (linux/amd64)...${NC}"
   if ! command -v go &>/dev/null; then
     echo -e "${RED}❌ Error: Go toolchain not found. Install Go ≥1.24 or pass --skip-auth.${NC}"
     exit 1
   fi
-  (cd "$REPO_DIR/services/auth" && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+  (cd "$REPO_DIR/server/services/auth" && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -o meshwork-auth ./cmd/server)
-  echo -e "${GREEN}✓ Auth binary built: services/auth/meshwork-auth${NC}"
+  echo -e "${GREEN}✓ Auth binary built: server/services/auth/meshwork-auth${NC}"
 else
   echo -e "${YELLOW}⚡ [1b/5] Skipping auth service build (--skip-auth).${NC}"
 fi

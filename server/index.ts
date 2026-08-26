@@ -165,7 +165,7 @@ if (process.env.NODE_ENV !== "production") {
       res.status(502).json({
         code: "AUTH_SERVICE_UNAVAILABLE",
         message:
-          "Auth service is not running. Start it with: make -C services/auth run",
+          "Auth service is not running. Start it with: make -C server/services/auth run",
       });
     });
     req.pipe(upstream);
@@ -339,7 +339,7 @@ app.get("/admin", requireAuth, (_req, res) => {
       `);
 
       // Auth tables (users/auth_*/one_time_tokens/audit_events) are owned
-      // and migrated by services/auth at ITS boot — never here.
+      // and migrated by server/services/auth at ITS boot — never here.
       log.info("Database migrations applied successfully");
     } catch (dbErr) {
       log.warn(

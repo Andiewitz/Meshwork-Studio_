@@ -82,7 +82,7 @@ docker-compose up -d
 ```bash
 npm install
 npm run dev              # monolith + frontend on :5000
-make -C services/auth run  # auth service on :8081 (auth endpoints are Go)
+make -C server/services/auth run  # auth service on :8081 (auth endpoints are Go)
 # Visit http://localhost:5000
 ```
 
@@ -132,7 +132,7 @@ make -C services/auth run  # auth service on :8081 (auth endpoints are Go)
 ```bash
 # Development
 npm run dev                    # Monolith + frontend on :5000
-make -C services/auth run      # Auth service on :8081 (required — auth
+make -C server/services/auth run      # Auth service on :8081 (required — auth
                                # endpoints are served by Go, not Express)
 npm run check                  # TypeScript type checking
 
@@ -219,23 +219,23 @@ meshwork-studio/
 │       ├── hooks/               # React Query hooks
 │       ├── lib/                 # secureFetch, CSRF, query client
 │       └── pages/               # Route-level page components
-├── services/
-│   └── auth/                    # Go identity service (sessions, MFA, OAuth)
-├── server/                      # Express monolith backend
-│   ├── modules/                 # Re-export shims per domain
-│   ├── services/                # Domain services (canvas, workspace,
-│   │                            #  team, ai, metrics + auth bridge)
+├── server/                      # Everything server-side
+│   ├── services/
+│   │   ├── auth/                # Go identity service (sessions, MFA,
+│   │   │                        #  OAuth; api/openapi.yaml inside)
+│   │   ├── canvas/  workspace/  # TS domain services
+│   │   └── team/  ai/  metrics/
+│   ├── auth/                    # Assertion verifier + CSRF (tiny)
 │   ├── middleware/              # Rate limiting
-│   └── types/                   # Express.Request.user augmentation
-├── client/src/                  # React frontend (also under client/)
+│   └── types/
+├── client/src/                  # React frontend
 ├── terraform/                   # Production ECS/RDS/Redis/ALB IAC
 ├── deploy/                      # Infra artifacts: nginx.conf, user-data, RDS notes
 ├── important/                   # DEPLOY.md, SECRETS.md, ops guides
 ├── scripts/                     # deploy.sh, build.ts, backup-db.ts, guards
-├── services/auth/api/           # OpenAPI contract (source of truth)
 ├── docs/                        # Deep-dive documentation (+ docs/archive/)
 ├── docker-compose.yml           # Full stack local orchestration
-├── vitest.config.ts             # Test runner configuration
+└── vitest.config.ts             # Test runner configuration
 ```
 
 ---

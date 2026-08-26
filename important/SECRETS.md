@@ -10,7 +10,7 @@
 
 1. Generate with `openssl rand -base64 32` (or `openssl rand -hex 32`) — never invent strings.
 2. Server env files live at `~/meshwork-studiov2/.env`, `chmod 600`, owned by `ubuntu`.
-3. Local dev uses `.env` at repo root (gitignored) and `services/auth/.env` for the Go service.
+3. Local dev uses `.env` at repo root (gitignored) and `server/services/auth/.env` for the Go service.
 4. Rotating a key = update every place it appears + restart the owning process.
 
 ---
@@ -31,7 +31,7 @@
 Removed (do **not** set): `JWT_SECRET`, anything `E2E_BYPASS_AUTH` — both stacks
 refuse/fail closed; their code is gone.
 
-## Go auth service (`services/auth/.env` locally; same file remotely)
+## Go auth service (`server/services/auth/.env` locally; same file remotely)
 
 | Variable                                                             | Purpose                                                             | Consumed by                                                 | Rotation / blast radius                                                                                                                                                                      |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

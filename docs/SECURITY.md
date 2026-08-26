@@ -49,7 +49,7 @@ Meshwork Studio implements a **defense-in-depth** security model. No single laye
 
 ## Authentication
 
-Authentication is owned by a dedicated **Go auth service** (`services/auth`) —
+Authentication is owned by a dedicated **Go auth service** (`server/services/auth`) —
 users, sessions, MFA, OAuth and the security audit trail live there. The Node
 monolith only validates sessions through a thin bridge. Full design:
 [AUTH_ARCHITECTURE.md](./AUTH_ARCHITECTURE.md).
@@ -400,7 +400,7 @@ app.put("/api/workspaces/:id", async (req, res) => {
 
 | File                             | Purpose                                                          |
 | -------------------------------- | ---------------------------------------------------------------- |
-| `services/auth/`                 | Go identity service: sessions, MFA, OAuth, audit (see its tests) |
+| `server/services/auth/`          | Go identity service: sessions, MFA, OAuth, audit (see its tests) |
 | `server/services/auth/`          | Monolith session bridge: middleware + CSRF only                  |
 | `server/middleware/rateLimit.ts` | API and auth rate limiters (monolith side)                       |
 | `server/types/express.d.ts`      | Express `Request.user` augmentation                              |
