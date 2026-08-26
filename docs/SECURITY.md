@@ -332,7 +332,7 @@ Secrets are inventoried centrally in [`../important/SECRETS.md`](../important/SE
 Fail-safe defaults:
 
 - Missing database URL → auth bridge refuses to boot (no silent stateless mode)
-- Missing `IDENTITY_IP_HASH_KEY` / `IDENTITY_ENCRYPTION_KEY` in production → Go service refuses to start
+- Missing `AUTH_IP_HASH_KEY` / `AUTH_ENCRYPTION_KEY` in production → Go service refuses to start
 - Redis configured but unreachable on sensitive routes → requests rejected (fail closed), not silently unprotected
 - No known-default secrets exist anywhere in either stack
 

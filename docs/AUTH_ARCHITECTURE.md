@@ -37,7 +37,7 @@ everything else → monolith :5000. Rollback = revert the nginx location block.
 | Stolen password alone disabling MFA | MFA disable requires password + current TOTP/backup code                                                                                                             |
 | Token replay                        | One-time tokens hashed + single-use at the DB level; new request invalidates prior family                                                                            |
 | Mass assignment                     | Preferences update uses an explicit column whitelist                                                                                                                 |
-| IP privacy / GDPR                   | IPs stored as keyed HMAC-SHA256 (`IDENTITY_IP_HASH_KEY`), never raw                                                                                                  |
+| IP privacy / GDPR                   | IPs stored as keyed HMAC-SHA256 (`AUTH_IP_HASH_KEY`), never raw                                                                                                      |
 | Silent degradation                  | No in-memory fallbacks: missing DB URL fails boot; Redis outage fails auth endpoints closed instead of silently disabling protections                                |
 
 ## Secrets policy
@@ -46,8 +46,8 @@ All keys are per-service env vars validated at boot; production refuses to
 start without real values. There are **no** defaults or fallback constants.
 
 ```
-IDENTITY_IP_HASH_KEY      openssl rand -base64 32
-IDENTITY_ENCRYPTION_KEY   openssl rand -base64 32   # AES-GCM for TOTP secrets
+AUTH_IP_HASH_KEY      openssl rand -base64 32
+AUTH_ENCRYPTION_KEY   openssl rand -base64 32   # AES-GCM for TOTP secrets
 SESSION_SECRET            openssl rand -base64 32   # monolith only
 ```
 

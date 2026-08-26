@@ -60,7 +60,7 @@ atomic swaps (`dist.old` / `meshwork-auth.old` kept for instant rollback),
 reloads both PM2 processes and prints health status for :5000 and :8081.
 
 > First time enabling the auth service on the box? Ensure its env vars exist
-> in the remote `.env` (`IDENTITY_*` namespace — see
+> in the remote `.env` (`AUTH_*` namespace — see
 > [`SECRETS.md`](./SECRETS.md)) and NGINX carries the identity location block
 > from `deploy/nginx.conf`.
 
@@ -105,6 +105,8 @@ on-instance containers. After first boot:
 
 1. Clone the repo to `~/meshwork-studiov2`
 2. Create `.env` from the inventory in [`SECRETS.md`](./SECRETS.md)
-   (generate every key listed there — no defaults exist)
+   (generate every key listed there — no defaults exist). The auth
+   service's `AUTH_ASSERTION_PRIVATE_KEY` and the monolith's
+   `AUTH_ASSERTION_PUBLIC_KEY` must be generated as one keypair.
 3. Run `./scripts/deploy.sh`
 4. Point the DNS record at the instance's public IP / Elastic IP
