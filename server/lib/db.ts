@@ -37,3 +37,23 @@ pool.on("error", (err) => {
 export const db = drizzle(pool, { schema });
 
 export { schema };
+
+/**
+ * Per-service connection factory. Every domain service uses the shared pool
+ * unless its own *_DATABASE_URL is explicitly set (the seam for future
+ * extraction — one env var flips a service onto an isolated database).
+ */
+export function makeServiceDb<S extends Record<string, unknown>>(
+  serviceName: string,
+  envKey: string,
+  schema: S,
+): { pool: pg.Pool; db: ReturnType<typeof drizzle> } {
+  const connectionString = process.env[envKey];
+  const svcPool = connectionString
+    ? new pg.Pool({ connectionString, max: 10 })
+    : pool;
+  createChildLogger(`${serviceName}-db`).info(
+    connectionString ? `dedicated database via ${envKey}` : "using shared pool",
+  );
+  return { pool: svcPool, db: drizzle(svcPool, { schema: schema as never }) };
+}

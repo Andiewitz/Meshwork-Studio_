@@ -1,21 +1,14 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "./schema";
-import { db as sharedDb, pool as sharedPool } from "@server/lib/db";
+import { makeServiceDb } from "@server/lib/db";
 import { createChildLogger } from "@server/lib/logger";
+
+import * as schema from "./schema";
 
 const log = createChildLogger("metrics-db");
 
-const { Pool } = pg;
-const metricsConnectionString = process.env.METRICS_DATABASE_URL;
-
-export const pool = metricsConnectionString
-  ? new Pool({ connectionString: metricsConnectionString })
-  : sharedPool;
-
-export const db = metricsConnectionString
-  ? drizzle(pool, { schema })
-  : sharedDb;
+// Split onto a dedicated database by setting METRICS_DATABASE_URL.
+const service = makeServiceDb("metrics", "METRICS_DATABASE_URL", schema);
+export const pool = service.pool;
+export const db = service.db;
 
 export async function createMetricsTable() {
   if (!process.env.DATABASE_URL && !process.env.METRICS_DATABASE_URL) {

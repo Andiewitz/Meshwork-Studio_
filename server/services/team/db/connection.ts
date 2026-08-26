@@ -1,18 +1,7 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { makeServiceDb } from "@server/lib/db";
 import * as schema from "./schema";
-import { db as sharedDb, pool as sharedPool } from "@server/lib/db";
-import { createChildLogger } from "@server/lib/logger";
 
-const log = createChildLogger("team-db");
+// Split onto a dedicated database by setting TEAM_DATABASE_URL.
+const { pool, db } = makeServiceDb("team", "TEAM_DATABASE_URL", schema);
 
-const { Pool } = pg;
-const teamConnectionString = process.env.TEAM_DATABASE_URL;
-
-export const pool = teamConnectionString
-  ? new Pool({ connectionString: teamConnectionString })
-  : sharedPool;
-
-export const db = teamConnectionString ? drizzle(pool, { schema }) : sharedDb;
-
-log.info("Team DB connection initialized");
+export { pool, db };

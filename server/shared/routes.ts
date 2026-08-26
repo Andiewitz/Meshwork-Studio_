@@ -23,26 +23,6 @@ export const errorSchemas = {
 };
 
 export const api = {
-  collections: {
-    list: {
-      method: "GET" as const,
-      path: "/api/v1/collections" as const,
-      responses: {
-        200: z.array(z.custom<typeof collections.$inferSelect>()),
-        401: errorSchemas.unauthorized,
-      },
-    },
-    create: {
-      method: "POST" as const,
-      path: "/api/v1/collections" as const,
-      input: insertCollectionSchema,
-      responses: {
-        201: z.custom<typeof collections.$inferSelect>(),
-        400: errorSchemas.validation,
-        401: errorSchemas.unauthorized,
-      },
-    },
-  },
   workspaces: {
     list: {
       method: "GET" as const,

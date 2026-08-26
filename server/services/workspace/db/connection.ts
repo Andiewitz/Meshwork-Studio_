@@ -1,20 +1,11 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { makeServiceDb } from "@server/lib/db";
 import * as schema from "./schema";
-import { db as sharedDb, pool as sharedPool } from "@server/lib/db";
-import { createChildLogger } from "@server/lib/logger";
 
-const log = createChildLogger("workspace-db");
+// Split onto a dedicated database by setting WORKSPACE_DATABASE_URL.
+const { pool, db } = makeServiceDb(
+  "workspace",
+  "WORKSPACE_DATABASE_URL",
+  schema,
+);
 
-const { Pool } = pg;
-const workspaceConnectionString = process.env.WORKSPACE_DATABASE_URL;
-
-export const pool = workspaceConnectionString
-  ? new Pool({ connectionString: workspaceConnectionString })
-  : sharedPool;
-
-export const db = workspaceConnectionString
-  ? drizzle(pool, { schema })
-  : sharedDb;
-
-log.info("Workspace DB connection initialized");
+export { pool, db };
