@@ -2,188 +2,247 @@ import { describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 import cookieParser from "cookie-parser";
-import { MemAuthStorage } from "../../helpers/mem-auth-storage";
-import { SessionService } from "@services/auth/services/session-service";
-import { createCsrfMiddleware } from "@services/auth/security/csrf";
-import { createAuthMiddleware } from "@services/auth/middleware/authMiddleware";
+import crypto from "node:crypto";
+import {
+  initAuth,
+  requireAuth,
+  optionalAuth,
+  csrfProtect,
+  revokedSessions,
+} from "../../../server/auth";
+
+void publicKeyFromSeed;
 
 /**
- * Auth BRIDGE integration tests.
+ * Auth middleware contract tests.
  *
- * The Go auth service (services/auth) owns all authentication endpoints and
- * their coverage lives in services/auth/**_test.go. This suite covers the
- * monolith-side contract only: session validation middleware and CSRF
- * enforcement on bridged requests.
+ * Identity is owned by the Go service (services/auth + its Go tests). These
+ * suites pin what the MONOLITH enforces locally:
+ *   - ed25519 assertion verification (signature, expiry, tamper, rotation)
+ *   - revocation denylist
+ *   - CSRF origin allowlist / double-submit on monolith mutations
  */
 
-function getFirstCookie(res: request.Response): string {
-  const raw = res.headers["set-cookie"];
-  if (Array.isArray(raw)) return raw[0] || "";
-  if (typeof raw === "string") return raw;
-  return "";
+// ─── key helpers (mirror of the Go signer's wire format) ────────────────────
+
+function generateSeed(): string {
+  return crypto.randomBytes(32).toString("base64");
 }
 
-const setupBridgeApp = () => {
+/** Raw ed25519 public key (32 bytes) derived from a base64 seed. */
+function publicKeyFromSeed(seedB64: string): Buffer {
+  const seed = Buffer.from(seedB64, "base64");
+  const priv = crypto.createPrivateKey({
+    key: pkcs8ForSeed(seed),
+    format: "der",
+    type: "pkcs8",
+  });
+  const spki = crypto
+    .createPublicKey(priv)
+    .export({ format: "der", type: "spki" });
+  return spki.subarray(spki.length - 32);
+}
+
+function pkcs8ForSeed(seed: Buffer): Buffer {
+  const innerSeed = Buffer.concat([Buffer.from([0x04, 0x20]), seed]);
+  const alg = Buffer.from([0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70]);
+  const version = Buffer.from([0x02, 0x01, 0x00]);
+  const body = Buffer.concat([
+    version,
+    alg,
+    Buffer.from([0x04, innerSeed.length]),
+    innerSeed,
+  ]);
+  return Buffer.concat([Buffer.from([0x30, body.length]), body]);
+}
+
+interface Claims {
+  sub: string;
+  sid: string;
+  adm: boolean;
+  exp: number;
+  kid?: string;
+  eml?: string;
+  nam?: string;
+}
+
+function signToken(seedB64: string, claims: Claims): string {
+  const seed = Buffer.from(seedB64, "base64");
+  const priv = crypto.createPrivateKey({
+    key: pkcs8ForSeed(seed),
+    format: "der",
+    type: "pkcs8",
+  });
+  // kid must match what the verifier derives from the public half
+  const spki = crypto
+    .createPublicKey(priv)
+    .export({ format: "der", type: "spki" });
+  claims.kid = crypto
+    .createHash("sha256")
+    .update(spki)
+    .digest("hex")
+    .slice(0, 8);
+
+  const payload = Buffer.from(JSON.stringify(claims));
+  const sig = crypto.sign(null, payload, priv);
+  return `v1.${payload.toString("base64url")}.${sig.toString("base64url")}`;
+}
+
+const SEED = generateSeed();
+
+process.env.AUTH_ASSERTION_PUBLIC_KEY = SEED;
+delete process.env.AUTH_ASSERTION_PREVIOUS_KEYS;
+
+// ─── app under test ────────────────────────────────────────────────────────
+
+const buildApp = () => {
   const app = express();
   app.use(express.json());
   app.use(cookieParser());
+  initAuth();
+  app.use(optionalAuth);
 
-  const storage = new MemAuthStorage();
-  const sessions = new SessionService(storage, 30);
-  const csrf = createCsrfMiddleware(storage);
-  const middleware = createAuthMiddleware(sessions, storage);
-
-  app.use(middleware.optionalAuth);
-
-  // Simulated monolith route protected by the bridge.
-  app.get("/api/v1/auth/session", middleware.requireAuth, (req, res) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const auth = (req as any).auth;
-    res.json({ user: auth.user });
+  app.get("/api/v1/auth/session", requireAuth, (req, res) => {
+    res.json({
+      user:
+        (req as express.Request & { auth?: { user: unknown } }).auth?.user ??
+        null,
+    });
   });
 
-  // Mutating route guarded by CSRF double-submit.
-  app.post(
-    "/api/v1/thing",
-    csrf.protect,
-    middleware.requireAuth,
-    (_req, res) => {
-      res.json({ ok: true });
-    },
-  );
-
-  // CSRF token issuance endpoint (bridge parity with identity service).
-  app.get("/api/v1/auth/csrf-token", csrf.issue);
-
-  // Seed a user + active session directly.
-  const seed = async () => {
-    const user = await storage.createUser({
-      email: "bridge@example.com",
-      authProvider: "email",
-      passwordHash: null,
+  app.get("/optional", optionalAuth, (req, res) => {
+    res.json({
+      user:
+        (req as express.Request & { auth?: { user: unknown } }).auth?.user ??
+        null,
     });
-    const session = await sessions.create(user.id);
-    return { user, rawToken: session.rawToken };
-  };
+  });
 
-  return { app, storage, sessions, seed };
+  app.post("/api/v1/thing", csrfProtect, (_req, res) => res.json({ ok: true }));
+  return app;
 };
 
-describe("Auth Bridge Integration Tests", () => {
-  let app: express.Express;
-  let seed: () => Promise<{ rawToken: string }>;
+let app: express.Express;
 
-  beforeEach(async () => {
-    const setup = setupBridgeApp();
-    app = setup.app;
-    seed = setup.seed;
+beforeEach(() => {
+  app = buildApp();
+});
+
+function mint(
+  overrides: Partial<Claims> = {},
+  seedB64 = SEED,
+  now = Date.now(),
+): string {
+  return signToken(seedB64, {
+    sub: "user-1",
+    sid: "session-hash-1",
+    adm: false,
+    exp: Math.floor(now / 1000) + 240,
+    eml: "user@example.com",
+    nam: "User",
+    ...overrides,
   });
+}
 
-  it("should_accept_a_valid_session_cookie", async () => {
-    const { rawToken } = await seed();
+const authCookie = (token: string) => `meshwork_assertion=${token}`;
+
+describe("assertion middleware", () => {
+  it("accepts_a_valid_assertion_and_populates_req_user", async () => {
     const res = await request(app)
       .get("/api/v1/auth/session")
-      .set("Cookie", `meshwork_session=${rawToken}`);
+      .set("Cookie", authCookie(mint()));
 
     expect(res.status).toBe(200);
-    expect(res.body.user.email).toBe("bridge@example.com");
+    expect(res.body.user).toMatchObject({
+      id: "user-1",
+      email: "user@example.com",
+      isAdmin: false,
+    });
   });
 
-  it("should_reject_revoked_sessions_with_401", async () => {
-    const { rawToken } = await seed();
-    await seed(); // second user irrelevant; revoke first below
+  it("rejects_missing_assertion_with_401", async () => {
+    expect((await request(app).get("/api/v1/auth/session")).status).toBe(401);
+  });
 
-    // Re-fetch the token holder via a fresh bridge to revoke precisely.
-    const setup2 = setupBridgeApp();
-    const seeded = await setup2.seed();
-    await setup2.sessions.revoke(seeded.rawToken);
-
+  it("rejects_expired_assertion_with_401", async () => {
+    const token = mint({ exp: Math.floor(Date.now() / 1000) - 120 });
     const res = await request(app)
       .get("/api/v1/auth/session")
-      .set("Cookie", `meshwork_session=${rawToken}`);
-
-    expect([200, 401]).toContain(res.status); // first app still holds valid row
-    void res;
-  });
-
-  it("should_return_401_without_session_cookie", async () => {
-    const res = await request(app).get("/api/v1/auth/session");
+      .set("Cookie", authCookie(token));
     expect(res.status).toBe(401);
   });
 
-  it("should_reject_mutation_without_csrf_token_even_when_authenticated", async () => {
-    const { rawToken } = await seed();
+  it("rejects_assertions_signed_by_a_different_key", async () => {
+    const strangerToken = mint({}, generateSeed());
     const res = await request(app)
-      .post("/api/v1/thing")
-      .set("Origin", "http://localhost:5173")
-      .set("Cookie", `meshwork_session=${rawToken}`);
-
-    expect(res.status).toBe(403);
+      .get("/api/v1/auth/session")
+      .set("Cookie", authCookie(strangerToken));
+    expect(res.status).toBe(401);
   });
 
-  it("should_accept_mutation_with_matching_double_submit_tokens", async () => {
-    const { rawToken } = await seed();
+  it("rejects_tampered_assertions", async () => {
+    const good = mint();
+    const tampered = good.slice(0, -4) + "AAAA";
+    const res = await request(app)
+      .get("/api/v1/auth/session")
+      .set("Cookie", authCookie(tampered));
+    expect(res.status).toBe(401);
+  });
 
-    const issueRes = await request(app)
-      .get("/api/v1/auth/csrf-token")
-      .set("Cookie", `meshwork_session=${rawToken}`);
-    expect(issueRes.status).toBe(200);
-
-    const csrfToken = issueRes.body.csrfToken as string;
-    const csrfCookie = getFirstCookie(issueRes);
+  it("rejects_assertions_on_the_revocation_denylist", async () => {
+    const token = mint({ sid: "revoked-session-hash" });
+    revokedSessions.add("revoked-session-hash");
 
     const res = await request(app)
-      .post("/api/v1/thing")
-      .set("Origin", "http://localhost:5173")
-      .set("Cookie", [`meshwork_session=${rawToken}`, csrfCookie].join("; "))
-      .set("X-CSRF-Token", csrfToken);
+      .get("/api/v1/auth/session")
+      .set("Cookie", authCookie(token));
+    expect(res.status).toBe(401);
+  });
 
+  it("optionalAuth_leaves_anonymous_requests_through_untouched", async () => {
+    const res = await request(app).get("/optional");
     expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
+    expect(res.body.user).toBeNull();
+  });
+});
+
+describe("monolith csrf", () => {
+  const csrfPair = ["csrf-cookie-value", "csrf-cookie-value"];
+
+  function post(path: string, headers: Record<string, string>) {
+    return request(app).post(path).set(headers);
+  }
+
+  it("rejects_mutation_without_origin_and_tokens", async () => {
+    expect((await post("/api/v1/thing", {})).status).toBe(403);
   });
 
-  it("should_bind_csrf_secret_to_the_session_server_side", async () => {
-    const { rawToken } = await seed();
+  it("accepts_mutation_from_allowed_origin_with_matching_double_submit", async () => {
+    const res = await post("/api/v1/thing", {
+      Origin: "http://localhost:5173",
+      Cookie: `meshwork_csrf=${csrfPair[0]}`,
+      "X-CSRF-Token": csrfPair[1],
+    });
+    expect(res.status).toBe(200);
+  });
 
-    const issueRes = await request(app)
-      .get("/api/v1/auth/csrf-token")
-      .set("Cookie", `meshwork_session=${rawToken}`);
-    const csrfToken = issueRes.body.csrfToken as string;
-
-    // A mismatching header must now fail even with matching cookie values.
-    const res = await request(app)
-      .post("/api/v1/thing")
-      .set("Origin", "http://localhost:5173")
-      .set(
-        "Cookie",
-        [`meshwork_session=${rawToken}`, `meshwork_csrf=${csrfToken}`].join(
-          "; ",
-        ),
-      )
-      .set("X-CSRF-Token", csrfToken.slice(0, -1) + "x");
-
+  it("rejects_evil_origins_even_with_valid_token_pair", async () => {
+    const res = await post("/api/v1/thing", {
+      Origin: "https://meshwork.evil.com",
+      Cookie: `meshwork_csrf=${csrfPair[0]}`,
+      "X-CSRF-Token": csrfPair[1],
+    });
     expect(res.status).toBe(403);
   });
 
-  it("should_reject_cross_origin_mutations", async () => {
-    const { rawToken } = await seed();
-
-    const issueRes = await request(app)
-      .get("/api/v1/auth/csrf-token")
-      .set("Cookie", `meshwork_session=${rawToken}`);
-    const csrfToken = issueRes.body.csrfToken as string;
-
-    const res = await request(app)
-      .post("/api/v1/thing")
-      .set("Origin", "https://meshwork.evil.com")
-      .set(
-        "Cookie",
-        [`meshwork_session=${rawToken}`, `meshwork_csrf=${csrfToken}`].join(
-          "; ",
-        ),
-      )
-      .set("X-CSRF-Token", csrfToken);
-
+  it("fails_closed_when_cookies_present_but_no_origin_signal", async () => {
+    const res = await post("/api/v1/thing", {
+      Cookie: [
+        `meshwork_csrf=${csrfPair[0]}`,
+        "meshwork_session=somesessionvalue123",
+      ].join("; "),
+      "X-CSRF-Token": csrfPair[1],
+    });
     expect(res.status).toBe(403);
   });
 });

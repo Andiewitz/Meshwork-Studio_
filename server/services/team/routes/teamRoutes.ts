@@ -1,7 +1,7 @@
 import type { Express, RequestHandler, Request } from "express";
 import { teamStorage } from "../db/storage";
 import { joinTeamSchema, updateMemberRoleSchema } from "../db/schema";
-import { AuthService } from "@services/auth";
+import { csrfProtect } from "../../../auth";
 import { z } from "zod";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
@@ -23,31 +23,26 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
     context.registry.get<IWorkspaceStorage>("workspaceStorage");
 
   // ── Create a team ────────────────────────────────────────────────
-  app.post(
-    "/api/v1/teams",
-    AuthService.csrf.protect,
-    isAuthenticated,
-    async (req, res) => {
-      try {
-        const { name } = req.body as { name?: unknown };
-        if (!name || typeof name !== "string" || name.trim().length === 0) {
-          return res.status(400).json({ message: "Team name is required" });
-        }
-        if (name.length > 64) {
-          return res
-            .status(400)
-            .json({ message: "Team name must be 64 characters or less" });
-        }
-
-        const userId = getUserId(req);
-        const team = await teamStorage.createTeam(name.trim(), userId);
-        res.status(201).json(team);
-      } catch (err) {
-        log.error({ err, userId: getUserId(req) }, "Failed to create team");
-        res.status(400).json({ message: "Failed to create team" });
+  app.post("/api/v1/teams", csrfProtect, isAuthenticated, async (req, res) => {
+    try {
+      const { name } = req.body as { name?: unknown };
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ message: "Team name is required" });
       }
-    },
-  );
+      if (name.length > 64) {
+        return res
+          .status(400)
+          .json({ message: "Team name must be 64 characters or less" });
+      }
+
+      const userId = getUserId(req);
+      const team = await teamStorage.createTeam(name.trim(), userId);
+      res.status(201).json(team);
+    } catch (err) {
+      log.error({ err, userId: getUserId(req) }, "Failed to create team");
+      res.status(400).json({ message: "Failed to create team" });
+    }
+  });
 
   // ── List user's teams ────────────────────────────────────────────
   app.get("/api/v1/teams", isAuthenticated, async (req, res) => {
@@ -77,7 +72,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Join team via invite code ────────────────────────────────────
   app.post(
     "/api/v1/teams/join",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -101,7 +96,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Leave / remove member ────────────────────────────────────────
   app.delete(
     "/api/v1/teams/:id/members/:userId",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const teamId = Array.isArray(req.params.id)
@@ -133,7 +128,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
   // ── Share workspace with team ────────────────────────────────────
   app.post(
     "/api/v1/teams/:id/workspaces",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -183,15 +178,15 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
     res.json(workspaces);
   });
 
-function getParam(req: Request, param = "id"): string {
-  const val = req.params[param];
-  return Array.isArray(val) ? val[0] : (val || "");
-}
+  function getParam(req: Request, param = "id"): string {
+    const val = req.params[param];
+    return Array.isArray(val) ? val[0] : val || "";
+  }
 
   // ── Unshare workspace ────────────────────────────────────────────
   app.delete(
     "/api/v1/teams/:id/workspaces/:workspaceId",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const teamId = getParam(req, "id");
@@ -217,7 +212,7 @@ function getParam(req: Request, param = "id"): string {
   // ── Regenerate invite code (owner only) ──────────────────────────
   app.post(
     "/api/v1/teams/:id/regenerate-code",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const teamId = Array.isArray(req.params.id)
@@ -239,7 +234,7 @@ function getParam(req: Request, param = "id"): string {
   // ── Delete team (owner only) ─────────────────────────────────────
   app.delete(
     "/api/v1/teams/:id",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const teamId = Array.isArray(req.params.id)
@@ -261,7 +256,7 @@ function getParam(req: Request, param = "id"): string {
   // ── Update member role (owner/admin only) ────────────────────────
   app.patch(
     "/api/v1/teams/:id/members/:userId/role",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const teamId = Array.isArray(req.params.id)

@@ -2,7 +2,7 @@ import type { Express, RequestHandler, Request } from "express";
 import { workspaceStorage } from "../db/storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { AuthService } from "@services/auth";
+import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
 import { canEditWorkspace, canDeleteWorkspace } from "@server/lib/permissions";
@@ -33,7 +33,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
   app.post(
     "/api/v1/collections",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -74,7 +74,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
   app.put(
     "/api/v1/collections/:id",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const id = Number(req.params.id);
@@ -102,7 +102,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
   app.delete(
     "/api/v1/collections/:id",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const id = Number(req.params.id);
@@ -134,10 +134,10 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     res.json(workspaces);
   });
 
-function getParamId(req: Request, param = "id"): string {
-  const val = req.params[param];
-  return Array.isArray(val) ? val[0] : (val || "");
-}
+  function getParamId(req: Request, param = "id"): string {
+    const val = req.params[param];
+    return Array.isArray(val) ? val[0] : val || "";
+  }
 
   app.get(api.workspaces.get.path, isAuthenticated, async (req, res) => {
     const id = getParamId(req);
@@ -160,7 +160,7 @@ function getParamId(req: Request, param = "id"): string {
 
   app.post(
     api.workspaces.create.path,
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -186,7 +186,7 @@ function getParamId(req: Request, param = "id"): string {
 
   app.put(
     api.workspaces.update.path,
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       try {
@@ -220,7 +220,7 @@ function getParamId(req: Request, param = "id"): string {
 
   app.delete(
     api.workspaces.delete.path,
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const id = getParamId(req);
@@ -250,7 +250,7 @@ function getParamId(req: Request, param = "id"): string {
 
   app.post(
     api.workspaces.duplicate.path,
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const id = getParamId(req);

@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import type { Server } from "http";
-import { AuthService, authStorage } from "@services/auth";
+import { initAuth, optionalAuth, requireAuth } from "./auth";
 import { WorkspaceService, workspaceStorage } from "@services/workspace";
 import { CanvasService, canvasStorage } from "@services/canvas";
 import { AIService } from "@services/ai";
@@ -20,18 +20,20 @@ export async function registerRoutes(
   // service (services/auth) — routed there by NGINX. The monolith only
   // validates sessions via the auth bridge below.
 
+  // Auth: verify the Go-signed assertion locally (no auth_db access).
+  initAuth();
+
   // Setup Service Registry and Event Bus
   const registry = new AppRegistry();
-  registry.register("authStorage", authStorage);
   registry.register("workspaceStorage", workspaceStorage);
   registry.register("teamStorage", teamStorage);
   registry.register("canvasStorage", canvasStorage);
 
   const context = { registry, eventBus };
 
-  // Initialize Auth bridge first (other services depend on its middleware)
-  await AuthService.initialize(app, context);
-  registry.register("isAuthenticated", AuthService.middleware.isAuthenticated);
+  // Populate req.user early when a valid assertion cookie exists
+  app.use(optionalAuth);
+  registry.register("isAuthenticated", requireAuth);
 
   // Initialize Canvas Service (handles nodes and edges) - must listen before WorkspaceService for user.deleted
   CanvasService.initialize(app, context);

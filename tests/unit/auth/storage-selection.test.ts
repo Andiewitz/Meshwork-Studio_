@@ -13,13 +13,4 @@ describe("workspace storage selection", () => {
     expect(workspaceStorage.constructor.name).toBe("WorkspaceDatabaseStorage");
     delete process.env.E2E_BYPASS_AUTH;
   });
-
-  it("auth storage fails loudly without a database URL", async () => {
-    delete process.env.AUTH_DATABASE_URL;
-    delete process.env.DATABASE_URL;
-    vi.resetModules();
-    await expect(import("@services/auth/db/storage")).rejects.toThrow(
-      /AUTH_DATABASE_URL/,
-    );
-  });
 });

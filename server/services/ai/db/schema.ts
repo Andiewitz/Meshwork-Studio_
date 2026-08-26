@@ -10,7 +10,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
-import { users } from "@services/auth/db/schema";
+import { users } from "@shared/schema";
 
 export const userApiKeys = pgTable(
   "user_api_keys",

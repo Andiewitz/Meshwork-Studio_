@@ -5,12 +5,11 @@ log.info("Starting initialization phase 0...");
 
 import express, { type Request, Response, NextFunction } from "express";
 import { db } from "./lib/db";
-import { db as authDb } from "./services/auth/db/connection";
-import { AuthService } from "./services/auth";
 import { sql } from "drizzle-orm";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer, request as httpRequest } from "http";
+import { requireAuth } from "./auth";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -269,7 +268,7 @@ app.get("/metrics", async (req, res) => {
 // Admin dashboard: session-authenticated admin users only. The old
 // secret-in-URL gate leaked via logs/history/Referer and had no authz.
 const adminHtmlPath = path.resolve(__dirname, "admin.html");
-app.get("/admin", AuthService.middleware.isAuthenticated, (_req, res) => {
+app.get("/admin", requireAuth, (_req, res) => {
   const user = (_req as { user?: { isAdmin?: boolean } }).user;
   if (!user?.isAdmin) {
     return res.status(404).send("Not Found");
@@ -339,79 +338,8 @@ app.get("/admin", AuthService.middleware.isAuthenticated, (_req, res) => {
         END $$;
       `);
 
-      const targetDbs = authDb === db ? [db] : [db, authDb];
-
-      for (const target of targetDbs) {
-        await target.execute(sql`
-          CREATE TABLE IF NOT EXISTS users (
-            id varchar(128) PRIMARY KEY DEFAULT gen_random_uuid(),
-            email varchar(320) UNIQUE NOT NULL,
-            email_normalized varchar(320),
-            first_name varchar(120),
-            last_name varchar(120),
-            profile_image_url text,
-            password_hash text,
-            auth_provider varchar(32) NOT NULL DEFAULT 'email',
-            is_active boolean NOT NULL DEFAULT true,
-            has_notified_team boolean DEFAULT false,
-            read_notification_ids jsonb DEFAULT '[]'::jsonb,
-            created_at timestamp DEFAULT NOW(),
-            updated_at timestamp DEFAULT NOW()
-          )
-        `);
-        await target.execute(
-          sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_normalized varchar(320)`,
-        );
-        await target.execute(
-          sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active boolean DEFAULT true`,
-        );
-        await target.execute(
-          sql`UPDATE users SET email_normalized = LOWER(TRIM(email)) WHERE email_normalized IS NULL`,
-        );
-        await target.execute(sql`
-          CREATE TABLE IF NOT EXISTS auth_identities (
-            id varchar(128) PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id varchar(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            provider varchar(32) NOT NULL,
-            provider_account_id varchar(255) NOT NULL,
-            created_at timestamp DEFAULT NOW()
-          )
-        `);
-        await target.execute(sql`
-          CREATE TABLE IF NOT EXISTS auth_sessions (
-            id_hash varchar(128) PRIMARY KEY,
-            user_id varchar(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            created_at timestamp DEFAULT NOW(),
-            last_seen_at timestamp DEFAULT NOW(),
-            expires_at timestamp NOT NULL,
-            revoked_at timestamp,
-            user_agent text,
-            ip_hash varchar(128)
-          )
-        `);
-        await target.execute(sql`
-          CREATE TABLE IF NOT EXISTS auth_csrf_secrets (
-            session_id_hash varchar(128) PRIMARY KEY,
-            secret_hash varchar(128) NOT NULL,
-            expires_at timestamp NOT NULL
-          )
-        `);
-        await target.execute(sql`
-          CREATE TABLE IF NOT EXISTS login_attempts (
-            email varchar(320) PRIMARY KEY,
-            failed integer NOT NULL DEFAULT 0,
-            last_attempt timestamp NOT NULL DEFAULT NOW(),
-            locked_until timestamp,
-            created_at timestamp NOT NULL DEFAULT NOW()
-          )
-        `);
-        await target.execute(sql`
-          CREATE UNIQUE INDEX IF NOT EXISTS login_attempts_email_uidx ON login_attempts (email)
-        `);
-        await target.execute(sql`
-          CREATE UNIQUE INDEX IF NOT EXISTS users_email_normalized_uidx ON users (email_normalized)
-        `);
-      }
+      // Auth tables (users/auth_*/one_time_tokens/audit_events) are owned
+      // and migrated by services/auth at ITS boot — never here.
       log.info("Database migrations applied successfully");
     } catch (dbErr) {
       log.warn(

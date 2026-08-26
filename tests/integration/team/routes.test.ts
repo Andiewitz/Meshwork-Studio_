@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
-import { registerTeamRoutes } from "@server/modules/team/routes";
+import { registerTeamRoutes } from "@services/team/routes";
 
 // ─── Mocks ───────────────────────────────────────────────────────────
 
@@ -54,35 +54,21 @@ vi.mock("@services/workspace/db/storage", () => ({
   WorkspaceDatabaseStorage: vi.fn(),
 }));
 
-vi.mock("@services/auth", () => ({
-  AuthModule: {
-    middleware: {
-      isAuthenticated: (req: any, res: any, next: any) => {
-        if (req.headers["x-test-user-id"]) {
-          req.user = { id: req.headers["x-test-user-id"] };
-          next();
-        } else {
-          res.status(401).json({ message: "Not authenticated" });
-        }
-      },
-    },
+vi.mock("../../../server/auth", () => ({
+  requireAuth: (req: any, res: any, next: any) => {
+    if (req.headers["x-test-user-id"]) {
+      req.user = { id: req.headers["x-test-user-id"] };
+      next();
+    } else {
+      res.status(401).json({ message: "Not authenticated" });
+    }
   },
-  AuthService: {
-    csrf: {
-      protect: (_req: any, _res: any, next: any) => next(),
-      issue: (_req: any, res: any) => res.json({ csrfToken: "test" }),
-    },
-    middleware: {
-      isAuthenticated: (req: any, res: any, next: any) => {
-        if (req.headers["x-test-user-id"]) {
-          req.user = { id: req.headers["x-test-user-id"] };
-          next();
-        } else {
-          res.status(401).json({ message: "Not authenticated" });
-        }
-      },
-    },
+  optionalAuth: (req: any, _res: any, next: any) => {
+    if (req.headers["x-test-user-id"])
+      req.user = { id: req.headers["x-test-user-id"] };
+    next();
   },
+  csrfProtect: (_req: any, _res: any, next: any) => next(),
 }));
 
 // ─── Setup ───────────────────────────────────────────────────────────

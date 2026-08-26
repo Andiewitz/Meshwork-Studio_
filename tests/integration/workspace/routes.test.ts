@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 // We use relative or @server imports properly now
-import { registerWorkspaceRoutes } from "@server/modules/workspace/routes";
+import { registerWorkspaceRoutes } from "@services/workspace/routes";
 
 // Mock dependencies
 const mockGetWorkspace = vi.fn();
@@ -27,41 +27,26 @@ vi.mock("@services/team/db/storage", () => ({
 }));
 
 // We mock AuthModule for middleware
-vi.mock("@services/auth", () => ({
-  AuthModule: {
-    middleware: {
-      isAuthenticated: (req: any, res: any, next: any) => {
-        // We inject a mock user dynamically for testing IDOR
-        if (req.headers["x-test-user-id"]) {
-          req.user = { id: req.headers["x-test-user-id"] };
-          next();
-        } else {
-          res.status(401).json({ message: "Not authenticated" });
-        }
-      },
-    },
+vi.mock("../../../server/auth", () => ({
+  requireAuth: (req: any, res: any, next: any) => {
+    if (req.headers["x-test-user-id"]) {
+      req.user = { id: req.headers["x-test-user-id"] };
+      next();
+    } else {
+      res.status(401).json({ message: "Not authenticated" });
+    }
   },
-  AuthService: {
-    csrf: {
-      protect: (_req: any, _res: any, next: any) => next(),
-      issue: (_req: any, res: any) => res.json({ csrfToken: "test" }),
-    },
-    middleware: {
-      isAuthenticated: (req: any, res: any, next: any) => {
-        if (req.headers["x-test-user-id"]) {
-          req.user = { id: req.headers["x-test-user-id"] };
-          next();
-        } else {
-          res.status(401).json({ message: "Not authenticated" });
-        }
-      },
-    },
+  optionalAuth: (req: any, _res: any, next: any) => {
+    if (req.headers["x-test-user-id"])
+      req.user = { id: req.headers["x-test-user-id"] };
+    next();
   },
+  csrfProtect: (_req: any, _res: any, next: any) => next(),
 }));
 
 // Mock CSRF middleware since we don't need real CSRF for route tests
 // Mock rate limiter
-vi.mock("@server/modules/rate-limit", () => ({
+vi.mock("@server/middleware/rateLimit", () => ({
   apiLimiter: (req: any, res: any, next: any) => next(),
   authLimiter: (req: any, res: any, next: any) => next(),
 }));

@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/oauth2"
 
+	"github.com/meshwork-studio/auth/internal/assertion"
 	"github.com/meshwork-studio/auth/internal/audit"
 	"github.com/meshwork-studio/auth/internal/password"
 	"github.com/meshwork-studio/auth/internal/session"
@@ -176,7 +177,13 @@ func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.setSessionCookie(w, raw)
-	s.issueAssertion(w, user.ID, rec.IDHash, user.IsAdmin)
+	s.issueAssertion(w, assertion.Identity{
+		UserID:        user.ID,
+		SessionIDHash: rec.IDHash,
+		Admin:         user.IsAdmin,
+		Email:         user.Email,
+		Name:          displayName(user),
+	})
 	s.auditor.Record(s.auditEntry(r, user.ID, user.Email, audit.OAuthLogin))
 	s.notifyNewDeviceIfUnseen(r, user)
 	http.Redirect(w, r, s.cfg.PublicURL+safeReturnTo(st.ReturnTo), http.StatusFound)
@@ -284,7 +291,13 @@ func (s *Server) handleGoogleLinkConfirm(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	s.setSessionCookie(w, rawTok)
-	s.issueAssertion(w, user.ID, rec.IDHash, user.IsAdmin)
+	s.issueAssertion(w, assertion.Identity{
+		UserID:        user.ID,
+		SessionIDHash: rec.IDHash,
+		Admin:         user.IsAdmin,
+		Email:         user.Email,
+		Name:          displayName(user),
+	})
 	s.auditor.Record(s.auditEntry(r, user.ID, user.Email, audit.LoginSuccess))
 	writeAuthSuccess(w, user, rec.ExpiresAt)
 }

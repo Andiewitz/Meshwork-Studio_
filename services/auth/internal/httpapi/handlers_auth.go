@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/meshwork-studio/auth/internal/assertion"
 	"github.com/meshwork-studio/auth/internal/audit"
 	"github.com/meshwork-studio/auth/internal/csrf"
 	"github.com/meshwork-studio/auth/internal/password"
@@ -163,7 +164,12 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.setSessionCookie(w, raw)
-	s.issueAssertion(w, user.ID, rec.IDHash, false)
+	s.issueAssertion(w, assertion.Identity{
+		UserID:        user.ID,
+		SessionIDHash: rec.IDHash,
+		Email:         user.Email,
+		Name:          displayName(user),
+	})
 
 	s.auditor.Record(s.auditEntry(r, user.ID, user.Email, audit.Register))
 	s.sendVerificationEmailAsync(user)
@@ -256,7 +262,13 @@ func (s *Server) completeLogin(w http.ResponseWriter, r *http.Request, user *sto
 		return
 	}
 	s.setSessionCookie(w, raw)
-	s.issueAssertion(w, user.ID, rec.IDHash, user.IsAdmin)
+	s.issueAssertion(w, assertion.Identity{
+		UserID:        user.ID,
+		SessionIDHash: rec.IDHash,
+		Admin:         user.IsAdmin,
+		Email:         user.Email,
+		Name:          displayName(user),
+	})
 	clearCookie(w, s.cfg.MFACookieName)
 
 	s.auditor.Record(s.auditEntry(r, user.ID, user.Email, audit.LoginSuccess))
@@ -410,4 +422,15 @@ func userIDOrEmpty(u *store.User) string {
 		return ""
 	}
 	return u.ID
+}
+
+// displayName picks the friendliest label available for assertions.
+func displayName(u *store.User) string {
+	if u.FirstName != nil && *u.FirstName != "" {
+		return *u.FirstName
+	}
+	if i := strings.IndexByte(u.Email, '@'); i > 0 {
+		return u.Email[:i]
+	}
+	return u.Email
 }

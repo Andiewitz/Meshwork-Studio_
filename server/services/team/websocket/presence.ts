@@ -4,9 +4,7 @@ import type { Server as HttpServer } from "http";
 import type { IncomingMessage } from "http";
 import cookie from "cookie";
 import { teamStorage } from "../db/storage";
-import { DrizzleAuthStorage } from "@services/auth/db/storage";
-import { SessionService } from "@services/auth/services/session-service";
-import { authConfig } from "@services/auth/config";
+import { verifyAssertionToken, revokedSessions } from "../../../auth";
 import { getRedis, createRedisClient } from "@server/lib/redis";
 import type { Redis as RedisType } from "ioredis";
 import {
@@ -15,10 +13,7 @@ import {
 } from "@server/lib/metrics";
 import crypto from "crypto";
 
-// Auth services for the new opaque session cookie architecture
-const authStorage = new DrizzleAuthStorage();
-const sessionService = new SessionService(authStorage, authConfig.sessionDays);
-
+// Auth: the Go service signs assertions; we verify locally (no auth_db).
 // SECURITY: revocation fan-out. The Go identity service publishes revoked
 // session/user ids here; live sockets must die immediately on logout,
 // password change or ban — not at next natural disconnect.
@@ -134,8 +129,10 @@ const rooms = new Map<string, Map<string, PresenceUser>>();
 
 // Per-connection auth state captured at the upgrade handshake.
 interface SocketAuth {
-  rawToken: string;
+  sidHash: string;
   userId: string;
+  email: string;
+  name: string;
   lastValidatedAt: number;
 }
 const socketAuth = new WeakMap<WebSocket, SocketAuth>();
@@ -219,37 +216,6 @@ function removeFromAllRooms(ws: WebSocket) {
   return null;
 }
 
-async function resolveSession(
-  req: IncomingMessage,
-): Promise<{ id: string; email: string; firstName: string | null } | null> {
-  try {
-    const cookieHeader = req.headers.cookie ?? "";
-    const cookies = cookie.parse(cookieHeader);
-
-    // New auth: opaque session token in HttpOnly cookie
-    const rawToken =
-      cookies[authConfig.sessionCookieName] ||
-      cookies["__Host-meshwork_session"] ||
-      cookies.meshwork_session;
-    if (!rawToken) return null;
-
-    const session = await sessionService.validate(rawToken);
-    if (!session) return null;
-
-    const user = await authStorage.findUserById(session.userId);
-    if (!user) return null;
-
-    return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-    };
-  } catch (err: unknown) {
-    log.error({ err }, "Session resolution error");
-    return null;
-  }
-}
-
 // ─── Handshake helpers ──────────────────────────────────────────────────────
 
 function rejectUpgrade(socket: import("net").Socket, reason: string): void {
@@ -261,10 +227,6 @@ function rejectUpgrade(socket: import("net").Socket, reason: string): void {
       `\r\n${reason}`,
   );
   socket.destroy();
-}
-
-function sessionHashOf(rawToken: string): string {
-  return crypto.createHash("sha256").update(rawToken).digest("hex");
 }
 
 export function initializeWebSocket(httpServer: HttpServer) {
@@ -286,24 +248,20 @@ export function initializeWebSocket(httpServer: HttpServer) {
           return;
         }
         const cookies = cookie.parse(req.headers.cookie ?? "");
-        const rawToken =
-          cookies[authConfig.sessionCookieName] ||
-          cookies["__Host-meshwork_session"] ||
-          cookies.meshwork_session;
-        if (!rawToken) {
-          rejectUpgrade(socket, "Unauthorized");
-          return;
-        }
-        const session = await sessionService.validate(rawToken);
-        if (!session) {
+        const assertion =
+          cookies["__Host-meshwork_assertion"] || cookies.meshwork_assertion;
+        const claims = verifyAssertionToken(assertion);
+        if (!claims) {
           rejectUpgrade(socket, "Unauthorized");
           return;
         }
 
         wss.handleUpgrade(req, req.socket, head, (ws) => {
           socketAuth.set(ws, {
-            rawToken,
-            userId: session.userId,
+            sidHash: claims.sid,
+            userId: claims.sub,
+            email: claims.eml ?? "",
+            name: claims.nam ?? "",
             lastValidatedAt: Date.now(),
           });
           wss.emit("connection", ws, req);
@@ -336,7 +294,7 @@ export function initializeWebSocket(httpServer: HttpServer) {
             if (!auth) continue;
             if (
               (payload.userId && payload.userId === uid) ||
-              payload.idHashes?.includes(sessionHashOf(auth.rawToken))
+              payload.idHashes?.includes(auth.sidHash)
             ) {
               user.ws.close(4001, "session revoked");
             }
@@ -367,19 +325,16 @@ export function initializeWebSocket(httpServer: HttpServer) {
       ws.ping();
     }, 30000);
 
-    // SECURITY: periodic re-validation of the session behind this socket.
-    const revalidator = setInterval(async () => {
+    // SECURITY: periodic revocation check for this socket. The assertion is
+    // verified at upgrade; here we only watch the denylist fed by the auth
+    // service's revocation channel.
+    const revalidator = setInterval(() => {
       const auth = socketAuth.get(ws);
       if (!auth) return ws.close(4001, "session expired");
-      try {
-        const session = await sessionService.validate(auth.rawToken);
-        if (!session || session.userId !== auth.userId) {
-          return ws.close(4001, "session revoked");
-        }
-        auth.lastValidatedAt = Date.now();
-      } catch {
-        return ws.close(1011, "internal error");
+      if (revokedSessions.has(auth.sidHash)) {
+        return ws.close(4001, "session revoked");
       }
+      auth.lastValidatedAt = Date.now();
     }, SESSION_REVALIDATE_MS);
 
     ws.on("message", async (raw) => {
@@ -398,24 +353,22 @@ export function initializeWebSocket(httpServer: HttpServer) {
               return;
             }
 
-            // Identity was established at the upgrade handshake; re-read it
-            // here (cheap) so a revoked socket cannot rejoin rooms.
+            // Identity was established at the upgrade handshake; re-check
+            // the denylist so a revoked socket cannot rejoin rooms.
             const auth = socketAuth.get(ws);
-            if (!auth) {
+            if (!auth || revokedSessions.has(auth.sidHash)) {
               ws.send(
                 JSON.stringify({ type: "error", message: "Unauthorized" }),
               );
               ws.close(4001, "session revoked");
               return;
             }
-            const user = await authStorage.findUserById(auth.userId);
-            if (!user) {
-              ws.send(
-                JSON.stringify({ type: "error", message: "Unauthorized" }),
-              );
-              ws.close(4001, "session revoked");
-              return;
-            }
+            // Assertion carries display fields — no lookups needed.
+            const user = {
+              id: auth.userId,
+              email: auth.email,
+              firstName: auth.name || null,
+            };
 
             const hasAccess = await teamStorage.canAccessWorkspace(
               user.id,

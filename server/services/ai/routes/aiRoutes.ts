@@ -12,7 +12,7 @@ import {
   aiChatRequestsTotal,
   aiChatDurationSeconds,
 } from "@server/lib/metrics";
-import { AuthService } from "@services/auth";
+import { csrfProtect } from "../../../auth";
 
 import { aiChatLimiter, aiFreeTierLimiter } from "../rate-limit/rateLimit";
 import {
@@ -63,8 +63,7 @@ export function createAIRoutes(context: AppContext) {
     context.registry.get<RequestHandler>("isAuthenticated");
 
   // Use the new session-bound CSRF guard from the auth rewrite
-  const conditionalCsrf = AuthService.csrf.protect;
-
+  const conditionalCsrf = csrfProtect;
 
   // List keys
   router.get("/keys", isAuthenticated, async (req: Request, res: Response) => {

@@ -10,7 +10,7 @@ import {
   type TeamRole,
 } from "./schema";
 import { workspaces, type Workspace } from "@services/workspace/db/schema";
-import { users } from "@services/auth/db/schema";
+import { users } from "@shared/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import type { DrizzleTx } from "@server/lib/events";
 import crypto from "crypto";

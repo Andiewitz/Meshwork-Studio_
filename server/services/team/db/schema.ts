@@ -9,7 +9,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
-import { users } from "@services/auth/db/schema";
+import { users } from "@shared/schema";
 import { workspaces } from "@services/workspace/db/schema";
 
 export const teams = pgTable(

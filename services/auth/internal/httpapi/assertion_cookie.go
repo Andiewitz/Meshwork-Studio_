@@ -13,11 +13,11 @@ const assertionCookieName = "meshwork_assertion"
 
 // issueAssertion sets the short-lived signed assertion cookie alongside the
 // session. Call at every point where a session is created or rotated.
-func (s *Server) issueAssertion(w http.ResponseWriter, userID, sessionIDHash string, admin bool) {
+func (s *Server) issueAssertion(w http.ResponseWriter, id assertion.Identity) {
 	if s.assert == nil {
 		return
 	}
-	tok, err := s.assert.Sign(userID, sessionIDHash, admin, time.Now())
+	tok, err := s.assert.Sign(id, time.Now())
 	if err != nil {
 		// Assertion failure must never block the primary session flow; the
 		// opaque cookie alone keeps the user signed in on auth-service routes.
@@ -45,5 +45,11 @@ func (s *Server) refreshAssertion(w http.ResponseWriter, r *http.Request) {
 	if remaining > s.cfg.AssertionTTL/2 {
 		return
 	}
-	s.issueAssertion(w, claims.Sub, claims.Sid, claims.Adm)
+	s.issueAssertion(w, assertion.Identity{
+		UserID:        claims.Sub,
+		SessionIDHash: claims.Sid,
+		Admin:         claims.Adm,
+		Email:         claims.Eml,
+		Name:          claims.Nam,
+	})
 }

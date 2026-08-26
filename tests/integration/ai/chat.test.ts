@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import request from "supertest";
 import express from "express";
-import aiRoutes from "@server/modules/ai/routes";
+import aiRoutes from "@services/ai/routes";
 
 // Mock DB calls — by default return null/empty to simulate no BYOK keys
 vi.mock("@services/ai/db/storage", () => ({
@@ -20,23 +20,21 @@ vi.mock("@services/ai/db", () => ({
   deleteApiKey: vi.fn(),
 }));
 
-vi.mock("@services/auth", () => ({
-  AuthService: {
-    csrf: {
-      protect: (_req: any, _res: any, next: any) => next(),
-      issue: (_req: any, res: any) => res.json({ csrfToken: "test" }),
-    },
-    middleware: {
-      isAuthenticated: (req: any, res: any, next: any) => {
-        if (req.headers["x-test-user-id"]) {
-          req.user = { id: req.headers["x-test-user-id"] };
-          next();
-        } else {
-          res.status(401).json({ message: "Not authenticated" });
-        }
-      },
-    },
+vi.mock("../../../server/auth", () => ({
+  requireAuth: (req: any, res: any, next: any) => {
+    if (req.headers["x-test-user-id"]) {
+      req.user = { id: req.headers["x-test-user-id"] };
+      next();
+    } else {
+      res.status(401).json({ message: "Not authenticated" });
+    }
   },
+  optionalAuth: (req: any, _res: any, next: any) => {
+    if (req.headers["x-test-user-id"])
+      req.user = { id: req.headers["x-test-user-id"] };
+    next();
+  },
+  csrfProtect: (_req: any, _res: any, next: any) => next(),
 }));
 
 const setupTestApp = () => {

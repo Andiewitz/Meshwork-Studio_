@@ -15,7 +15,7 @@ func TestSignVerifyRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, err := s.Sign("user-1", "sessionhash", true, time.Now())
+	tok, err := s.Sign(Identity{UserID: "user-1", SessionIDHash: "sessionhash", Admin: true}, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestSignVerifyRoundtrip(t *testing.T) {
 
 func TestExpiredTokenRejected(t *testing.T) {
 	s, _, _ := NewSigner(seed(), 5*time.Minute, nil)
-	tok, _ := s.Sign("u", "s", false, time.Now().Add(-10*time.Minute))
+	tok, _ := s.Sign(Identity{UserID: "u", SessionIDHash: "s", Admin: false}, time.Now().Add(-10*time.Minute))
 	if _, err := Verify(tok, s, time.Now()); err != ErrExpired {
 		t.Fatalf("want ErrExpired, got %v", err)
 	}
@@ -41,7 +41,7 @@ func TestExpiredTokenRejected(t *testing.T) {
 
 func TestClockLeewayTolerated(t *testing.T) {
 	s, _, _ := NewSigner(seed(), 5*time.Minute, nil)
-	tok, _ := s.Sign("u", "s", false, time.Now().Add(-time.Minute)) // expired ~55s ago
+	tok, _ := s.Sign(Identity{UserID: "u", SessionIDHash: "s", Admin: false}, time.Now().Add(-time.Minute)) // expired ~55s ago
 	if _, err := Verify(tok, s, time.Now()); err != nil {
 		t.Fatalf("±30s leeway should accept near-expiry: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestClockLeewayTolerated(t *testing.T) {
 
 func TestTamperedPayloadRejected(t *testing.T) {
 	s, _, _ := NewSigner(seed(), 5*time.Minute, nil)
-	tok, _ := s.Sign("u", "s", false, time.Now())
+	tok, _ := s.Sign(Identity{UserID: "u", SessionIDHash: "s", Admin: false}, time.Now())
 	tampered := tok[:len(tok)-4] + "AAAA"
 	if _, err := Verify(tampered, s, time.Now()); err == nil {
 		t.Fatal("tampered token must not verify")
@@ -61,7 +61,7 @@ func TestWrongKeyRejected(t *testing.T) {
 	otherSeed := base64.StdEncoding.EncodeToString([]byte("abcdefghabcdefghabcdefghabcdefgh"))
 	s2, _, _ := NewSigner(otherSeed, 5*time.Minute, nil)
 
-	tok, _ := s1.Sign("u", "s", false, time.Now())
+	tok, _ := s1.Sign(Identity{UserID: "u", SessionIDHash: "s"}, time.Now())
 	if _, err := Verify(tok, s2, time.Now()); err == nil {
 		t.Fatal("token from a different key must not verify")
 	}
@@ -70,7 +70,7 @@ func TestWrongKeyRejected(t *testing.T) {
 func TestRotationKeyStillAccepted(t *testing.T) {
 	oldSeed := seed()
 	old, _, _ := NewSigner(oldSeed, 5*time.Minute, nil)
-	oldTok, _ := old.Sign("u", "s", false, time.Now())
+	oldTok, _ := old.Sign(Identity{UserID: "u", SessionIDHash: "s"}, time.Now())
 
 	current, _, _ := NewSigner(
 		base64.StdEncoding.EncodeToString([]byte("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")),
@@ -89,7 +89,7 @@ func TestRotationKeyStillAccepted(t *testing.T) {
 func TestRotationUnknownKidRejected(t *testing.T) {
 	unknownSeed := base64.StdEncoding.EncodeToString([]byte("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY"))
 	stranger, _, _ := NewSigner(unknownSeed, 5*time.Minute, nil)
-	strangerTok, _ := stranger.Sign("u", "attacker-session", true, time.Now())
+	strangerTok, _ := stranger.Sign(Identity{UserID: "u", SessionIDHash: "attacker-session", Admin: true}, time.Now())
 
 	current, _, _ := NewSigner(seed(), 5*time.Minute, nil)
 	if _, err := Verify(strangerTok, current, time.Now()); err == nil {

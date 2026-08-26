@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/meshwork-studio/auth/internal/assertion"
 	"github.com/meshwork-studio/auth/internal/audit"
 	"github.com/meshwork-studio/auth/internal/csrf"
 	"github.com/meshwork-studio/auth/internal/mfa"
@@ -131,7 +132,13 @@ func (s *Server) handleMFAChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.setSessionCookie(w, raw)
-	s.issueAssertion(w, user.ID, rec.IDHash, user.IsAdmin)
+	s.issueAssertion(w, assertion.Identity{
+		UserID:        user.ID,
+		SessionIDHash: rec.IDHash,
+		Admin:         user.IsAdmin,
+		Email:         user.Email,
+		Name:          displayName(user),
+	})
 	clearCookie(w, s.cfg.MFACookieName)
 
 	s.auditor.Record(s.auditEntry(r, user.ID, user.Email, audit.LoginSuccess))

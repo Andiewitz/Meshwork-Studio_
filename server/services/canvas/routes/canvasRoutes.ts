@@ -1,7 +1,7 @@
 import type { Express, RequestHandler } from "express";
 import { canvasStorage } from "../db/storage";
 import { api } from "@shared/routes";
-import { AuthService } from "@services/auth";
+import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
 import type { IWorkspaceStorage } from "@services/workspace/db/storage";
@@ -12,7 +12,7 @@ const log = createChildLogger("canvas-routes");
 
 function getParamId(req: any, param = "id"): string {
   const val = req.params[param];
-  return Array.isArray(val) ? val[0] : (val || "");
+  return Array.isArray(val) ? val[0] : val || "";
 }
 
 export function registerCanvasRoutes(app: Express, context: AppContext) {
@@ -46,7 +46,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
 
   app.post(
     api.workspaces.syncCanvas.path,
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const id = getParamId(req);
@@ -71,7 +71,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
   // Duplicate canvas data when duplicating workspace
   app.post(
     "/api/v1/workspaces/:id/duplicate-canvas",
-    AuthService.csrf.protect,
+    csrfProtect,
     isAuthenticated,
     async (req, res) => {
       const id = getParamId(req);

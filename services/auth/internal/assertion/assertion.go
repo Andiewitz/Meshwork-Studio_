@@ -6,12 +6,13 @@
 //
 //	v1.<base64url(payloadJSON)>.<base64url(sig)>
 //
-// payload = {"sub","sid","adm","exp","kid"}
+// payload = {"sub","sid","adm","exp","kid","eml","nam"}
 //   - sub: user id
 //   - sid: session id hash — matches the revocation pub/sub denylist keys
 //   - adm: admin flag
 //   - exp: unix seconds
-//   - kid: key id (first 8 bytes of the public key, hex) enabling rotation
+//   - kid: key id enabling rotation
+//   - eml/nam: display email/name so consumers need no user lookups
 package assertion
 
 import (
@@ -42,6 +43,17 @@ type Claims struct {
 	Adm bool   `json:"adm"`
 	Exp int64  `json:"exp"`
 	Kid string `json:"kid,omitempty"`
+	Eml string `json:"eml,omitempty"` // email (display purposes)
+	Nam string `json:"nam,omitempty"` // display name
+}
+
+// Identity is what gets baked into an assertion.
+type Identity struct {
+	UserID        string
+	SessionIDHash string
+	Admin         bool
+	Email         string
+	Name          string
 }
 
 type Signer struct {
@@ -107,12 +119,14 @@ func (s *Signer) PublicKeySeed() string {
 
 func (s *Signer) KeyID() string { return s.kid }
 
-// Sign mints an assertion for a user/session.
-func (s *Signer) Sign(userID, sessionIDHash string, admin bool, now time.Time) (string, error) {
+// Sign mints an assertion for an identity.
+func (s *Signer) Sign(id Identity, now time.Time) (string, error) {
 	claims := Claims{
-		Sub: userID,
-		Sid: sessionIDHash,
-		Adm: admin,
+		Sub: id.UserID,
+		Sid: id.SessionIDHash,
+		Adm: id.Admin,
+		Eml: id.Email,
+		Nam: id.Name,
 		Exp: now.Add(s.ttl).Unix(),
 		Kid: s.kid,
 	}
