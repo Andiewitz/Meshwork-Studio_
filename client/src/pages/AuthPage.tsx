@@ -11,7 +11,7 @@ import {
 import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { apiRequest } from "@/lib/queryClient";
 import { formatUserErrorMessage } from "@/lib/error-utils";
-import { refreshCsrfToken } from "@/lib/csrf-init";
+import { refreshCsrfToken } from "@/lib/secure-fetch";
 import { PASSWORD_POLICY, validatePasswordStrength } from "@shared/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";

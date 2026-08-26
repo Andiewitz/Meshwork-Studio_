@@ -1,8 +1,8 @@
 import {
-  authenticatedFetch,
   clearCsrfToken,
   refreshCsrfToken,
-} from "./csrf-client";
+  secureFetch as authenticatedFetch,
+} from "@/lib/secure-fetch";
 import type { AuthResult, PublicUser } from "./auth-types";
 
 export interface LoginResponse extends AuthResult {

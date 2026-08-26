@@ -1,30 +1,91 @@
+// THE single HTTP client for the app.
+//
+// Responsibilities (all in one place):
+//   - same-origin credentials on every request
+//   - X-CSRF-Token attach on mutations
+//   - one-shot CSRF refresh + retry when the server answers 403
+//   - token storage in sessionStorage
+
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string) || "";
+const CSRF_ENDPOINT = "/api/v1/auth/csrf-token";
 
 function getApiUrl(path: string): string {
   if (path.startsWith("http")) return path;
   return `${API_BASE_URL}${path}`;
 }
 
+import { useEffect } from "react";
+
+// ─── CSRF token plumbing ────────────────────────────────────────────────────
+
+function getCsrfToken(): string {
+  if (typeof window === "undefined") return "";
+  return (
+    window.sessionStorage.getItem("csrfToken") ||
+    window.sessionStorage.getItem("auth.csrfToken") ||
+    ""
+  );
+}
+
+export function storeCsrfToken(token: string): void {
+  if (typeof window === "undefined") return;
+  // Both keys are written so any straggler reader stays correct; only
+  // "csrfToken" is authoritative going forward.
+  window.sessionStorage.setItem("csrfToken", token);
+}
+
+export function clearCsrfToken(): void {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem("csrfToken");
+  window.sessionStorage.removeItem("auth.csrfToken");
+}
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+/** Fetch a fresh CSRF token. Concurrent callers share one request. */
+export function refreshCsrfToken(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = fetch(getApiUrl(CSRF_ENDPOINT), {
+    credentials: "include",
+  })
+    .then(async (res) => {
+      if (!res.ok) return null;
+      const data = (await res.json()) as { csrfToken?: string };
+      if (!data.csrfToken) return null;
+      storeCsrfToken(data.csrfToken);
+      return data.csrfToken;
+    })
+    .catch(() => null)
+    .finally(() => {
+      refreshInFlight = null;
+    });
+
+  return refreshInFlight;
+}
+
+/** Boot-time hook: primes a CSRF token once on app mount. */
+export function useCsrfTokenInitializer(): void {
+  useEffect(() => {
+    void refreshCsrfToken();
+  }, []);
+}
+
+// ─── the client ─────────────────────────────────────────────────────────────
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 /**
- * Enhanced fetch function that automatically includes CSRF token
- *
- * This wraps the native fetch API to automatically add:
- * - X-CSRF-Token header for state-changing requests
- * - Automatic CSRF token refresh and retry on 403
- *
- * Usage is identical to fetch():
- * ```tsx
- * const response = await secureFetch('/api/v1/workspaces', {
- *   method: 'POST',
- *   body: JSON.stringify(data),
- * });
- * ```
+ * The fetch wrapper every API call should go through.
+ * Usage is identical to fetch(); mutations automatically carry a CSRF token
+ * and retry once behind a fresh token if the server rejects with 403.
  */
 export async function secureFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
   const method = (init?.method || "GET").toUpperCase();
+  const isMutation = !SAFE_METHODS.has(method);
   const requestUrl =
     typeof input === "string"
       ? input
@@ -32,89 +93,32 @@ export async function secureFetch(
         ? input.href
         : input.url;
 
-  const requestInit: RequestInit = { ...init, credentials: "include" };
+  const headers = new Headers(init?.headers);
+  const retryInit: RequestInit | undefined = init;
 
-  // Only add CSRF token for state-changing requests
-  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
-    const headers = new Headers(requestInit.headers);
-    const csrfToken = getCsrfToken();
-    if (csrfToken) {
-      headers.set("X-CSRF-Token", csrfToken);
-    }
-    requestInit.headers = headers;
+  if (isMutation) {
+    const token = getCsrfToken() || (await refreshCsrfToken());
+    if (token) headers.set("X-CSRF-Token", token);
   }
 
-  let response = await fetch(input, requestInit);
+  const doFetch = () =>
+    fetch(input, { ...retryInit, headers, credentials: "include" });
 
-  // Automatic CSRF Token Refresh
-  // If the request fails with 403 (CSRF validation failure after server restart),
-  // fetch a fresh CSRF token and retry the original request once.
+  let response = await doFetch();
+
   if (
+    isMutation &&
     response.status === 403 &&
-    !requestUrl.includes("csrf-token") &&
-    !["GET", "HEAD", "OPTIONS"].includes(method)
+    !requestUrl.includes(CSRF_ENDPOINT)
   ) {
-    try {
-      const csrfEndpoint = getApiUrl("/api/v1/auth/csrf-token");
-      let csrfResponse = await fetch(csrfEndpoint, {
-        credentials: "include",
-      });
-      if (!csrfResponse.ok) {
-        csrfResponse = await fetch(getApiUrl("/api/v1/csrf-token"), {
-          credentials: "include",
-        });
-      }
-      if (csrfResponse.ok) {
-        const data = (await csrfResponse.json()) as { csrfToken?: string };
-        if (data.csrfToken) {
-          storeCsrfToken(data.csrfToken);
-          // Rebuild headers with the new token and retry
-          const retryInit = { ...requestInit };
-          const retryHeaders = new Headers(retryInit.headers);
-          retryHeaders.set("X-CSRF-Token", data.csrfToken);
-          retryInit.headers = retryHeaders;
-          response = await fetch(input, retryInit);
-        }
-      }
-    } catch (csrfErr) {
-      console.warn("[CSRF] Token refresh failed:", csrfErr);
+    const fresh = await refreshCsrfToken();
+    if (fresh) {
+      headers.set("X-CSRF-Token", fresh);
+      response = await doFetch();
     }
   }
 
   return response;
 }
 
-/**
- * Get CSRF token from sessionStorage
- */
-function getCsrfToken(): string {
-  if (typeof window !== "undefined") {
-    const stored =
-      sessionStorage.getItem("csrfToken") ||
-      sessionStorage.getItem("auth.csrfToken");
-    if (stored) {
-      return stored;
-    }
-  }
-  return "";
-}
-
-/**
- * Store CSRF token in session storage
- */
-export function storeCsrfToken(token: string): void {
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem("csrfToken", token);
-    sessionStorage.setItem("auth.csrfToken", token);
-  }
-}
-
-/**
- * Clear CSRF token
- */
-export function clearCsrfToken(): void {
-  if (typeof window !== "undefined") {
-    sessionStorage.removeItem("csrfToken");
-    sessionStorage.removeItem("auth.csrfToken");
-  }
-}
+export { getApiUrl };

@@ -12,7 +12,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
-import { useCsrfTokenInitializer } from "@/lib/csrf-init";
+import { useCsrfTokenInitializer } from "@/lib/secure-fetch";
 import { DefaultLoading, RedirectLoading } from "@/components/loading-states";
 import { MobileGate } from "@/components/ui/mobile-gate";
 import { AnimatePresence, motion } from "framer-motion";
