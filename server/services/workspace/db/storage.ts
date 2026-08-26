@@ -32,6 +32,8 @@ export interface IWorkspaceStorage {
     collectionId?: number | null,
   ): Promise<Workspace[]>;
   getWorkspace(id: string): Promise<Workspace | undefined>;
+  /** Ids the user personally owns (not team-shared) — deletion choreography. */
+  listWorkspaceIdsByOwner(userId: string): Promise<string[]>;
   createWorkspace(workspace: InsertWorkspace): Promise<Workspace>;
   updateWorkspace(
     id: string,
@@ -131,6 +133,14 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
       .from(workspaces)
       .where(fullQuery)
       .orderBy(desc(workspaces.createdAt));
+  }
+
+  async listWorkspaceIdsByOwner(userId: string): Promise<string[]> {
+    const rows = await db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(eq(workspaces.userId, userId));
+    return rows.map((r) => r.id);
   }
 
   async getWorkspace(id: string): Promise<Workspace | undefined> {
@@ -331,6 +341,10 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
   async deleteAllUserData(userId: string): Promise<void> {
     this.workspaces = this.workspaces.filter((w) => w.userId !== userId);
     this.collections = this.collections.filter((c) => c.userId !== userId);
+  }
+
+  async listWorkspaceIdsByOwner(userId: string): Promise<string[]> {
+    return this.workspaces.filter((w) => w.userId === userId).map((w) => w.id);
   }
 }
 

@@ -13,7 +13,7 @@ export class CanvasService {
     // Listen to external events
     context.eventBus.on("workspace.deleted", async ({ id }) => {
       try {
-        await canvasStorage.syncCanvas(id, [], []);
+        await canvasStorage.deleteWorkspaces([id]);
         log.info({ workspaceId: id }, "Canvas data deleted via event");
       } catch (err) {
         log.error({ err, workspaceId: id }, "Failed to delete canvas data");
@@ -35,12 +35,13 @@ export class CanvasService {
       },
     );
 
-    context.eventBus.on("user.deleted", async ({ id, tx }) => {
+    context.eventBus.on("workspaces.deleted", async ({ ids }) => {
+      if (ids.length === 0) return;
       try {
-        await canvasStorage.deleteAllUserData(id, tx);
-        log.info({ userId: id }, "User canvas data deleted via event");
+        await canvasStorage.deleteWorkspaces(ids);
+        log.info({ count: ids.length }, "User canvas data deleted via event");
       } catch (err) {
-        log.error({ err, userId: id }, "Failed to delete user canvas data");
+        log.error({ err }, "Failed to delete user canvas data");
       }
     });
 

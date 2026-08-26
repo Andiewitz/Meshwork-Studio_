@@ -11,11 +11,13 @@ export class WorkspaceService {
   static initialize(app: Express, context: AppContext) {
     registerWorkspaceRoutes(app, context);
 
-    context.eventBus.on("user.deleted", async ({ id, tx }) => {
+    context.eventBus.on("user.deleted", async ({ id }) => {
       try {
-        await workspaceStorage.deleteAllUserData(id, tx);
+        const ownedIds = await workspaceStorage.listWorkspaceIdsByOwner(id);
+        context.eventBus.emit("workspaces.deleted", { ids: ownedIds });
+        await workspaceStorage.deleteAllUserData(id);
         log.info(
-          { userId: id },
+          { userId: id, workspaces: ownedIds.length },
           "User workspaces and collections deleted via event",
         );
       } catch (err) {

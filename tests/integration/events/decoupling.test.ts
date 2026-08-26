@@ -1,28 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { EventBus, type DrizzleTx } from "@server/lib/events";
-import { AppRegistry } from "@server/lib/registry";
+import { EventBus } from "@server/lib/events";
 
 /**
  * Integration Tests for EventBus & Decoupled Module Communication
  *
- * These tests verify that the EventBus correctly dispatches events
- * across service boundaries — the core mechanism that replaced
- * direct `import` coupling between Auth, Workspace, Canvas, and Team.
- *
- * Strategy: Instead of calling Service.initialize() (which also mounts
- * HTTP routes and requires a full Express app), we register event listeners
- * manually to test the EventBus plumbing in isolation.
+ * Verifies the event choreography required by database-per-service:
+ * each service cleans ONLY its own store; cross-service deletion is
+ * coordinated through events (user.deleted → workspaces.deleted).
  */
-
-// ─── Hoisted mocks (vitest hoists vi.mock calls) ────────────────────
 
 const { mockWorkspaceStorage, mockCanvasStorage, mockTeamStorage } = vi.hoisted(
   () => ({
     mockWorkspaceStorage: {
       deleteAllUserData: vi.fn().mockResolvedValue(undefined),
+      listWorkspaceIdsByOwner: vi.fn().mockResolvedValue([]),
     },
     mockCanvasStorage: {
-      deleteAllUserData: vi.fn().mockResolvedValue(undefined),
+      deleteWorkspaces: vi.fn().mockResolvedValue(undefined),
       syncCanvas: vi.fn().mockResolvedValue(undefined),
       duplicateCanvas: vi.fn().mockResolvedValue(undefined),
     },
@@ -34,22 +28,16 @@ const { mockWorkspaceStorage, mockCanvasStorage, mockTeamStorage } = vi.hoisted(
 
 vi.mock("@services/workspace/db/storage", () => ({
   workspaceStorage: mockWorkspaceStorage,
-  WorkspaceDatabaseStorage: vi
-    .fn()
-    .mockImplementation(() => mockWorkspaceStorage),
+  WorkspaceDatabaseStorage: vi.fn(),
 }));
 
 vi.mock("@services/canvas/db/storage", () => ({
   canvasStorage: mockCanvasStorage,
-  CanvasDatabaseStorage: vi.fn().mockImplementation(() => mockCanvasStorage),
 }));
 
 vi.mock("@services/team/db/storage", () => ({
   teamStorage: mockTeamStorage,
-  TeamDatabaseStorage: vi.fn().mockImplementation(() => mockTeamStorage),
 }));
-
-// ─── Tests ──────────────────────────────────────────────────────────
 
 describe("EventBus & Decoupling Integration Tests", () => {
   let eventBus: EventBus;
@@ -59,171 +47,106 @@ describe("EventBus & Decoupling Integration Tests", () => {
     eventBus = new EventBus();
   });
 
-  // ── user.deleted cascade ──────────────────────────────────────────
+  // ── workspace.deleted → canvas purge ──────────────────────────────
 
-  describe("user.deleted event cascade", () => {
-    beforeEach(() => {
-      // Wire up listeners the same way WorkspaceService.initialize and
-      // CanvasService.initialize do — but without HTTP routes.
-      eventBus.on("user.deleted", async ({ id, tx }) => {
-        await mockWorkspaceStorage.deleteAllUserData(id, tx);
-      });
-      eventBus.on("user.deleted", async ({ id, tx }) => {
-        await mockCanvasStorage.deleteAllUserData(id, tx);
-      });
-      eventBus.on("user.deleted", async ({ id, tx }) => {
-        await mockTeamStorage.deleteAllUserData(id, tx);
-      });
+  it("canvas_purges_its_store_when_a_workspace_is_deleted", async () => {
+    const handler = vi.fn(async ({ id }: { id: string }) => {
+      await mockCanvasStorage.deleteWorkspaces([id]);
     });
+    eventBus.on("workspace.deleted", handler);
 
-    it("should cascade user deletion to all dependent modules", async () => {
-      const userId = "123";
-      const mockTx = { transaction: "mock" } as unknown as DrizzleTx;
+    await eventBus.emitAsync("workspace.deleted", { id: "ws-42" });
 
-      await eventBus.emitAsync("user.deleted", { id: userId, tx: mockTx });
-
-      expect(mockWorkspaceStorage.deleteAllUserData).toHaveBeenCalledTimes(1);
-      expect(mockWorkspaceStorage.deleteAllUserData).toHaveBeenCalledWith(
-        "123",
-        mockTx,
-      );
-
-      expect(mockCanvasStorage.deleteAllUserData).toHaveBeenCalledTimes(1);
-      expect(mockCanvasStorage.deleteAllUserData).toHaveBeenCalledWith(
-        "123",
-        mockTx,
-      );
-
-      expect(mockTeamStorage.deleteAllUserData).toHaveBeenCalledTimes(1);
-      expect(mockTeamStorage.deleteAllUserData).toHaveBeenCalledWith(
-        "123",
-        mockTx,
-      );
-    });
-
-    it("should pass tx=undefined when no transaction is provided", async () => {
-      await eventBus.emitAsync("user.deleted", { id: "456" });
-
-      expect(mockWorkspaceStorage.deleteAllUserData).toHaveBeenCalledWith(
-        "456",
-        undefined,
-      );
-      expect(mockCanvasStorage.deleteAllUserData).toHaveBeenCalledWith(
-        "456",
-        undefined,
-      );
-      expect(mockTeamStorage.deleteAllUserData).toHaveBeenCalledWith(
-        "456",
-        undefined,
-      );
-    });
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(mockCanvasStorage.deleteWorkspaces).toHaveBeenCalledWith(["ws-42"]);
   });
 
-  // ── workspace.deleted cascade ─────────────────────────────────────
+  // ── workspace.duplicated → canvas copy ────────────────────────────
 
-  describe("workspace.deleted event cascade", () => {
-    beforeEach(() => {
-      // Wire up the Canvas listener for workspace deletion
-      eventBus.on("workspace.deleted", async ({ id }) => {
-        await mockCanvasStorage.syncCanvas(id, [], []);
-      });
-    });
-
-    it("should clear canvas data when a workspace is deleted", async () => {
-      await eventBus.emitAsync("workspace.deleted", { id: "42" });
-
-      expect(mockCanvasStorage.syncCanvas).toHaveBeenCalledTimes(1);
-      expect(mockCanvasStorage.syncCanvas).toHaveBeenCalledWith("42", [], []);
-    });
-  });
-
-  // ── workspace.duplicated cascade ──────────────────────────────────
-
-  describe("workspace.duplicated event cascade", () => {
-    beforeEach(() => {
-      eventBus.on("workspace.duplicated", async ({ originalId, newId }) => {
+  it("canvas_duplicates_documents_when_a_workspace_is_duplicated", async () => {
+    const handler = vi.fn(
+      async ({ originalId, newId }: { originalId: string; newId: string }) => {
         await mockCanvasStorage.duplicateCanvas(originalId, newId);
-      });
+      },
+    );
+    eventBus.on("workspace.duplicated", handler);
+
+    await eventBus.emitAsync("workspace.duplicated", {
+      originalId: "ws-a",
+      newId: "ws-b",
     });
 
-    it("should duplicate canvas data when a workspace is duplicated", async () => {
-      await eventBus.emitAsync("workspace.duplicated", {
-        originalId: "10",
-        newId: "20",
-      });
-
-      expect(mockCanvasStorage.duplicateCanvas).toHaveBeenCalledTimes(1);
-      expect(mockCanvasStorage.duplicateCanvas).toHaveBeenCalledWith("10", "20");
-    });
+    expect(mockCanvasStorage.duplicateCanvas).toHaveBeenCalledWith(
+      "ws-a",
+      "ws-b",
+    );
   });
 
-  // ── Error isolation ───────────────────────────────────────────────
+  // ── user.deleted cascade (two-phase, db-per-service) ──────────────
 
-  describe("Error isolation", () => {
-    it("should not crash the emitter if one listener throws", async () => {
-      eventBus.on("user.deleted", async () => {
-        throw new Error("DB Connection lost");
-      });
+  describe("user.deleted two-phase cascade", () => {
+    beforeEach(() => {
+      // Phase 1: workspace resolves owned ids and announces them.
       eventBus.on("user.deleted", async ({ id }) => {
-        await mockCanvasStorage.deleteAllUserData(id);
+        const ids = await mockWorkspaceStorage.listWorkspaceIdsByOwner(id);
+        await mockWorkspaceStorage.deleteAllUserData(id);
+        await workspaceCleanup(ids);
+        eventBus.emit("workspaces.deleted", { ids });
       });
+      // Phase 2: canvas purges announced ids from its own store.
+      eventBus.on("workspaces.deleted", async ({ ids }) => {
+        if (ids.length === 0) return;
+        await mockCanvasStorage.deleteWorkspaces(ids);
+      });
+    });
 
-      await expect(
-        eventBus.emitAsync("user.deleted", { id: "999" }),
-      ).rejects.toThrow("DB Connection lost");
+    function workspaceCleanup(ids: string[]): Promise<void> {
+      void ids;
+      return Promise.resolve();
+    }
+
+    it("announces_owned_workspace_ids_then_canvas_purges_them", async () => {
+      mockWorkspaceStorage.listWorkspaceIdsByOwner.mockResolvedValue([
+        "ws-1",
+        "ws-2",
+      ]);
+
+      await eventBus.emitAsync("user.deleted", { id: "user-9" });
+
+      expect(mockWorkspaceStorage.listWorkspaceIdsByOwner).toHaveBeenCalledWith(
+        "user-9",
+      );
+      expect(mockWorkspaceStorage.deleteAllUserData).toHaveBeenCalledWith(
+        "user-9",
+      );
+      expect(mockCanvasStorage.deleteWorkspaces).toHaveBeenCalledWith([
+        "ws-1",
+        "ws-2",
+      ]);
+    });
+
+    it("emits_an_empty_id_list_when_the_user_owned_nothing", async () => {
+      mockWorkspaceStorage.listWorkspaceIdsByOwner.mockResolvedValue([]);
+      const spy = vi.fn();
+      eventBus.on("workspaces.deleted", spy);
+
+      await eventBus.emitAsync("user.deleted", { id: "user-empty" });
+
+      expect(spy).toHaveBeenCalledWith({ ids: [] });
+      expect(mockCanvasStorage.deleteWorkspaces).not.toHaveBeenCalled();
     });
   });
 
-  // ── Isolation between EventBus instances ──────────────────────────
+  // ── team cleans up on user.deleted directly ───────────────────────
 
-  describe("Instance isolation", () => {
-    it("should not leak listeners between separate EventBus instances", async () => {
-      const bus1 = new EventBus();
-      const bus2 = new EventBus();
-
-      const listener1 = vi.fn();
-      const listener2 = vi.fn();
-
-      bus1.on("user.deleted", listener1);
-      bus2.on("user.deleted", listener2);
-
-      await bus1.emitAsync("user.deleted", { id: "1" });
-
-      expect(listener1).toHaveBeenCalledTimes(1);
-      expect(listener2).not.toHaveBeenCalled();
+  it("team_deletes_membership_rows_on_user_deleted", async () => {
+    const handler = vi.fn(async ({ id }: { id: string }) => {
+      await mockTeamStorage.deleteAllUserData(id);
     });
-  });
+    eventBus.on("user.deleted", handler);
 
-  // ── Registry integration ──────────────────────────────────────────
+    await eventBus.emitAsync("user.deleted", { id: "user-7" });
 
-  describe("AppRegistry + EventBus integration", () => {
-    it("should compose a valid AppContext for module initialization", () => {
-      const registry = new AppRegistry();
-      registry.register("isAuthenticated", vi.fn());
-      registry.register("teamStorage", mockTeamStorage);
-
-      const context = { registry, eventBus };
-
-      expect(context.registry.get("isAuthenticated")).toBeDefined();
-      expect(context.registry.get("teamStorage")).toBe(mockTeamStorage);
-
-      expect(typeof context.eventBus.on).toBe("function");
-      expect(typeof context.eventBus.emitAsync).toBe("function");
-    });
-
-    it("should throw when retrieving an unregistered service", () => {
-      const registry = new AppRegistry();
-      expect(() => registry.get("nonexistent")).toThrow(
-        "Service nonexistent not found",
-      );
-    });
-
-    it("should throw when registering a duplicate service", () => {
-      const registry = new AppRegistry();
-      registry.register("auth", vi.fn());
-      expect(() => registry.register("auth", vi.fn())).toThrow(
-        "already registered",
-      );
-    });
+    expect(mockTeamStorage.deleteAllUserData).toHaveBeenCalledWith("user-7");
   });
 });

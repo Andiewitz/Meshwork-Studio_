@@ -27,6 +27,19 @@ services:
       timeout: 5s
       retries: 5
 
+  # Canvas documents (nodes/edges) — always-free tier, single table.
+  emnesh-dynamodb-local:
+    container_name: emnesh-dynamodb-local
+    image: amazon/dynamodb-local:latest
+    restart: always
+    ports:
+      - '8000:8000'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   emnesh-redis:
     container_name: emnesh-redis
     image: redis:7-alpine
@@ -57,9 +70,11 @@ services:
       TEAM_DATABASE_URL: postgresql://team_app:${TEAM_DB_PASSWORD}@emnesh-postgres:5432/team_db
       AI_DATABASE_URL: postgresql://ai_app:${AI_DB_PASSWORD}@emnesh-postgres:5432/ai_db
       METRICS_DATABASE_URL: postgresql://metrics_app:${METRICS_DB_PASSWORD}@emnesh-postgres:5432/metrics_db
-      # TRANSITIONAL: canvas moves to DynamoDB; until then its tables still
-      # live in workspace_db from the pre-split era.
-      CANVAS_DATABASE_URL: postgresql://workspace_app:${WORKSPACE_DB_PASSWORD}@emnesh-postgres:5432/workspace_db
+      CANVAS_DDB_TABLE: ${CANVAS_DDB_TABLE:-meshwork-canvas}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      DYNAMODB_ENDPOINT: http://emnesh-dynamodb-local:8000
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
       # SECURITY: the monolith has NO auth_db access — it verifies Go-signed
       # assertion cookies locally with this public key only.
       AUTH_ASSERTION_PUBLIC_KEY: ${AUTH_ASSERTION_PUBLIC_KEY:?AUTH_ASSERTION_PUBLIC_KEY required}
@@ -78,6 +93,8 @@ services:
     depends_on:
       emnesh-postgres:
         condition: service_healthy
+      emnesh-dynamodb-local:
+        condition: service_started
       emnesh-redis:
         condition: service_healthy
 

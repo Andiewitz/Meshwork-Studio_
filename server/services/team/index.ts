@@ -11,9 +11,9 @@ export class TeamService {
   static initialize(app: Express, context: AppContext) {
     registerTeamRoutes(app, context);
 
-    context.eventBus.on("user.deleted", async ({ id, tx }) => {
+    context.eventBus.on("user.deleted", async ({ id }) => {
       try {
-        await teamStorage.deleteAllUserData(id, tx);
+        await teamStorage.deleteAllUserData(id);
         log.info({ userId: id }, "User team data deleted via event");
       } catch (err) {
         log.error({ err, userId: id }, "Failed to delete user team data");

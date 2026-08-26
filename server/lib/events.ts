@@ -10,7 +10,8 @@ export type DrizzleTx = PgTransaction<any, any, any>;
 export interface AppEvents {
   "workspace.deleted": { id: string; tx?: DrizzleTx };
   "workspace.duplicated": { originalId: string; newId: string; tx?: DrizzleTx };
-  "user.deleted": { id: string; tx?: DrizzleTx };
+  "user.deleted": { id: string };
+  "workspaces.deleted": { ids: string[] };
 }
 
 export class EventBus extends EventEmitter {
