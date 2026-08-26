@@ -95,7 +95,7 @@ function ProtectedRoute({
   component: React.ComponentType;
 }) {
   const { user, isLoading, isRedirecting } = useAuth();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
@@ -105,18 +105,27 @@ function ProtectedRoute({
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // Redirect to login when auth resolves to unauthenticated (client-side navigation)
+  React.useEffect(() => {
+    if (!isLoading && !user) {
+      navigate(
+        `/login?reason=session_expired&redirect=${encodeURIComponent(location)}`,
+      );
+    }
+  }, [user, isLoading, navigate, location]);
+
   // Show default loader during initial auth verification
   if (isLoading && user === undefined) {
     return <DefaultLoading />;
   }
 
-  // Redirecting state during logout transition or unauthenticated redirect
+  // Redirecting state during logout transition
   if (isRedirecting) {
-    return <RedirectLoading message="Redirecting..." />;
+    return <RedirectLoading message="Signing out..." />;
   }
 
+  // Not authenticated — show loading while the effect above navigates
   if (!user && !isLoading) {
-    window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(location)}`;
     return <RedirectLoading message="Redirecting to sign in..." />;
   }
 

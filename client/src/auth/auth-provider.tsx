@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { useLocation } from "wouter";
 import { authClient } from "./auth-client";
 import {
   anonymousState,
