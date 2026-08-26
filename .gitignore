@@ -63,3 +63,5 @@ test-results/
 # SSH keys (CRITICAL - NEVER COMMIT)
 ssh-keys/
 *.pem
+# test artifacts
+playwright-report/

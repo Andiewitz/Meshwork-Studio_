@@ -183,10 +183,11 @@ Historical documents (tickets, investigations, older audits) live in
 
 ## Deployment Architectures
 
-Meshwork Studio supports two deployment workflows:
+Meshwork Studio deploys to a single EC2 instance:
 
-1. **Production (Canonical)**: **AWS ECS / Fargate behind an Application Load Balancer** with Amazon RDS Multi-AZ PostgreSQL, ElastiCache Redis, and S3/CloudFront static assets managed via declarative Terraform in `terraform/`. Security groups enforce strict SG-to-SG isolation (RDS/Redis accessible only from ECS; ECS accessible only from ALB).
-2. **Single-Node / Emergency Fallback**: Automated bash and systemd/PM2 scripts in `deploy/` for running the entire stack (NGINX reverse proxy + Node.js API + local DB) on a single EC2 instance for rapid evaluation or disaster recovery.
+1. **Deploy paths**: GitHub Actions on push to `main`, or local `./scripts/deploy.sh` (dist-swap + Go auth binary). Full runbook: [`important/DEPLOY.md`](./important/DEPLOY.md).
+2. **Topology**: NGINX (TLS, static frontend) → Go auth service :8081 + Node monolith :5000 → Dockerized Postgres ×2 + Redis.
+3. **Future ECS path**: an archived Terraform stack lives in `docs/archive/terraform/` if horizontal-scale migration ever becomes a priority.
 
 ---
 

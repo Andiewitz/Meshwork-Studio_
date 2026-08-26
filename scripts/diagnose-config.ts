@@ -1,195 +1,155 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env npx tsx
 /**
- * Configuration Diagnostic Script
- * Run locally or in production to verify all required config
- * Usage: npx tsx scripts/diagnose-config.ts
+ * Configuration Diagnostic
+ *
+ * Verifies the environment for BOTH processes: the Node monolith and the Go
+ * auth service. Run locally or on the server:
+ *
+ *   npx tsx scripts/diagnose-config.ts
  */
 
-import { config } from "dotenv";
-config();
+import { config as loadEnv } from "dotenv";
+loadEnv();
+// Also surface the auth service's own .env when present.
+loadEnv({ path: "server/services/auth/.env", quiet: true });
 
 interface CheckResult {
   name: string;
   passed: boolean;
   message: string;
-  details?: any;
 }
 
-const checks: CheckResult[] = [];
+const results: CheckResult[] = [];
 
-function check(
-  name: string,
-  condition: boolean,
-  message: string,
-  details?: any,
-) {
-  checks.push({ name, passed: condition, message, details });
-  const icon = condition ? "✅" : "❌";
-  console.log(`${icon} ${name}: ${message}`);
-  if (details && !condition) console.log(`   Details:`, details);
+function check(name: string, passed: boolean, message: string) {
+  results.push({ name, passed, message });
 }
 
-async function runDiagnostics() {
-  console.log("🔍 Configuration Diagnostics\n");
-  console.log("Environment:", process.env.NODE_ENV || "undefined");
-  console.log("");
+function has(key: string): boolean {
+  return Boolean(process.env[key]?.trim());
+}
 
-  // 1. Required Environment Variables
-  console.log("=== Required Environment Variables ===");
-  const requiredVars = [
-    "DATABASE_URL",
-    "JWT_SECRET",
-    "SESSION_SECRET",
-    "NODE_ENV",
-    "FRONTEND_URL",
-    "PORT",
-  ];
-
-  for (const varName of requiredVars) {
-    const value = process.env[varName];
-    check(
-      varName,
-      !!value,
-      value ? `Set (${value.length} chars)` : "MISSING",
-      value
-        ? { length: value.length, preview: value.slice(0, 20) + "..." }
-        : undefined,
-    );
-  }
-
-  // 2. Redis Configuration
-  console.log("\n=== Redis Configuration ===");
-  const redisUrl = process.env.REDIS_URL;
-  check(
-    "REDIS_URL",
-    redisUrl !== undefined,
-    redisUrl
-      ? redisUrl
-        ? "Set"
-        : "Explicitly disabled (empty)"
-      : "Not set (will auto-connect)",
-    redisUrl ? { value: redisUrl.slice(0, 30) } : undefined,
-  );
-
-  // 3. Test Database Connection
-  console.log("\n=== Database Connection ===");
-  if (process.env.DATABASE_URL) {
-    try {
-      const { Pool } = await import("pg");
-      const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl:
-          process.env.NODE_ENV === "production"
-            ? { rejectUnauthorized: false }
-            : false,
-      });
-      const client = await pool.connect();
-      const result = await client.query(
-        "SELECT NOW() as time, current_database() as db",
-      );
-      client.release();
-      await pool.end();
-      check(
-        "Database Connection",
-        true,
-        `Connected to ${result.rows[0].db} at ${result.rows[0].time}`,
-        { database: result.rows[0].db },
-      );
-    } catch (error: any) {
-      check("Database Connection", false, "FAILED", {
-        error: error.message,
-        code: error.code,
-      });
-    }
-  } else {
-    check("Database Connection", false, "DATABASE_URL not set");
-  }
-
-  // 4. Test Redis Connection (if configured)
-  console.log("\n=== Redis Connection ===");
-  if (process.env.REDIS_URL && process.env.REDIS_URL !== "") {
-    try {
-      const redis = await import("redis").catch(() => null);
-      if (!redis) {
-        check("Redis Connection", false, "SKIPPED", {
-          reason: "redis package not installed locally",
-        });
-      } else {
-        const client = redis.createClient({ url: process.env.REDIS_URL });
-        await client.connect();
-        await client.ping();
-        await client.quit();
-        check("Redis Connection", true, "Connected successfully");
-      }
-    } catch (error: any) {
-      check("Redis Connection", false, "FAILED", { error: error.message });
-    }
-  } else {
-    check("Redis Connection", true, "Disabled (REDIS_URL empty or not set)");
-  }
-
-  // 5. Check JWT_SECRET Strength
-  console.log("\n=== Security Checks ===");
-  if (process.env.JWT_SECRET) {
-    const secret = process.env.JWT_SECRET;
-    const isBase64 = /^[A-Za-z0-9+/]+=*$/.test(secret);
-    const decodedLen = Buffer.from(secret, "base64").length;
-    check(
-      "JWT_SECRET Strength",
-      decodedLen >= 32,
-      `Length: ${decodedLen} bytes (base64 decoded), ${secret.length} chars`,
-      { isBase64, decodedLength: decodedLen },
-    );
-  }
-
-  if (process.env.SESSION_SECRET) {
-    const secret = process.env.SESSION_SECRET;
-    const decodedLen = Buffer.from(secret, "base64").length;
-    check(
-      "SESSION_SECRET Strength",
-      decodedLen >= 32,
-      `Length: ${decodedLen} bytes (base64 decoded), ${secret.length} chars`,
-      { decodedLength: decodedLen },
-    );
-  }
-
-  // 6. Google OAuth (optional but good to verify)
-  console.log("\n=== Optional: Google OAuth ===");
-  check(
-    "GOOGLE_CLIENT_ID",
-    !!process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_ID ? "Set" : "Not configured",
-  );
-  check(
-    "GOOGLE_CLIENT_SECRET",
-    !!process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Not configured",
-  );
-
-  // Summary
-  console.log("\n" + "=".repeat(50));
-  console.log("SUMMARY");
-  console.log("=".repeat(50));
-  const passed = checks.filter((c) => c.passed).length;
-  const failed = checks.filter((c) => !c.passed).length;
-  console.log(
-    `Total: ${checks.length} | Passed: ${passed} | Failed: ${failed}`,
-  );
-
-  if (failed > 0) {
-    console.log("\n❌ FAILED CHECKS:");
-    checks
-      .filter((c) => !c.passed)
-      .forEach((c) => {
-        console.log(`  - ${c.name}: ${c.message}`);
-        if (c.details) console.log(`    ${JSON.stringify(c.details)}`);
-      });
-    console.log("\n🔧 Fix the failed checks above, then redeploy.");
-    process.exit(1);
-  } else {
-    console.log("\n🎉 ALL CHECKS PASSED - Configuration looks good!");
-    process.exit(0);
+function base64Bytes(key: string): number | null {
+  const v = process.env[key];
+  if (!v) return null;
+  try {
+    return Buffer.from(v.trim(), "base64").length;
+  } catch {
+    return -1;
   }
 }
 
-runDiagnostics().catch(console.error);
+const isProd = process.env.NODE_ENV === "production";
+
+// ─── Monolith ────────────────────────────────────────────────────────────────
+
+check("NODE_ENV", has("NODE_ENV"), `= ${process.env.NODE_ENV ?? "(unset)"}`);
+check(
+  "DATABASE_URL",
+  has("DATABASE_URL"),
+  has("DATABASE_URL") ? "workspace DB DSN present" : "required by the monolith",
+);
+check(
+  "REDIS_URL",
+  has("REDIS_URL"),
+  has("REDIS_URL") ? "present" : "optional (rate-limit/WS degradation)",
+);
+check(
+  "SESSION_SECRET",
+  isProd ? (process.env.SESSION_SECRET?.length ?? 0) >= 32 : true,
+  isProd ? "must be ≥32 chars in production" : "dev — any value accepted",
+);
+check(
+  "METRICS_BEARER_TOKEN",
+  !isProd || has("METRICS_BEARER_TOKEN"),
+  has("METRICS_BEARER_TOKEN")
+    ? "/metrics protected"
+    : "⚠ /metrics returns 404 in production",
+);
+
+// ─── Go auth service ────────────────────────────────────────────────────────
+
+for (const key of ["AUTH_DATABASE_URL", "AUTH_REDIS_URL"]) {
+  check(
+    key,
+    has(key),
+    has(key) ? "present" : "auth service cannot boot without it",
+  );
+}
+
+for (const key of [
+  "AUTH_IP_HASH_KEY",
+  "AUTH_ENCRYPTION_KEY",
+  "AUTH_ASSERTION_PRIVATE_KEY",
+]) {
+  const bytes = base64Bytes(key);
+  check(
+    key,
+    bytes === 32,
+    bytes === 32
+      ? "32-byte key OK"
+      : `must be base64 of 32 bytes (got ${bytes ?? "unset"})`,
+  );
+}
+
+const pubSeed = process.env.AUTH_ASSERTION_PUBLIC_KEY;
+const privSeed = process.env.AUTH_ASSERTION_PRIVATE_KEY;
+if (pubSeed && privSeed) {
+  const same = Buffer.from(pubSeed.trim(), "base64").equals(
+    Buffer.from(privSeed.trim(), "base64"),
+  );
+  check(
+    "assertion keypair pairing",
+    same,
+    same
+      ? "monolith public seed matches auth private seed"
+      : "MISMATCH — monolith will reject every login",
+  );
+} else if (isProd) {
+  check(
+    "assertion keypair pairing",
+    false,
+    "both seeds required in production",
+  );
+} else {
+  check("assertion keypair pairing", true, "skipped (development)");
+}
+
+check(
+  "AUTH_INTERNAL_KEY",
+  !isProd || has("AUTH_INTERNAL_KEY"),
+  has("AUTH_INTERNAL_KEY")
+    ? "introspection enabled"
+    : "required in production (monolith → auth)",
+);
+
+check(
+  "SMTP_HOST + EMAIL_FROM",
+  !isProd || (has("SMTP_HOST") && has("EMAIL_FROM")),
+  has("SMTP_HOST")
+    ? `relay: ${process.env.SMTP_HOST}`
+    : "production needs email for verify/reset flows",
+);
+
+const googleOk = has("GOOGLE_CLIENT_ID") && has("GOOGLE_CLIENT_SECRET");
+check(
+  "Google OAuth",
+  googleOk,
+  googleOk ? "configured" : "optional — button disabled",
+);
+
+// ─── Report ─────────────────────────────────────────────────────────────────
+
+const failed = results.filter((r) => !r.passed);
+for (const r of results) {
+  const mark = r.passed ? "✔" : "✖";
+  console.log(`${mark} ${r.name.padEnd(28)} ${r.message}`);
+}
+
+console.log(
+  `\n${results.length - failed.length}/${results.length} checks passed`,
+);
+if (failed.length > 0) {
+  console.error(`\nFAILED:\n${failed.map((f) => ` - ${f.name}`).join("\n")}`);
+  process.exit(1);
+}
