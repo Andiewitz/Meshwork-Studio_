@@ -224,6 +224,10 @@ ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" SKIP_AUTH="$SKIP_AUTH" bash -s "$REMO
     rmdir "$TARGET_DIR/auth.staging" 2>/dev/null || true
 
     echo "  ⚡ Reloading PM2 meshwork-auth process..."
+    # pm2 does not read .env files — export them into the process environment
+    set -a
+    [ -f "$TARGET_DIR/.env" ] && . "$TARGET_DIR/.env"
+    set +a
     if pm2 describe meshwork-auth >/dev/null 2>&1; then
       pm2 restart meshwork-auth --update-env
     else

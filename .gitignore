@@ -65,3 +65,6 @@ ssh-keys/
 *.pem
 # test artifacts
 playwright-report/
+
+# go build artifacts
+server/services/auth/meshwork-auth
