@@ -10,6 +10,7 @@ This skill governs how components are structured, organized, and composed. A $10
 ## Core Rules for Component Design
 
 ### 1. File Organization (Feature-First)
+
 ```
 src/
 ├── app/                    # Next.js App Router pages & layouts
@@ -46,12 +47,14 @@ src/
 ```
 
 ### 2. Component API Rules
+
 - **Props interface:** Every component must have a named TypeScript interface. `interface HeroProps { ... }`, not inline types.
 - **Default exports:** Pages use `export default`. All other components use **named exports**.
 - **Barrel exports:** Every feature folder has an `index.ts` that re-exports public components. Import from the folder, not the file: `import { Hero } from '@/features/hero'`.
 - **Children pattern:** Layout components accept `children: React.ReactNode`. Content components accept explicit props.
 
 ### 3. Server vs Client Components
+
 - **Default to Server Components.** Only add `'use client'` when the component:
   - Uses React hooks (`useState`, `useEffect`, `useRef`)
   - Uses browser APIs (`window`, `document`, `IntersectionObserver`)
@@ -61,6 +64,7 @@ src/
 - **Data fetching:** Always fetch data in Server Components using `async/await`. Pass data down to client components as props.
 
 ### 4. Composition Over Configuration
+
 - Prefer composing small components over creating mega-components with 15+ props.
 - **Bad:** `<Card variant="testimonial" showAvatar showRating layout="horizontal" size="lg" />`
 - **Good:**
@@ -73,26 +77,32 @@ src/
   ```
 
 ### 5. Shared Section Component
+
 Create a reusable `<Section>` wrapper that enforces consistent spacing, max-width, and semantic HTML:
+
 ```tsx
 interface SectionProps {
   children: React.ReactNode;
   id?: string;
   className?: string;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
-  padding?: 'sm' | 'md' | 'lg';
+  maxWidth?: "sm" | "md" | "lg" | "xl";
+  padding?: "sm" | "md" | "lg";
 }
 ```
+
 Every page section should be wrapped in this component to maintain rhythm.
 
 ### 6. MUI + Tailwind Integration Rules
+
 - **MUI `sx` prop:** Use for component-specific style overrides tied to MUI's theme system (spacing, palette, breakpoints).
 - **Tailwind classes:** Use for layout utilities (`flex`, `grid`, `gap`, `p-`, `m-`, `w-`, `max-w-`) and responsive modifiers.
 - **Never mix:** Don't set `padding` in both `sx` and `className` on the same element. Pick one system per property.
 - **Theme tokens:** Access MUI theme values via `sx` (`color: 'primary.main'`). Access Tailwind tokens via classes.
 
 ### 7. Custom Hooks
+
 Extract reusable logic into hooks in `src/hooks/`:
+
 - `useScrollProgress()` — returns scroll percentage for the viewport or a ref'd container.
 - `useInView(ref, options)` — wrapper around IntersectionObserver.
 - `useMediaQuery(query)` — SSR-safe media query hook (use MUI's `useMediaQuery`).

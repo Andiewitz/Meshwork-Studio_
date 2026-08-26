@@ -229,7 +229,6 @@ meshwork-studio/
 │   ├── middleware/              # Rate limiting
 │   └── types/
 ├── client/src/                  # React frontend
-├── terraform/                   # Production ECS/RDS/Redis/ALB IAC
 ├── deploy/                      # Infra artifacts: nginx.conf, user-data, RDS notes
 ├── important/                   # DEPLOY.md, SECRETS.md, ops guides
 ├── scripts/                     # deploy.sh, build.ts, backup-db.ts, guards
