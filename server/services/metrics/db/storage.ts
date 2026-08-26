@@ -1,25 +1,60 @@
 import { pool } from "./connection";
 
 export interface MetricCounts {
-  total_users?: string | number | null;
-  new_users_today?: string | number | null;
-  active_users_24h?: string | number | null;
-  logins_today?: string | number | null;
-  total_workspaces?: string | number | null;
-  total_teams?: string | number | null;
+  total_users?: number;
+  new_users_today?: number;
+  active_users_24h?: number;
+  logins_today?: number;
+  total_workspaces?: number;
+  total_teams?: number;
+}
+
+// Cross-service counters arrive over the internal API — users live in
+// auth_db, workspaces in workspace_db, teams in team_db. A service that
+// fails to answer contributes zeros rather than breaking collection.
+async function fetchCount<T>(service: string, path: string): Promise<T | null> {
+  const key = process.env.INTERNAL_API_KEY || "";
+  const base =
+    process.env[`${service.toUpperCase()}_SERVICE_URL`] ||
+    "http://127.0.0.1:5000";
+  if (!key) return null;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(`${base}${path}`, {
+      headers: { "X-Internal-Key": key },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+interface AuthUserStats {
+  totalUsers: number;
+  newUsersToday: number;
+  activeUsers24h: number;
+  loginsToday: number;
 }
 
 export async function queryMetricsCounts(): Promise<MetricCounts> {
-  const counts = await pool.query<MetricCounts>(`
-    SELECT
-      (SELECT COUNT(*) FROM users) as total_users,
-      (SELECT COUNT(*) FROM users WHERE created_at >= CURRENT_DATE) as new_users_today,
-      (SELECT COUNT(DISTINCT email) FROM login_attempts WHERE last_attempt >= NOW() - INTERVAL '24 hours') as active_users_24h,
-      (SELECT COUNT(*) FROM login_attempts WHERE last_attempt >= CURRENT_DATE) as logins_today,
-      (SELECT COUNT(*) FROM workspaces) as total_workspaces,
-      (SELECT COUNT(*) FROM teams) as total_teams
-  `);
-  return counts.rows[0] ?? {};
+  const [auth, workspace, team] = await Promise.all([
+    fetchCount<AuthUserStats>("auth", "/internal/stats/users"),
+    fetchCount<{ totalWorkspaces: number }>("workspace", "/internal/stats"),
+    fetchCount<{ totalTeams: number }>("team", "/internal/stats"),
+  ]);
+
+  return {
+    total_users: auth?.totalUsers ?? 0,
+    new_users_today: auth?.newUsersToday ?? 0,
+    active_users_24h: auth?.activeUsers24h ?? 0,
+    logins_today: auth?.loginsToday ?? 0,
+    total_workspaces: workspace?.totalWorkspaces ?? 0,
+    total_teams: team?.totalTeams ?? 0,
+  };
 }
 
 export async function insertSnapshot(values: {

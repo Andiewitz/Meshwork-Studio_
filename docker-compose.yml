@@ -79,6 +79,7 @@ services:
       # assertion cookies locally with this public key only.
       AUTH_ASSERTION_PUBLIC_KEY: ${AUTH_ASSERTION_PUBLIC_KEY:?AUTH_ASSERTION_PUBLIC_KEY required}
       AUTH_INTERNAL_KEY: ${AUTH_INTERNAL_KEY:?AUTH_INTERNAL_KEY required}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
       AUTH_SERVICE_URL: http://emnesh-auth:8081
       REDIS_URL: redis://emnesh-redis:6379
       NODE_ENV: production

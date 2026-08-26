@@ -1,0 +1,68 @@
+// Server-to-server HTTP client for monolith-internal service calls
+// (workspace ⇄ team ⇄ metrics). Guarded by the shared INTERNAL_API_KEY.
+//
+// Loopback-only by default: services live in one process behind NGINX, and
+// NGINX never routes /internal/* — so these paths are unreachable externally.
+
+import crypto from "node:crypto";
+
+const INTERNAL_KEY = () => process.env.INTERNAL_API_KEY || "";
+
+export class InternalCallError extends Error {
+  constructor(
+    public readonly service: string,
+    public readonly status: number,
+    message?: string,
+  ) {
+    super(message || `${service} internal call failed (${status})`);
+  }
+}
+
+function baseUrl(service: string): string {
+  const key = `${service.toUpperCase()}_SERVICE_URL`;
+  return (process.env[key] || "http://127.0.0.1:5000").replace(/\/$/, "");
+}
+
+/** GET an internal endpoint, returning parsed JSON or null on failure. */
+export async function internalGet<T>(
+  service: string,
+  path: string,
+  timeoutMs = 3000,
+): Promise<T | null> {
+  const key = INTERNAL_KEY();
+  if (!key) return null; // unconfigured → callers use their fallback path
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${baseUrl(service)}${path}`, {
+      headers: { "X-Internal-Key": key },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new InternalCallError(service, res.status);
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Express middleware: rejects internal calls without the shared key. */
+export function requireInternalKey(
+  req: import("express").Request,
+  res: import("express").Response,
+  next: import("express").NextFunction,
+): void {
+  const expected = INTERNAL_KEY();
+  const presented = req.header("X-Internal-Key") || "";
+  if (
+    !expected ||
+    presented.length !== expected.length ||
+    !crypto.timingSafeEqual(Buffer.from(presented), Buffer.from(expected))
+  ) {
+    res.status(404).json({ message: "Not Found" }); // deliberately opaque
+    return;
+  }
+  next();
+}

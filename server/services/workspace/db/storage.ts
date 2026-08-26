@@ -8,8 +8,10 @@ import {
   type InsertCollection,
 } from "./schema";
 // TODO(C5): replace this cross-service read with the team internal endpoint.
-import { teamMembers, teamWorkspaces } from "@services/team/db/schema";
-import { eq, desc, and, isNull, or, inArray } from "drizzle-orm";
+// Team membership rows are NOT queryable from workspace_db — the shared
+// workspace ids arrive via the team service's internal API.
+import { fetchSharedWorkspaceIds } from "@services/team/db/ownership-client";
+import { eq, desc, and, isNull, or, inArray, sql } from "drizzle-orm";
 import type { DrizzleTx } from "@server/lib/events";
 
 export interface IWorkspaceStorage {
@@ -34,6 +36,7 @@ export interface IWorkspaceStorage {
   getWorkspace(id: string): Promise<Workspace | undefined>;
   /** Ids the user personally owns (not team-shared) — deletion choreography. */
   listWorkspaceIdsByOwner(userId: string): Promise<string[]>;
+  countWorkspaces(): Promise<number>;
   createWorkspace(workspace: InsertWorkspace): Promise<Workspace>;
   updateWorkspace(
     id: string,
@@ -96,23 +99,7 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     userId: string,
     collectionId: number | null = null,
   ): Promise<Workspace[]> {
-    // 1. Get teams the user is in
-    const memberships = await db
-      .select({ teamId: teamMembers.teamId })
-      .from(teamMembers)
-      .where(eq(teamMembers.userId, userId));
-
-    const teamIds = memberships.map((m) => m.teamId);
-
-    // 2. Get workspaces shared with those teams
-    let sharedWorkspaceIds: string[] = [];
-    if (teamIds.length > 0) {
-      const shared = await db
-        .select({ workspaceId: teamWorkspaces.workspaceId })
-        .from(teamWorkspaces)
-        .where(inArray(teamWorkspaces.teamId, teamIds));
-      sharedWorkspaceIds = shared.map((s) => s.workspaceId);
-    }
+    const sharedWorkspaceIds = await fetchSharedWorkspaceIds(userId);
 
     // 3. Build query: owned workspaces respect collection filter,
     //    shared workspaces always appear at root level (no collection filter)
@@ -141,6 +128,13 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
       .from(workspaces)
       .where(eq(workspaces.userId, userId));
     return rows.map((r) => r.id);
+  }
+
+  async countWorkspaces(): Promise<number> {
+    const [row] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(workspaces);
+    return row?.n ?? 0;
   }
 
   async getWorkspace(id: string): Promise<Workspace | undefined> {
@@ -345,6 +339,10 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
 
   async listWorkspaceIdsByOwner(userId: string): Promise<string[]> {
     return this.workspaces.filter((w) => w.userId === userId).map((w) => w.id);
+  }
+
+  async countWorkspaces(): Promise<number> {
+    return this.workspaces.length;
   }
 }
 

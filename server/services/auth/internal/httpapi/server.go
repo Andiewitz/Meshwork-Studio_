@@ -191,6 +191,7 @@ func (s *Server) Router() http.Handler {
 	// Server-to-server surface. Never routed through NGINX; guarded by the
 	// shared internal key inside the handler itself.
 	r.Post("/internal/introspect", s.handleIntrospect)
+	r.Get("/internal/stats/users", s.handleUserStats)
 
 	r.Route("/api/v1", func(v1 chi.Router) { v1.Mount("/", api) })
 	r.Mount("/debug/pprof", pprofDisabled())

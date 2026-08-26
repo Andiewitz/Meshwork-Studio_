@@ -1,5 +1,6 @@
 import {
   pgTable,
+  text,
   timestamp,
   integer,
   varchar,
@@ -117,3 +118,14 @@ export type TeamMember = typeof teamMembers.$inferSelect;
 export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
 export type TeamWorkspace = typeof teamWorkspaces.$inferSelect;
 export type InsertTeamWorkspace = z.infer<typeof insertTeamWorkspaceSchema>;
+
+// Read-through ownership mirror (populated via the workspace service's
+// lookup endpoint). THROWAWAY with the collaborators revamp.
+export const workspaceOwners = pgTable("workspace_owners", {
+  workspaceId: varchar("workspace_id").primaryKey(),
+  ownerId: varchar("owner_id").notNull(),
+  title: text("title").notNull().default(""),
+  syncedAt: timestamp("synced_at").notNull().defaultNow(),
+});
+
+export type WorkspaceOwner = typeof workspaceOwners.$inferSelect;

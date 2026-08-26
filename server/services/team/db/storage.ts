@@ -9,7 +9,9 @@ import {
   type TeamWorkspace,
   type TeamRole,
 } from "./schema";
-import { workspaces, type Workspace } from "@services/workspace/db/schema";
+import type { Workspace } from "@shared/schema";
+import { workspaceOwners, type WorkspaceOwner } from "./schema";
+import { fetchWorkspaceOwners } from "./ownership-client";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import type { DrizzleTx } from "@server/lib/events";
 import crypto from "crypto";
@@ -244,22 +246,84 @@ export class TeamDatabaseStorage implements ITeamStorage {
   }
 
   async getTeamWorkspaces(teamId: string): Promise<Workspace[]> {
+    // Ownership metadata comes from the local mirror; the authoritative rows
+    // live in workspace_db and are fetched via the workspace internal API.
     const shared = await db
       .select({ workspaceId: teamWorkspaces.workspaceId })
       .from(teamWorkspaces)
       .where(eq(teamWorkspaces.teamId, teamId));
+    const ids = shared.map((s) => s.workspaceId);
+    const mirror = await this.mirrorFor(ids);
 
-    if (shared.length === 0) return [];
-
-    return await db
-      .select()
-      .from(workspaces)
-      .where(
-        inArray(
-          workspaces.id,
-          shared.map((s) => s.workspaceId),
-        ),
+    return ids.map((id) => {
+      const o = mirror.get(id);
+      return this.mirrorAsWorkspace(
+        o ?? { workspaceId: id, ownerId: "", title: "", syncedAt: new Date() },
       );
+    });
+  }
+
+  /** Read-through mirror hydration for a set of workspace ids. */
+  private async ensureOwners(workspaceIds: string[]): Promise<void> {
+    if (workspaceIds.length === 0) return;
+    const known = await db
+      .select({ id: workspaceOwners.workspaceId })
+      .from(workspaceOwners)
+      .where(inArray(workspaceOwners.workspaceId, workspaceIds));
+    const knownSet = new Set(known.map((k) => k.id));
+    const missing = workspaceIds.filter((id) => !knownSet.has(id));
+    if (missing.length === 0) return;
+
+    const owners = await fetchWorkspaceOwners(missing);
+    if (owners.length > 0) {
+      await db
+        .insert(workspaceOwners)
+        .values(
+          owners.map((o) => ({
+            workspaceId: o.id,
+            ownerId: o.ownerId,
+            title: o.title,
+          })),
+        )
+        .onConflictDoNothing();
+    }
+  }
+
+  /** Mirror rows for ids, hydrating unknown ones first. */
+  private async mirrorFor(
+    workspaceIds: string[],
+  ): Promise<Map<string, WorkspaceOwner>> {
+    await this.ensureOwners(workspaceIds);
+    const rows =
+      workspaceIds.length === 0
+        ? []
+        : await db
+            .select()
+            .from(workspaceOwners)
+            .where(inArray(workspaceOwners.workspaceId, workspaceIds));
+    return new Map(rows.map((r) => [r.workspaceId, r]));
+  }
+
+  /** Rebuild a client-contract Workspace from mirror metadata. Fields that
+   *  only workspace_db knows are returned neutral — the client refetches
+   *  authoritative detail through /api/v1/workspaces/:id when opened. */
+  private mirrorAsWorkspace(o: WorkspaceOwner): Workspace {
+    return {
+      id: o.workspaceId,
+      title: o.title || "Untitled",
+      userId: o.ownerId,
+      type: "shared",
+      icon: null,
+      isFavorite: false,
+      collectionId: null,
+      createdAt: o.syncedAt,
+      updatedAt: o.syncedAt,
+      description: null,
+      author: null,
+      aiContext: null,
+      groups: [],
+      tags: [],
+    };
   }
 
   async isTeamMember(teamId: string, userId: string): Promise<boolean> {
@@ -300,11 +364,9 @@ export class TeamDatabaseStorage implements ITeamStorage {
     userId: string,
     workspaceId: string,
   ): Promise<boolean> {
-    const [workspace] = await db
-      .select()
-      .from(workspaces)
-      .where(eq(workspaces.id, workspaceId));
-    if (workspace?.userId === userId) return true;
+    const mirror = await this.mirrorFor([workspaceId]);
+    const owner = mirror.get(workspaceId)?.ownerId;
+    if (owner === userId) return true;
 
     const teamsWithAccess = await db
       .select({ teamId: teamWorkspaces.teamId })
@@ -362,11 +424,8 @@ export class TeamDatabaseStorage implements ITeamStorage {
     workspaceId: string,
     userId: string,
   ): Promise<TeamRole | "workspace-owner" | null> {
-    const [workspace] = await db
-      .select()
-      .from(workspaces)
-      .where(eq(workspaces.id, workspaceId));
-    if (workspace?.userId === userId) return "workspace-owner";
+    const mirror = await this.mirrorFor([workspaceId]);
+    if (mirror.get(workspaceId)?.ownerId === userId) return "workspace-owner";
 
     const shared = await db
       .select({ teamId: teamWorkspaces.teamId })

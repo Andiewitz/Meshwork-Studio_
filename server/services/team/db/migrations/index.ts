@@ -45,4 +45,15 @@ export const MIGRATIONS: Migration[] = [
         ON team_workspaces (team_id, workspace_id);
     `,
   },
+  {
+    version: "0002_workspace_owners",
+    up: `
+      CREATE TABLE IF NOT EXISTS workspace_owners (
+        workspace_id VARCHAR(128) PRIMARY KEY,
+        owner_id VARCHAR(128) NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        synced_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `,
+  },
 ];
