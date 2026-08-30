@@ -35,11 +35,29 @@ func (s *Server) refreshAssertion(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := r.Cookie(assertionCookieName)
 	if err != nil || c.Value == "" {
+		if info := authFrom(r); info != nil && info.User != nil && info.Session != nil {
+			s.issueAssertion(w, assertion.Identity{
+				UserID:        info.User.ID,
+				SessionIDHash: info.Session.IDHash,
+				Admin:         info.User.IsAdmin,
+				Email:         info.User.Email,
+				Name:          displayName(info.User),
+			})
+		}
 		return
 	}
 	claims, verr := assertion.Verify(c.Value, s.assert, time.Now())
-	if verr != nil || claims.Sub != "" && claims.Sid == "" {
-		return // malformed/foreign — leave alone; requireAuth handles rejection
+	if verr != nil || (claims.Sub != "" && claims.Sid == "") {
+		if info := authFrom(r); info != nil && info.User != nil && info.Session != nil {
+			s.issueAssertion(w, assertion.Identity{
+				UserID:        info.User.ID,
+				SessionIDHash: info.Session.IDHash,
+				Admin:         info.User.IsAdmin,
+				Email:         info.User.Email,
+				Name:          displayName(info.User),
+			})
+		}
+		return
 	}
 	remaining := time.Until(time.Unix(claims.Exp, 0))
 	if remaining > s.cfg.AssertionTTL/2 {

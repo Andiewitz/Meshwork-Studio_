@@ -44,9 +44,14 @@ export class Verifier {
         type: "pkcs8",
       });
       const pub = crypto.createPublicKey(priv);
+      // Compute kid the same way Go does: sha256(rawPublicKey32Bytes)[:4] → hex.
+      // Go: hex.EncodeToString(sha256.Sum256(pub)[:4])
+      // The raw public key is the last 32 bytes of the SPKI DER export.
+      const spkiDer = pub.export({ format: "der", type: "spki" });
+      const rawPub = spkiDer.subarray(spkiDer.length - 32);
       const kid = crypto
         .createHash("sha256")
-        .update(pub.export({ format: "der", type: "spki" }))
+        .update(rawPub)
         .digest("hex")
         .slice(0, 8);
       return [kid, pub];

@@ -21,6 +21,7 @@ type introspectBody struct {
 }
 
 type introspectResponse struct {
+	Active    bool   `json:"active"`
 	Sub       string `json:"sub"`
 	Sid       string `json:"sid"`
 	Adm       bool   `json:"adm"`
@@ -68,6 +69,7 @@ func (s *Server) handleIntrospect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, introspectResponse{
+		Active:    true,
 		Sub:       user.ID,
 		Sid:       rec.IDHash,
 		Adm:       user.IsAdmin,

@@ -73,13 +73,14 @@ function signToken(seedB64: string, claims: Claims): string {
     format: "der",
     type: "pkcs8",
   });
-  // kid must match what the verifier derives from the public half
+  // kid must match what the Go signer and verifier derive from the raw public key
   const spki = crypto
     .createPublicKey(priv)
     .export({ format: "der", type: "spki" });
+  const rawPub = spki.subarray(spki.length - 32);
   claims.kid = crypto
     .createHash("sha256")
-    .update(spki)
+    .update(rawPub)
     .digest("hex")
     .slice(0, 8);
 

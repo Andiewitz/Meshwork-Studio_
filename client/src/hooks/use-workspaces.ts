@@ -246,17 +246,18 @@ export {
 } from "@shared/permissions";
 
 export function useWorkspaceRole(workspaceId: string | null | undefined) {
+  const { isAuthenticated } = useAuth();
   return useQuery<{ role: WorkspaceRole }>({
     queryKey: ["workspace-role", workspaceId],
     queryFn: async () => {
-      const res = await fetch(
+      const res = await secureFetch(
         getApiUrl(`/api/v1/workspaces/${workspaceId}/role`),
         { credentials: "include" },
       );
       if (!res.ok) return { role: "none" as WorkspaceRole };
       return res.json() as Promise<{ role: WorkspaceRole }>;
     },
-    enabled: !!workspaceId,
+    enabled: isAuthenticated && !!workspaceId,
   });
 }
 
@@ -272,10 +273,11 @@ export interface WorkspaceMember {
 }
 
 export function useWorkspaceMembers(workspaceId: string | null | undefined) {
+  const { isAuthenticated } = useAuth();
   return useQuery<{ teamId: string | null; members: WorkspaceMember[] }>({
     queryKey: ["workspace-members", workspaceId],
     queryFn: async () => {
-      const res = await fetch(
+      const res = await secureFetch(
         getApiUrl(`/api/v1/workspaces/${workspaceId}/members`),
         { credentials: "include" },
       );
@@ -285,7 +287,7 @@ export function useWorkspaceMembers(workspaceId: string | null | undefined) {
         members: WorkspaceMember[];
       }>;
     },
-    enabled: !!workspaceId,
+    enabled: isAuthenticated && !!workspaceId,
   });
 }
 

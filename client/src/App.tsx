@@ -94,7 +94,7 @@ function ProtectedRoute({
 }: {
   component: React.ComponentType;
 }) {
-  const { user, isLoading, isRedirecting } = useAuth();
+  const { user, isLoading, isRedirecting, isLoggingOut } = useAuth();
   const [location, navigate] = useLocation();
   const [isMobile, setIsMobile] = React.useState(false);
 
@@ -105,14 +105,11 @@ function ProtectedRoute({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Redirect to login when auth resolves to unauthenticated (client-side navigation)
+  // Redirect to landing when auth resolves to unauthenticated
   React.useEffect(() => {
-    if (!isLoading && !user) {
-      navigate(
-        `/login?reason=session_expired&redirect=${encodeURIComponent(location)}`,
-      );
-    }
-  }, [user, isLoading, navigate, location]);
+    if (isLoading || user) return;
+    navigate("/");
+  }, [user, isLoading, navigate]);
 
   // Show default loader during initial auth verification
   if (isLoading && user === undefined) {
@@ -120,13 +117,13 @@ function ProtectedRoute({
   }
 
   // Redirecting state during logout transition
-  if (isRedirecting) {
+  if (isLoggingOut || isRedirecting) {
     return <RedirectLoading message="Signing out..." />;
   }
 
-  // Not authenticated — show loading while the effect above navigates
+  // Not authenticated — show loading while navigating
   if (!user && !isLoading) {
-    return <RedirectLoading message="Redirecting to sign in..." />;
+    return <RedirectLoading message="Redirecting to landing page..." />;
   }
 
   if (isMobile) {
@@ -167,7 +164,7 @@ function DashboardRoutes() {
 
 function Router() {
   const [location] = useLocation();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
 
   // Backwards compat: redirect old /auth/* routes
   if (location.startsWith("/auth/")) {
@@ -175,21 +172,28 @@ function Router() {
     return <Redirect to={`/${mode}`} />;
   }
 
+  // Helper for public/guest pages that redirect authenticated users to dashboard
+  const renderGuestRoute = (guestComponent: React.ReactNode) => {
+    if (isLoading && user === undefined) {
+      return <DefaultLoading />;
+    }
+    if (user) {
+      return <Redirect to="/home" />;
+    }
+    return guestComponent;
+  };
+
   return (
     <Switch>
       {/* Public Pages */}
-      <Route path="/">{user ? <Redirect to="/home" /> : <Landing />}</Route>
-      <Route path="/login">
-        {user ? <Redirect to="/home" /> : <AuthPage />}
-      </Route>
-      <Route path="/register">
-        {user ? <Redirect to="/home" /> : <AuthPage />}
-      </Route>
+      <Route path="/">{renderGuestRoute(<Landing />)}</Route>
+      <Route path="/login">{renderGuestRoute(<AuthPage />)}</Route>
+      <Route path="/register">{renderGuestRoute(<AuthPage />)}</Route>
       <Route path="/forgot-password">
-        {user ? <Redirect to="/home" /> : <ForgotPasswordPage />}
+        {renderGuestRoute(<ForgotPasswordPage />)}
       </Route>
       <Route path="/reset-password">
-        {user ? <Redirect to="/home" /> : <ResetPasswordPage />}
+        {renderGuestRoute(<ResetPasswordPage />)}
       </Route>
       <Route path="/verify-email" component={VerifyEmailPage} />
       <Route path="/terms" component={TermsOfService} />

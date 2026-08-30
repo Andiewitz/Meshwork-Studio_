@@ -93,7 +93,7 @@ export async function introspectSession(
         return null;
       }
       const data = (await res.json()) as IntrospectionResult;
-      if (!data.active || !data.sub) {
+      if (!data.active || !data.sub || !data.assertion) {
         negativeCache.set(fp, Date.now() + NEGATIVE_TTL);
         return null;
       }

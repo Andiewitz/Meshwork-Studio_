@@ -300,10 +300,10 @@ export function VerifyEmailPage() {
             <CheckCircleIcon className="w-10 h-10 mx-auto text-green-500" />
             <h1 className="text-lg font-semibold text-white">Email verified</h1>
             <button
-              onClick={() => setLocation("/home")}
+              onClick={() => setLocation("/login")}
               className="mt-2 inline-block h-9 px-5 rounded-lg bg-white text-black text-xs font-semibold hover:bg-white/90 cursor-pointer"
             >
-              Continue to app
+              Sign in to your account
             </button>
           </>
         )}

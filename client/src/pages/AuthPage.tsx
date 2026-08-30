@@ -60,6 +60,20 @@ async function handlePendingPromptAndRedirect(
       console.error("Failed to auto-create workspace on auth:", err);
     }
   }
+
+  // Preserve and navigate to original destination if provided
+  const params = new URLSearchParams(window.location.search);
+  const redirect = params.get("redirect");
+  if (
+    redirect &&
+    redirect.startsWith("/") &&
+    !redirect.startsWith("/login") &&
+    !redirect.startsWith("/register")
+  ) {
+    setLocation(redirect);
+    return;
+  }
+
   setLocation("/home");
 }
 

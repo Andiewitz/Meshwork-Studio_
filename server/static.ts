@@ -4,10 +4,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // Works both under tsx (ESM) and the bundled CJS output.
-const moduleDir = (() => {
-  if (typeof __filename === "string") return path.dirname(__filename);
-  return path.dirname(fileURLToPath(import.meta.url));
-})();
+const moduleDir =
+  typeof __dirname === "string"
+    ? __dirname
+    : typeof import.meta !== "undefined" && import.meta.url
+      ? path.dirname(fileURLToPath(import.meta.url))
+      : process.cwd();
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(moduleDir, "public");

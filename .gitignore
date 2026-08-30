@@ -66,5 +66,10 @@ ssh-keys/
 # test artifacts
 playwright-report/
 
+# IDE & Editor caches
+.opencode/
+
 # go build artifacts
 server/services/auth/meshwork-auth
+server/meshwork-auth
+**/meshwork-auth

@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { canvasStorage } from "./db/storage";
+import { ensureCanvasTable } from "./db/dynamo";
 import { registerCanvasRoutes } from "./routes/canvasRoutes";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
@@ -9,6 +10,7 @@ const log = createChildLogger("canvas-service");
 export class CanvasService {
   static initialize(app: Express, context: AppContext) {
     registerCanvasRoutes(app, context);
+    void ensureCanvasTable();
 
     // Listen to external events
     context.eventBus.on("workspace.deleted", async ({ id }) => {

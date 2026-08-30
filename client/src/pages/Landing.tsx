@@ -1914,11 +1914,11 @@ const Home = () => {
                       >
                         Canvas
                       </a>
-                      <Link href="/templates">
+                      <a href="#templates">
                         <span className="text-white/40 hover:text-white transition-colors text-sm cursor-pointer">
                           Templates
                         </span>
-                      </Link>
+                      </a>
                     </div>
                     <div className="flex flex-col gap-3">
                       <h4 className="font-sans font-semibold text-white text-sm mb-1">

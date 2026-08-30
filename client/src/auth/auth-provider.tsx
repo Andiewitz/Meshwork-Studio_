@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { useLocation } from "wouter";
+import { queryClient } from "@/lib/queryClient";
 import { authClient } from "./auth-client";
 import {
   anonymousState,
@@ -92,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     generation.current += 1;
+    setIsRedirecting(false);
     const result = await authClient.login(email, password);
     dispatch({ type: "authenticated", result });
     return result;
@@ -105,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lastName?: string;
     }) => {
       generation.current += 1;
+      setIsRedirecting(false);
       const result = await authClient.register(input);
       dispatch({ type: "authenticated", result });
       return result;
@@ -115,12 +118,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     generation.current += 1;
     setIsLoggingOut(true);
+    setIsRedirecting(true);
     try {
       await authClient.logout();
+    } catch (err) {
+      console.warn("[auth] logout error:", err);
     } finally {
+      queryClient.clear();
       dispatch({ type: "logout" });
       setIsLoggingOut(false);
-      setIsRedirecting(true);
+      setIsRedirecting(false);
+      window.location.href = "/";
     }
   }, []);
 
@@ -144,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const notifyLoginSuccess = useCallback(
     (newUser: PublicUser, expiresAt: string) => {
       generation.current += 1;
+      setIsRedirecting(false);
       dispatch({
         type: "authenticated",
         result: { user: newUser, expiresAt, accessTokenExpiresAt: expiresAt },

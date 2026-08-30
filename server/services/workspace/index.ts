@@ -11,6 +11,7 @@ const log = createChildLogger("workspace-service");
 export class WorkspaceService {
   static initialize(app: Express, context: AppContext) {
     registerWorkspaceRoutes(app, context);
+    registerWorkspaceInternalRoutes(app as any);
 
     context.eventBus.on("user.deleted", async ({ id }) => {
       try {

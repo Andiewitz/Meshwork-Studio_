@@ -9,13 +9,21 @@
 // consumed capacity proportional to the actual edit, matching the previous
 // Postgres upsert behavior.
 
-import { DynamoDBClient, DescribeTableCommand } from "@aws-sdk/client-dynamodb";
+import {
+  DynamoDBClient,
+  DescribeTableCommand,
+  CreateTableCommand,
+  waitUntilTableExists,
+} from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
   BatchWriteCommand,
   QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
 import type { CanvasEdge, CanvasNode, ICanvasStorage } from "./model";
+import { createChildLogger } from "@server/lib/logger";
+
+const log = createChildLogger("dynamo-canvas");
 
 const TABLE = process.env.CANVAS_DDB_TABLE || "meshwork-canvas";
 const ENDPOINT = process.env.DYNAMODB_ENDPOINT; // dynamo-local in dev
@@ -60,6 +68,54 @@ export async function canvasTableReady(timeoutMs = 1500): Promise<boolean> {
   }
 }
 
+/** Ensure the DynamoDB table exists, auto-creating if missing. */
+export async function ensureCanvasTable(): Promise<void> {
+  const { client } = clients();
+  try {
+    await client.send(new DescribeTableCommand({ TableName: TABLE }));
+    log.info(
+      { table: TABLE, region: REGION },
+      "DynamoDB canvas table verified",
+    );
+  } catch (err: any) {
+    if (err?.name !== "ResourceNotFoundException") {
+      log.warn({ err, table: TABLE }, "DynamoDB describe table warning");
+      return;
+    }
+    log.info(
+      { table: TABLE, region: REGION },
+      "DynamoDB canvas table missing, creating...",
+    );
+    try {
+      await client.send(
+        new CreateTableCommand({
+          TableName: TABLE,
+          BillingMode: "PAY_PER_REQUEST",
+          AttributeDefinitions: [
+            { AttributeName: "pk", AttributeType: "S" },
+            { AttributeName: "sk", AttributeType: "S" },
+          ],
+          KeySchema: [
+            { AttributeName: "pk", KeyType: "HASH" },
+            { AttributeName: "sk", KeyType: "RANGE" },
+          ],
+          ...(ENDPOINT ? {} : { SSESpecification: { Enabled: true } }),
+        }),
+      );
+      await waitUntilTableExists(
+        { client, maxWaitTime: 30 },
+        { TableName: TABLE },
+      );
+      log.info({ table: TABLE }, "DynamoDB canvas table created successfully");
+    } catch (createErr) {
+      log.error(
+        { err: createErr, table: TABLE },
+        "Failed to auto-create DynamoDB canvas table",
+      );
+    }
+  }
+}
+
 interface Item {
   pk: string;
   sk: string;
@@ -68,11 +124,12 @@ interface Item {
 
 function nodeItem(workspaceId: string, n: CanvasNode): Item {
   const body = { ...n } as Record<string, unknown>;
+  const id = n.id;
   delete body.id;
   delete body.workspaceId;
   return {
     pk: partitionKey(workspaceId),
-    sk: `node#${body.id as string}`,
+    sk: `node#${id}`,
     body,
   };
 }

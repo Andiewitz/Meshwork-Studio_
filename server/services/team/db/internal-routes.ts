@@ -22,7 +22,7 @@ export function registerTeamInternalRoutes(app: Router) {
     async (req: Request, res: Response) => {
       const userId = String(req.params.userId);
       const memberships = await db
-        .select({ teamId: teamWorkspaces.teamId })
+        .select({ teamId: teamMembersTable.teamId })
         .from(teamMembersTable)
         .where(eq(teamMembersTable.userId, userId));
 
