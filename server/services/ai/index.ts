@@ -17,14 +17,17 @@ const log = createChildLogger("ai-service");
  */
 export class AIService {
   static initialize(app: Express, context: AppContext) {
-    // Mount AI routes under /api/v1/ai
-    app.use("/api/v1/ai", createAIRoutes(context));
+    const aiRouter = createAIRoutes(context);
+    // Mount Jenkos AI routes under /api/v1/jenkos and legacy /api/v1/ai
+    app.use("/api/v1/jenkos", aiRouter);
+    app.use("/api/v1/ai", aiRouter);
 
-    log.info("AI service initialized at /api/v1/ai");
+    log.info("Jenkos AI service initialized at /api/v1/jenkos and /api/v1/ai");
   }
 }
 
-// Backward compatibility alias
+// Service aliases
+export const JenkosService = AIService;
 export const AIModule = AIService;
 
 export * from "./db";

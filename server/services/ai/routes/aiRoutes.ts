@@ -6,7 +6,24 @@ import {
   getUserApiKeys,
   getApiKeyWithPlaintext,
   getActiveKeyForProvider,
+  createConversation,
+  getConversations,
+  getConversationById,
+  updateConversation,
+  deleteConversation,
+  createMessage,
+  getMessagesByConversationId,
+  createMemory,
+  getMemories,
+  searchMemories,
+  deleteMemory,
+  recallMemory,
 } from "../db/storage";
+import {
+  insertConversationSchema,
+  insertMessageSchema,
+  insertMemorySchema,
+} from "../db/schema";
 import { validateKeyFormat } from "../encryption";
 import {
   aiChatRequestsTotal,
@@ -544,7 +561,7 @@ export function createAIRoutes(context: AppContext) {
         const canvasNodes: CanvasNode[] = canvas?.nodes ?? [];
         const canvasEdges: CanvasEdge[] = canvas?.edges ?? [];
 
-        const prompt = `You are Mosh, the expert cloud architecture co-pilot for Meshwork Studio. 
+        const prompt = `You are Jenkos, the expert cloud architecture co-pilot for Meshwork Studio. 
 Based on the current canvas state, generate 4 short, highly relevant, and actionable next-step suggestions or starter layout ideas for the user.
 
 Current canvas contains:
@@ -644,6 +661,338 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
           "Build a serverless event-driven data pipeline",
           "Create a secure AWS VPC with public/private subnets",
         ]);
+      }
+    },
+  );
+
+  // ─── Conversations API ──────────────────────────────────────────────────────
+
+  // List conversations
+  router.get(
+    "/conversations",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const workspaceId = req.query.workspaceId as string | undefined;
+        const scope = req.query.scope as string | undefined;
+
+        const list = await getConversations(userId, { workspaceId, scope });
+        res.json(list);
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to list conversations",
+        );
+        res.status(500).json({ message: "Failed to list conversations" });
+      }
+    },
+  );
+
+  // Create conversation
+  router.post(
+    "/conversations",
+    isAuthenticated,
+    conditionalCsrf,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const parsed = insertConversationSchema.parse({
+          ...req.body,
+          userId,
+        });
+
+        const created = await createConversation(parsed);
+        res.status(201).json(created);
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to create conversation",
+        );
+        res.status(400).json({ message: "Failed to create conversation" });
+      }
+    },
+  );
+
+  // Get single conversation
+  router.get(
+    "/conversations/:id",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const conversationId = req.params.id as string;
+        const conversation = await getConversationById(conversationId, userId);
+
+        if (!conversation) {
+          return res.status(404).json({ message: "Conversation not found" });
+        }
+
+        res.json(conversation);
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to get conversation",
+        );
+        res.status(500).json({ message: "Failed to get conversation" });
+      }
+    },
+  );
+
+  // Update conversation
+  router.patch(
+    "/conversations/:id",
+    isAuthenticated,
+    conditionalCsrf,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const conversationId = req.params.id as string;
+        const updated = await updateConversation(
+          conversationId,
+          userId,
+          req.body,
+        );
+
+        if (!updated) {
+          return res.status(404).json({ message: "Conversation not found" });
+        }
+
+        res.json(updated);
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to update conversation",
+        );
+        res.status(500).json({ message: "Failed to update conversation" });
+      }
+    },
+  );
+
+  // Delete conversation
+  router.delete(
+    "/conversations/:id",
+    isAuthenticated,
+    conditionalCsrf,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const conversationId = req.params.id as string;
+        const deleted = await deleteConversation(conversationId, userId);
+
+        if (!deleted) {
+          return res.status(404).json({ message: "Conversation not found" });
+        }
+
+        res.json({ success: true });
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to delete conversation",
+        );
+        res.status(500).json({ message: "Failed to delete conversation" });
+      }
+    },
+  );
+
+  // Get messages for conversation
+  router.get(
+    "/conversations/:id/messages",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const conversationId = req.params.id as string;
+        const conversation = await getConversationById(conversationId, userId);
+
+        if (!conversation) {
+          return res.status(404).json({ message: "Conversation not found" });
+        }
+
+        const limit = req.query.limit
+          ? parseInt(req.query.limit as string, 10)
+          : 100;
+        const messageList = await getMessagesByConversationId(
+          conversationId,
+          limit,
+        );
+        res.json(messageList);
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to get messages",
+        );
+        res.status(500).json({ message: "Failed to get messages" });
+      }
+    },
+  );
+
+  // Create message in conversation
+  router.post(
+    "/conversations/:id/messages",
+    isAuthenticated,
+    conditionalCsrf,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const conversationId = req.params.id as string;
+        const conversation = await getConversationById(conversationId, userId);
+
+        if (!conversation) {
+          return res.status(404).json({ message: "Conversation not found" });
+        }
+
+        const parsed = insertMessageSchema.parse({
+          ...req.body,
+          conversationId,
+        });
+
+        const created = await createMessage(parsed);
+        res.status(201).json(created);
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to create message",
+        );
+        res.status(400).json({ message: "Failed to create message" });
+      }
+    },
+  );
+
+  // ─── Memories API ───────────────────────────────────────────────────────────
+
+  // Get memories
+  router.get(
+    "/memories",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const workspaceId = req.query.workspaceId as string | undefined;
+        const scope = req.query.scope as string | undefined;
+        const category = req.query.category as string | undefined;
+        const limit = req.query.limit
+          ? parseInt(req.query.limit as string, 10)
+          : 50;
+
+        const memoryList = await getMemories(userId, {
+          workspaceId,
+          scope,
+          category,
+          limit,
+        });
+        res.json(memoryList);
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to list memories",
+        );
+        res.status(500).json({ message: "Failed to list memories" });
+      }
+    },
+  );
+
+  // Search memories
+  router.get(
+    "/memories/search",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const query = req.query.q as string;
+        const workspaceId = req.query.workspaceId as string | undefined;
+
+        if (!query) {
+          return res
+            .status(400)
+            .json({ message: "Search query 'q' is required" });
+        }
+
+        const results = await searchMemories(userId, query, { workspaceId });
+        res.json(results);
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to search memories",
+        );
+        res.status(500).json({ message: "Failed to search memories" });
+      }
+    },
+  );
+
+  // Create memory
+  router.post(
+    "/memories",
+    isAuthenticated,
+    conditionalCsrf,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const parsed = insertMemorySchema.parse({
+          ...req.body,
+          userId,
+        });
+
+        const created = await createMemory(parsed);
+        res.status(201).json(created);
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to create memory",
+        );
+        res.status(400).json({ message: "Failed to create memory" });
+      }
+    },
+  );
+
+  // Recall / touch memory
+  router.post(
+    "/memories/:id/recall",
+    isAuthenticated,
+    conditionalCsrf,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const memoryId = req.params.id as string;
+        const memory = await recallMemory(memoryId, userId);
+
+        if (!memory) {
+          return res.status(404).json({ message: "Memory not found" });
+        }
+
+        res.json(memory);
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to recall memory",
+        );
+        res.status(500).json({ message: "Failed to recall memory" });
+      }
+    },
+  );
+
+  // Delete memory
+  router.delete(
+    "/memories/:id",
+    isAuthenticated,
+    conditionalCsrf,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = req.user!.id;
+        const memoryId = req.params.id as string;
+        const deleted = await deleteMemory(memoryId, userId);
+
+        if (!deleted) {
+          return res.status(404).json({ message: "Memory not found" });
+        }
+
+        res.json({ success: true });
+      } catch (error) {
+        log.error(
+          { err: error, userId: req.user?.id },
+          "Failed to delete memory",
+        );
+        res.status(500).json({ message: "Failed to delete memory" });
       }
     },
   );
