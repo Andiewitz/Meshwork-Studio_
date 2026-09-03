@@ -130,3 +130,56 @@ export interface CanvasEdge {
   markerEnd: Record<string, unknown> | null;
   animated: number | null;
 }
+
+// ─── jenkos_db (owned by server/services/ai) ────────────────────────────────
+
+export type JenkosScope = "workspace" | "global" | "meshlabs" | "search";
+
+export interface Conversation {
+  id: string;
+  userId: string;
+  workspaceId?: string | null;
+  scope: JenkosScope | string;
+  title: string;
+  context?: Record<string, unknown> | null;
+  createdAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  role: "user" | "assistant" | "system" | "tool" | string;
+  content: string;
+  toolCalls?: Record<string, unknown>[] | null;
+  toolResults?: Record<string, unknown>[] | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt?: Date | string | null;
+}
+
+export type MemoryCategory =
+  "architectural_decision" | "user_preference" | "system_pattern" | "fact";
+
+export interface Memory {
+  id: string;
+  userId: string;
+  workspaceId?: string | null;
+  scope: "global" | "workspace" | "user" | "meshlabs" | string;
+  category: MemoryCategory | string;
+  key: string;
+  content: string;
+  tags?: string[] | null;
+  confidence?: number | null;
+  sourceMessageId?: string | null;
+  lastRecalledAt?: Date | string | null;
+  createdAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+}
+
+export interface UserApiKeyPublic {
+  id: string;
+  provider: string;
+  keyHint?: string | null;
+  isActive: boolean;
+  createdAt?: Date | string | null;
+}
