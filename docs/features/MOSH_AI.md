@@ -1,22 +1,40 @@
-# Mosh (Meshwork AI) Architecture & Security
+# Jenkos (Meshwork AI) Architecture, Persistence & Security
 
-**Mosh** (formerly Meshwork AI) is the embedded cloud architecture co-pilot inside Meshwork Studio. It interprets natural language prompts and translates them directly into structural canvas modifications (ReactFlow nodes and edges) using state-of-the-art LLMs.
+**Jenkos** (formerly Mosh / Meshwork AI) is the embedded cloud architecture co-pilot and persistent intelligence layer inside Meshwork Studio. It interprets natural language prompts, preserves contextual conversation threads, maintains architectural memory across workspaces, and translates requirements directly into structural canvas modifications (ReactFlow nodes and edges).
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ System Architecture & `jenkos_db`
 
-Mosh operates on a **dual-tier provider model**:
+Jenkos owns its own dedicated database (**`jenkos_db`**), isolated under the database-per-service paradigm and accessed via `JENKOS_DATABASE_URL` (with `AI_DATABASE_URL` compatibility).
 
-1. **Free Tier (default):** Every user gets Mosh working out of the box — no API key required. Powered by a single app-owned OpenRouter key (GPT OSS 120B) configured via the `OPENROUTER_API_KEY` environment variable.
-2. **BYOK Upgrade (optional):** Users can add their own API keys (Anthropic, OpenAI, OpenRouter) to unlock different models on their own dollar.
+### Database Schema
+
+1. **`conversations`**:
+   - Manages threaded multi-turn chat sessions across scopes (`workspace`, `global`, `meshlabs`, `search`).
+   - Fields: `id`, `user_id`, `workspace_id`, `scope`, `title`, `context`, `created_at`, `updated_at`.
+2. **`messages`**:
+   - Stores user messages, model thoughts, tool calls, and tool execution results.
+   - Fields: `id`, `conversation_id`, `role`, `content`, `tool_calls`, `tool_results`, `metadata`, `created_at`.
+3. **`memories`**:
+   - Long-term architectural decisions, user preferences, system patterns, and cross-feature intelligence.
+   - Fields: `id`, `user_id`, `workspace_id`, `scope`, `category`, `key`, `content`, `tags`, `confidence`, `last_recalled_at`.
+4. **`user_api_keys`**:
+   - AES-256-GCM encrypted BYOK keys for Google Gemini, OpenAI, Anthropic, and OpenRouter.
+
+### Provider Model
+
+Jenkos operates on a **dual-tier provider model**:
+
+1. **Free Tier (default):** Every user gets Jenkos working out of the box with Gemini / OpenRouter fallbacks.
+2. **BYOK Upgrade (optional):** Users can add their own API keys (Anthropic, OpenAI, OpenRouter, Gemini) to unlock different models on their own dollar.
 
 ### Provider Resolution
 
 All AI requests flow through a single **resolver** (`resolveProviderForRequest`) that determines which key and provider to use:
 
 ```
-POST /api/v1/ai/chat
+POST /api/v1/ai/chat  or  POST /api/v1/jenkos/chat
         │
         ▼
 resolveProviderForRequest(userId, provider?, model?)
@@ -29,12 +47,12 @@ for requested provider)      or provider is default)
    │                              │
    ▼                              ▼
 decrypt stored key           read OPENROUTER_API_KEY
-from database                from environment
+from jenkos_db               from environment
    │                              │
    └──────────┬───────────────────┘
               ▼
    dispatch to provider adapter
-   (openai.ts / anthropic.ts / openrouter.ts)
+   (gemini.ts / openai.ts / anthropic.ts / openrouter.ts)
               ▼
        return response
 ```
