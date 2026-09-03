@@ -15,6 +15,7 @@ services:
       WORKSPACE_DB_PASSWORD: ${WORKSPACE_DB_PASSWORD:?WORKSPACE_DB_PASSWORD required}
       TEAM_DB_PASSWORD: ${TEAM_DB_PASSWORD:?TEAM_DB_PASSWORD required}
       AI_DB_PASSWORD: ${AI_DB_PASSWORD:?AI_DB_PASSWORD required}
+      JENKOS_DB_PASSWORD: ${JENKOS_DB_PASSWORD:-${AI_DB_PASSWORD}}
       METRICS_DB_PASSWORD: ${METRICS_DB_PASSWORD:?METRICS_DB_PASSWORD required}
     ports:
       - '5434:5432'
@@ -69,6 +70,7 @@ services:
       WORKSPACE_DATABASE_URL: postgresql://workspace_app:${WORKSPACE_DB_PASSWORD}@emnesh-postgres:5432/workspace_db
       TEAM_DATABASE_URL: postgresql://team_app:${TEAM_DB_PASSWORD}@emnesh-postgres:5432/team_db
       AI_DATABASE_URL: postgresql://ai_app:${AI_DB_PASSWORD}@emnesh-postgres:5432/ai_db
+      JENKOS_DATABASE_URL: postgresql://jenkos_app:${JENKOS_DB_PASSWORD:-${AI_DB_PASSWORD}}@emnesh-postgres:5432/jenkos_db
       METRICS_DATABASE_URL: postgresql://metrics_app:${METRICS_DB_PASSWORD}@emnesh-postgres:5432/metrics_db
       CANVAS_DDB_TABLE: ${CANVAS_DDB_TABLE:-meshwork-canvas}
       AWS_REGION: ${AWS_REGION:-us-east-1}
