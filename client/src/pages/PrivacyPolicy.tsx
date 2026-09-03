@@ -3,7 +3,10 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowLeftIcon,
+  AdjustmentsHorizontalIcon,
+} from "@heroicons/react/24/outline";
 import Lenis from "lenis";
 
 const EFFECTIVE_DATE = "June 4, 2026";
@@ -164,13 +167,44 @@ export default function PrivacyPolicy() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.5 }}
-            className="text-white/50 text-[15px] leading-[1.8] font-medium mb-14"
+            className="text-white/50 text-[15px] leading-[1.8] font-medium mb-8"
           >
             At Meshwork Studio, we take your privacy seriously. This Privacy
             Policy explains what information we collect, how we use it, how we
             share it, and what choices you have. By using our Service, you agree
             to the practices described in this policy.
           </motion.p>
+
+          {/* Cookie Preferences Quick Action Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.4 }}
+            className="p-4 sm:p-5 mb-14 bg-white/[0.03] border border-white/10 rounded-none flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          >
+            <div className="space-y-1">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                <span className="w-2 h-2 rounded-none bg-emerald-400 inline-block" />
+                Cookie &amp; Tracking Controls
+              </h3>
+              <p className="text-xs text-white/50 leading-relaxed">
+                You can inspect or adjust your cookie permissions and telemetry
+                preferences at any time.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent("meshwork:open-cookie-preferences"),
+                );
+              }}
+              className="shrink-0 px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-mono text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <AdjustmentsHorizontalIcon className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Customize Preferences</span>
+            </button>
+          </motion.div>
 
           {/* Sections */}
           <div className="space-y-10">

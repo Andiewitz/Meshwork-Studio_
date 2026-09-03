@@ -66,7 +66,6 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useToast } from "@/hooks/use-toast";
-import { CookieBanner } from "@/components/ui/cookie-banner";
 import { RATE_LIMITING_COPY } from "@/content/platform-copy";
 
 interface BlogPost {
@@ -1227,6 +1226,16 @@ const Home = () => {
                     About Dev
                   </NavigationMenuLink>
                 </NavigationMenuItem>
+
+                {/* PRIVACY POLICY LINK */}
+                <NavigationMenuItem>
+                  <NavigationMenuLink
+                    onClick={() => setLocation("/privacy")}
+                    className="cursor-pointer"
+                  >
+                    Privacy Policy
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
 
@@ -1335,7 +1344,18 @@ const Home = () => {
                       </AccordionItem>
                     </Accordion>
 
-                    <div className="pt-4 border-t border-white/10 flex flex-col gap-3">
+                    <div className="pt-3 border-t border-white/10 flex flex-col gap-1">
+                      <Link href="/privacy">
+                        <SheetClose asChild>
+                          <button className="w-full text-left py-2 px-3 rounded-lg text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors flex items-center justify-between cursor-pointer">
+                            <span>Privacy Policy</span>
+                            <ChevronRight className="w-4 h-4 text-white/40" />
+                          </button>
+                        </SheetClose>
+                      </Link>
+                    </div>
+
+                    <div className="pt-3 border-t border-white/10 flex flex-col gap-3">
                       <button
                         onClick={() => setShowDocsView(true)}
                         className="w-full py-3 rounded-lg bg-white/10 text-white font-medium text-sm hover:bg-white/15 transition-colors cursor-pointer"
@@ -1989,9 +2009,6 @@ const Home = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Cookie consent banner */}
-      <CookieBanner />
     </div>
   );
 };
