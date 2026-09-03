@@ -15,9 +15,9 @@ import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
 import StreamingText from "@/components/ui/streaming-text";
 import LoadingState from "@/components/ui/loading-state";
 import {
-  runMoshAgent,
-  MoshAgentMessage,
-} from "@/features/workspace/agent/moshAgent";
+  runJenkosAgent,
+  JenkosAgentMessage,
+} from "@/features/workspace/agent/jenkosAgent";
 
 const DEFAULT_SUGGESTIONS = [
   "Add a Redis caching layer to the backend",
@@ -51,10 +51,10 @@ export function WorkspaceLeftSidebar({
   isOpen,
   onClose,
 }: WorkspaceLeftSidebarProps) {
-  const [messages, setMessages] = useState<MoshAgentMessage[]>([]);
+  const [messages, setMessages] = useState<JenkosAgentMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [agentStatus, setAgentStatus] = useState("Consulting Mosh...");
+  const [agentStatus, setAgentStatus] = useState("Consulting Jenkos...");
   const [isDesigning, setIsDesigning] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash");
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
@@ -124,7 +124,7 @@ export function WorkspaceLeftSidebar({
           userPrompt,
         );
 
-      const userMsg: MoshAgentMessage = {
+      const userMsg: JenkosAgentMessage = {
         id: Date.now().toString(),
         role: "user",
         content: userPrompt,
@@ -141,9 +141,14 @@ export function WorkspaceLeftSidebar({
 
       setIsLoading(true);
       setIsDesigning(isArchitectureTask);
-      setAgentStatus("Consulting Mosh...");
+      setAgentStatus("Consulting Jenkos...");
 
       if (isArchitectureTask) {
+        window.dispatchEvent(
+          new CustomEvent("jenkos:designing", {
+            detail: { active: true, x: centerX, y: centerY },
+          }),
+        );
         window.dispatchEvent(
           new CustomEvent("mosh:designing", {
             detail: { active: true, x: centerX, y: centerY },
@@ -155,7 +160,7 @@ export function WorkspaceLeftSidebar({
         const currentNodes = getNodes();
         const currentEdges = getEdges();
 
-        const agentResult = await runMoshAgent({
+        const agentResult = await runJenkosAgent({
           userPrompt,
           history: messages,
           currentNodes,
@@ -202,6 +207,9 @@ export function WorkspaceLeftSidebar({
         setIsLoading(false);
         setIsDesigning(false);
         window.dispatchEvent(
+          new CustomEvent("jenkos:designing", { detail: { active: false } }),
+        );
+        window.dispatchEvent(
           new CustomEvent("mosh:designing", { detail: { active: false } }),
         );
       }
@@ -219,9 +227,12 @@ export function WorkspaceLeftSidebar({
   );
 
   useEffect(() => {
-    const autoPrompt = localStorage.getItem("meshwork_auto_trigger_mosh");
+    const autoPrompt =
+      localStorage.getItem("meshwork_auto_trigger_jenkos") ||
+      localStorage.getItem("meshwork_auto_trigger_mosh");
     const autoModel = localStorage.getItem("meshwork_auto_trigger_model");
     if (autoPrompt) {
+      localStorage.removeItem("meshwork_auto_trigger_jenkos");
       localStorage.removeItem("meshwork_auto_trigger_mosh");
       localStorage.removeItem("meshwork_auto_trigger_model");
       if (autoModel) setSelectedModel(autoModel);
@@ -247,7 +258,7 @@ export function WorkspaceLeftSidebar({
 
   return (
     <div className="h-full flex flex-col overflow-hidden select-none">
-      {/* ── Mosh AI Co-pilot (always-on, no tabs) ── */}
+      {/* ── Jenkos AI Co-pilot (always-on, no tabs) ── */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Tiny clear button */}
         {messages.length > 0 && (
@@ -291,7 +302,9 @@ export function WorkspaceLeftSidebar({
                   <CpuChipIcon className="w-3 h-3 text-white/70" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium text-white/80">Mosh</p>
+                  <p className="text-[11px] font-medium text-white/80">
+                    Jenkos
+                  </p>
                   <p className="text-[10px] text-white/35">
                     Describe any system or ask to design cloud topologies.
                   </p>

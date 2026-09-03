@@ -258,13 +258,14 @@ export function buildDefaultGroups(
         },
         {
           id: "docs-ai",
-          label: "Ask Mosh AI",
+          label: "Ask Jenkos AI",
           description: "Open the AI co-pilot in your workspace",
           icon: makeDefaultIcon(SparklesIcon, "text-fuchsia-400"),
           badge: "AI",
           badgeColor:
             "text-fuchsia-400 bg-fuchsia-400/10 border-fuchsia-400/20",
           action: () => {
+            window.dispatchEvent(new CustomEvent("meshwork:open-jenkos"));
             window.dispatchEvent(new CustomEvent("meshwork:open-mosh"));
           },
         },

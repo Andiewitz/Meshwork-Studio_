@@ -111,13 +111,14 @@ export function getDefaultMeshworkActions(
     },
     {
       id: "5",
-      label: "Ask Mosh AI Co-Pilot",
+      label: "Ask Jenkos AI Co-Pilot",
       icon: <Sparkles className="h-4 w-4 text-pink-400" />,
       description: "Generate topology with AI",
       short: "⌘J",
       end: "AI Agent",
       category: "AI",
       onSelect: () => {
+        window.dispatchEvent(new CustomEvent("meshwork:open-jenkos"));
         window.dispatchEvent(new CustomEvent("meshwork:open-mosh"));
       },
     },

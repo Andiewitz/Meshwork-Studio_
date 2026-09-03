@@ -11,9 +11,9 @@ import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
 import StreamingText from "@/components/ui/streaming-text";
 import LoadingState from "@/components/ui/loading-state";
 import {
-  runMoshAgent,
-  MoshAgentMessage,
-} from "@/features/workspace/agent/moshAgent";
+  runJenkosAgent,
+  JenkosAgentMessage,
+} from "@/features/workspace/agent/jenkosAgent";
 
 const DEFAULT_SUGGESTIONS = [
   "Add a Redis caching layer to the backend",
@@ -30,11 +30,11 @@ export function AiChatDrawer({
   isRightSidebarOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<MoshAgentMessage[]>([]);
+  const [messages, setMessages] = useState<JenkosAgentMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDesigning, setIsDesigning] = useState(false);
-  const [agentStatus, setAgentStatus] = useState("Consulting Mosh...");
+  const [agentStatus, setAgentStatus] = useState("Consulting Jenkos...");
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
     null,
   );
@@ -108,7 +108,7 @@ export function AiChatDrawer({
           userPrompt,
         );
 
-      const userMsg: MoshAgentMessage = {
+      const userMsg: JenkosAgentMessage = {
         id: Date.now().toString(),
         role: "user",
         content: userPrompt,
@@ -124,9 +124,14 @@ export function AiChatDrawer({
 
       setIsLoading(true);
       setIsDesigning(isArchitectureTask);
-      setAgentStatus("Consulting Mosh...");
+      setAgentStatus("Consulting Jenkos...");
 
       if (isArchitectureTask) {
+        window.dispatchEvent(
+          new CustomEvent("jenkos:designing", {
+            detail: { active: true, x: centerX, y: centerY },
+          }),
+        );
         window.dispatchEvent(
           new CustomEvent("mosh:designing", {
             detail: { active: true, x: centerX, y: centerY },
@@ -138,7 +143,7 @@ export function AiChatDrawer({
         const currentNodes = getNodes();
         const currentEdges = getEdges();
 
-        const agentResult = await runMoshAgent({
+        const agentResult = await runJenkosAgent({
           userPrompt,
           history: messages,
           currentNodes,
@@ -185,6 +190,9 @@ export function AiChatDrawer({
         setIsLoading(false);
         setIsDesigning(false);
         window.dispatchEvent(
+          new CustomEvent("jenkos:designing", { detail: { active: false } }),
+        );
+        window.dispatchEvent(
           new CustomEvent("mosh:designing", { detail: { active: false } }),
         );
       }
@@ -203,10 +211,13 @@ export function AiChatDrawer({
 
   // Auto-trigger from landing page prompt
   useEffect(() => {
-    const autoPrompt = localStorage.getItem("meshwork_auto_trigger_mosh");
+    const autoPrompt =
+      localStorage.getItem("meshwork_auto_trigger_jenkos") ||
+      localStorage.getItem("meshwork_auto_trigger_mosh");
     const autoModel = localStorage.getItem("meshwork_auto_trigger_model");
 
     if (autoPrompt) {
+      localStorage.removeItem("meshwork_auto_trigger_jenkos");
       localStorage.removeItem("meshwork_auto_trigger_mosh");
       localStorage.removeItem("meshwork_auto_trigger_model");
 
@@ -339,7 +350,7 @@ export function AiChatDrawer({
                     </div>
                     <div>
                       <p className="text-[13px] font-medium text-white/90">
-                        Mosh
+                        Jenkos
                       </p>
                       <p className="text-[11px] text-white/40">
                         Describe your cloud infrastructure or ask me to modify

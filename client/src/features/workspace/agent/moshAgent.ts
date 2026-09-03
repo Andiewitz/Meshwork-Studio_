@@ -6,7 +6,7 @@ import {
   CanvasExecutionResult,
 } from "./tools/canvasToolExecutor";
 
-export interface MoshAgentMessage {
+export interface JenkosAgentMessage {
   id: string;
   role: "user" | "assistant" | "system" | "tool";
   content: string;
@@ -19,7 +19,9 @@ export interface MoshAgentMessage {
   appliedToCanvas?: boolean;
 }
 
-export const MOSH_SYSTEM_PROMPT = `You are Mosh, the expert cloud systems architect and engineering co-pilot for Meshwork Studio.
+export type MoshAgentMessage = JenkosAgentMessage;
+
+export const JENKOS_SYSTEM_PROMPT = `You are Jenkos, the expert cloud systems architect, engineering co-pilot, and persistent intelligence layer for Meshwork Studio.
 
 Your mission is to help software engineers, DevOps teams, and architects design resilient, secure, scalable, and cost-effective distributed systems.
 
@@ -50,7 +52,9 @@ Your mission is to help software engineers, DevOps teams, and architects design 
    - Group private resources inside VPCs or Kubernetes namespaces by specifying their \`parentId\`.
 `;
 
-export const MOSH_TOOLS = [
+export const MOSH_SYSTEM_PROMPT = JENKOS_SYSTEM_PROMPT;
+
+export const JENKOS_TOOLS = [
   {
     type: "function" as const,
     function: {
@@ -148,16 +152,36 @@ export const MOSH_TOOLS = [
   },
 ];
 
+export const MOSH_TOOLS = JENKOS_TOOLS;
+
 /**
- * Serializes current canvas state into structured JSON context for Mosh
+ * Serializes persistent memories and architectural context
+ */
+export function formatMemoriesContext(
+  memories?: { key: string; content: string; category?: string }[],
+): string {
+  if (!memories || memories.length === 0) return "";
+  return (
+    `\n\nRELEVANT MEMORIES & PERSISTENT CONTEXT:\n` +
+    memories
+      .map((m) => `- [${m.category || "fact"}] ${m.key}: ${m.content}`)
+      .join("\n")
+  );
+}
+
+/**
+ * Serializes current canvas state into structured JSON context for Jenkos
  */
 export function formatCanvasContext(
   nodes: Node[],
   edges: Edge[],
   viewportCenter: { x: number; y: number },
+  memories?: { key: string; content: string; category?: string }[],
 ): string {
+  const memoryText = formatMemoriesContext(memories);
+
   if (nodes.length === 0) {
-    return `\n\nCURRENT CANVAS STATE: Empty canvas.\nVIEWPORT CENTER: x=${viewportCenter.x}, y=${viewportCenter.y}.`;
+    return `${memoryText}\n\nCURRENT CANVAS STATE: Empty canvas.\nVIEWPORT CENTER: x=${viewportCenter.x}, y=${viewportCenter.y}.`;
   }
 
   const simplifiedNodes = nodes.map((n) => ({
@@ -177,7 +201,7 @@ export function formatCanvasContext(
     label: (e.data?.label as string) || (e.label as string) || undefined,
   }));
 
-  return `\n\nCURRENT CANVAS STATE (${nodes.length} nodes, ${edges.length} edges):
+  return `${memoryText}\n\nCURRENT CANVAS STATE (${nodes.length} nodes, ${edges.length} edges):
 \`\`\`json
 ${JSON.stringify({ nodes: simplifiedNodes, edges: simplifiedEdges }, null, 2)}
 \`\`\`
@@ -186,39 +210,42 @@ VIEWPORT CENTER: x=${viewportCenter.x}, y=${viewportCenter.y}.`;
 
 export interface SendAgentPromptOptions {
   userPrompt: string;
-  history: MoshAgentMessage[];
+  history: JenkosAgentMessage[];
   currentNodes: Node[];
   currentEdges: Edge[];
   viewportCenter: { x: number; y: number };
+  memories?: { key: string; content: string; category?: string }[];
   model?: string;
   onStatusUpdate?: (status: string) => void;
 }
 
 export interface AgentRunResponse {
-  message: MoshAgentMessage;
+  message: JenkosAgentMessage;
   canvasResult?: CanvasExecutionResult;
 }
 
 /**
- * Runs the Mosh Agent loop against the AI Service
+ * Runs the Jenkos Agent loop against the AI Service
  */
-export async function runMoshAgent({
+export async function runJenkosAgent({
   userPrompt,
   history,
   currentNodes,
   currentEdges,
   viewportCenter,
+  memories,
   model = "gemini-3.5-flash",
   onStatusUpdate,
 }: SendAgentPromptOptions): Promise<AgentRunResponse> {
-  onStatusUpdate?.("Consulting Mosh...");
+  onStatusUpdate?.("Consulting Jenkos...");
 
   const canvasContext = formatCanvasContext(
     currentNodes,
     currentEdges,
     viewportCenter,
+    memories,
   );
-  const fullSystemPrompt = MOSH_SYSTEM_PROMPT + canvasContext;
+  const fullSystemPrompt = JENKOS_SYSTEM_PROMPT + canvasContext;
 
   const payloadMessages = [
     { role: "system" as const, content: fullSystemPrompt },
@@ -368,3 +395,5 @@ export async function runMoshAgent({
     canvasResult,
   };
 }
+
+export const runMoshAgent = runJenkosAgent;
