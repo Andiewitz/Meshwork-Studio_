@@ -40,6 +40,27 @@ func TestVerifyLegacyBcrypt(t *testing.T) {
 	}
 }
 
+func TestVerifyRejectsMalformedArgon2id(t *testing.T) {
+	valid, err := Hash("password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, invalid := range map[string]string{
+		"version":          strings.Replace(valid, "v=19", "v=99", 1),
+		"zero time":        strings.Replace(valid, "t=3", "t=0", 1),
+		"zero threads":     strings.Replace(valid, "p=2", "p=0", 1),
+		"excessive memory": strings.Replace(valid, "m=65536", "m=4294967295", 1),
+		"empty key":        valid[:strings.LastIndex(valid, "$")+1],
+	} {
+		t.Run(name, func(t *testing.T) {
+			ok, err := Verify("password", invalid)
+			if ok || err == nil {
+				t.Fatalf("expected rejection, got ok=%v err=%v", ok, err)
+			}
+		})
+	}
+}
+
 func TestNeedsRehash(t *testing.T) {
 	argon, _ := Hash("x")
 	if NeedsRehash(argon) {
@@ -54,7 +75,7 @@ func TestNeedsRehash(t *testing.T) {
 	}
 }
 
-func TestVerifyDummyAlwaysWorks(t *testing.T) {
+func TestVerifyDummyAlwaysWorks(_ *testing.T) {
 	// The dummy hash is a real hash; verification must succeed silently.
 	VerifyDummy("anything")
 }

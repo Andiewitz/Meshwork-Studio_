@@ -1,10 +1,10 @@
 package password
 
 import (
-	"crypto/sha1"
+	"context"
+	"crypto/sha1" // #nosec G505 -- HIBP's range protocol requires SHA-1; passwords are stored with Argon2id.
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,12 +24,12 @@ func KeyedHash(domain, v string) string {
 // never the password itself. On network failure we fail OPEN (availability)
 // and let rate limiting carry the risk.
 func Breached(plain string) (bool, error) {
-	sum := sha1.Sum([]byte(plain))
+	sum := sha1.Sum([]byte(plain)) // #nosec G401 -- HIBP lookup fingerprint, never a password-storage hash.
 	hex := strings.ToUpper(fmt.Sprintf("%x", sum))
 	prefix, suffix := hex[:5], hex[5:]
 
 	client := &http.Client{Timeout: 1500 * time.Millisecond}
-	req, err := http.NewRequest(http.MethodGet,
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
 		"https://api.pwnedpasswords.com/range/"+prefix, nil)
 	if err != nil {
 		return false, err
@@ -39,13 +39,10 @@ func Breached(plain string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }() // Read-only lookup; no pending writes to flush.
 	if resp.StatusCode != http.StatusOK {
 		return false, fmt.Errorf("hibp status %d", resp.StatusCode)
 	}
-	dec := json.NewDecoder(resp.Body)
-	_ = dec // response is line-based text, not JSON; scan manually below
-
 	buf := make([]byte, 0, 64*1024)
 	chunk := make([]byte, 4096)
 	for {

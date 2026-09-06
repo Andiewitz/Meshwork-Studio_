@@ -377,7 +377,7 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	s.clearSessionCookies(w)
 
 	s.auditor.Record(s.auditEntry(r, info.User.ID, info.User.Email, audit.PasswordChange))
-	go s.mailer.Send(EmailPasswordChanged(info.User.Email))
+	go s.sendEmail(EmailPasswordChanged(info.User.Email))
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "requiresLogin": true})
 }
 

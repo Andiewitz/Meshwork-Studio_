@@ -65,11 +65,19 @@ func verifyArgon2id(plain, encoded string) (bool, error) {
 	if _, err := fmt.Sscanf(parts[2], "v=%d", &version); err != nil {
 		return false, fmt.Errorf("parse version: %w", err)
 	}
+	if version != argon2.Version {
+		return false, errors.New("unsupported argon2id version")
+	}
 	var m uint32
 	var t uint32
 	var p uint8
 	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &m, &t, &p); err != nil {
 		return false, fmt.Errorf("parse params: %w", err)
+	}
+	// Bound work before deriving a key: malformed stored hashes must not panic
+	// or exhaust the small production host's memory and CPU.
+	if p == 0 || p > 16 || t == 0 || t > 10 || m < 8*uint32(p) || m > 256*1024 {
+		return false, errors.New("invalid argon2id parameters")
 	}
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
@@ -79,7 +87,10 @@ func verifyArgon2id(plain, encoded string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("decode key: %w", err)
 	}
-	got := argon2.IDKey([]byte(plain), salt, t, m, p, uint32(len(want)))
+	if len(salt) < 8 || len(salt) > 64 || len(want) != argonKeyLen {
+		return false, errors.New("invalid argon2id salt or key length")
+	}
+	got := argon2.IDKey([]byte(plain), salt, t, m, p, argonKeyLen)
 	return subtle.ConstantTimeCompare(got, want) == 1, nil
 }
 

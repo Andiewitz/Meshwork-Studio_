@@ -1,6 +1,42 @@
 # CI/CD audit and repair plan
 
-Status: draft; implementation has not started.
+Status: partially implemented; CI repair verification in progress. The original
+audit below is a historical baseline, not a claim that all follow-up work is done.
+
+## CI failure repair — 2026-09-06
+
+The `dd608fc` run failed in Go lint, Go security, integration tests, and browser
+startup; Required Checks correctly failed as their aggregate. Full authenticated
+runner logs were retrieved for this repair.
+
+- Removed the obsolete `gosimple` entry (its checks are part of `staticcheck` in
+  v2) and preserved v1's default documentation-comment exclusions. Runtime and
+  security linters remain enabled. See the
+  [official migration guide](https://golangci-lint.run/docs/product/migration-guide/).
+- Fixed unchecked asynchronous email errors, SMTP TLS configuration and fallback
+  recipient handling, context-aware network calls, and unused auth helpers.
+  Restricted security suppressions to documented protocol/metadata false positives.
+- Bounded Argon2 verification parameters and added malformed-hash regressions.
+- Updated pgx to 5.9.2 and x/text to 0.39.0 for the reachable vulnerabilities
+  GO-2026-5004 and GO-2026-5970 reported by govulncheck.
+- Provisioned separate disposable PostgreSQL databases for each service in CI;
+  the previous shared database caused concurrent migration-table creation failures.
+- Set DynamoDB test configuration before module import, fixed cookie parsing and
+  permission argument order in the WebSocket fixture, and made missing CI DynamoDB
+  fail instead of silently skipping that suite.
+- Replaced the weak smoke selection with a separate anonymous smoke test proving
+  readiness, protected-route rejection, real Go auth routing, and rendered login UI.
+  Authenticated dashboard/canvas browser coverage still needs real account fixtures;
+  this repair does **not** claim the entire browser suite runs in CI.
+- Excluded host dependencies, build output, environment files and keys from the
+  Docker build context. Existing production/deployment gates are retained.
+
+Validation status will be recorded after the new hosted run. Local verification
+uses a clean auth snapshot so unrelated in-progress auth/UI edits are not included.
+Remaining artifact-promotion, rollback, release provenance, branch protection and
+t3.small rollout work below must not be treated as completed by a green CI run.
+
+## Original audit
 
 Audit date: 2026-09-06. Source revision:
 `a911ff30286b1bd4d2c1eaade0a797b185e84a33`.

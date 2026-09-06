@@ -7,7 +7,6 @@ linters:
     - govet
     - staticcheck
     - unused
-    - gosimple
     - ineffassign
     - gosec
     - misspell
@@ -21,6 +20,10 @@ linters:
       excludes:
         - G404 # rand usage reviewed manually where non-crypto
   exclusions:
+    # Preserve v1's default documentation-comment exclusions during migration.
+    # Runtime, security, unused-code and error-handling checks remain enabled.
+    presets:
+      - comments
     rules:
       # Tests may ignore returned errors for readability.
       - path: _test\.go

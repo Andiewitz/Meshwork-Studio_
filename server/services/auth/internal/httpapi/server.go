@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -71,7 +70,7 @@ func NewServer(cfg *config.Config, pool *pgxpool.Pool, rdb redis.UniversalClient
 			ClientSecret: cfg.GoogleClientSecret,
 			RedirectURL:  strings.TrimSuffix(cfg.PublicURL, "/") + "/api/v1/auth/google/callback",
 			Scopes:       []string{"openid", "email", "profile"},
-			Endpoint:     oauth2.Endpoint{AuthURL: "https://accounts.google.com/o/oauth2/v2/auth", TokenURL: "https://oauth2.googleapis.com/token"},
+			Endpoint:     oauth2.Endpoint{AuthURL: "https://accounts.google.com/o/oauth2/v2/auth", TokenURL: "https://oauth2.googleapis.com/token"}, // #nosec G101 -- Public OAuth endpoint URLs, not credentials.
 		}
 	}
 
@@ -248,14 +247,6 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ready"})
-}
-
-// adminTokenMatches performs a constant-time comparison of bearer tokens.
-func adminTokenMatches(presented, expected string) bool {
-	if presented == "" || expected == "" {
-		return false
-	}
-	return subtle.ConstantTimeCompare([]byte(presented), []byte(expected)) == 1
 }
 
 func trustedProxyAllowed(ip net.IP, cidrs []*net.IPNet) bool {

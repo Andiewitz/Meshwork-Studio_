@@ -5,7 +5,7 @@ const localServer = process.env.BASE_URL
   ? undefined
   : {
       command: "npm run dev",
-      url: baseURL,
+      url: `${baseURL}/ready`,
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
     };

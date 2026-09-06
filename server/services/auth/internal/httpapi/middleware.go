@@ -241,12 +241,6 @@ func (s *Server) csrfProtect(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) csrfProtectWrap(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		s.csrfProtect(h).ServeHTTP(w, r)
-	}
-}
-
 // captchaProtect enforces CAPTCHA on registration when configured.
 func (s *Server) captchaProtect(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

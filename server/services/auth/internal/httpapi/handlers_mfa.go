@@ -206,7 +206,7 @@ func (s *Server) handleMFAActivate(w http.ResponseWriter, r *http.Request) {
 		codes = nil
 	}
 	s.auditor.Record(s.auditEntry(r, info.User.ID, info.User.Email, audit.MFAActivated))
-	go s.mailer.Send(EmailMFAEnabled(info.User.Email))
+	go s.sendEmail(EmailMFAEnabled(info.User.Email))
 	resp := map[string]any{"ok": true}
 	if codes != nil {
 		resp["backupCodes"] = codes
@@ -251,7 +251,7 @@ func (s *Server) handleMFADisable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, info.User.ID, info.User.Email, audit.MFADisabled))
-	go s.mailer.Send(EmailMFADisabled(info.User.Email))
+	go s.sendEmail(EmailMFADisabled(info.User.Email))
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 

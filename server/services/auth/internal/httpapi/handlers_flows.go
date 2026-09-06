@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/meshwork-studio/auth/internal/audit"
+	"github.com/meshwork-studio/auth/internal/email"
 	"github.com/meshwork-studio/auth/internal/password"
 	"github.com/meshwork-studio/auth/internal/store"
 )
@@ -50,7 +51,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 			ipHash := s.ipHasher.Hash(clientIPFrom(r))
 			if terr = s.db.CreateOneTimeToken(r.Context(), user.ID, store.TokenPasswordReset,
 				hash, resetTokenTTL, ipHash); terr == nil {
-				go s.mailer.Send(EmailPasswordReset(user.Email,
+				go s.sendEmail(EmailPasswordReset(user.Email,
 					s.cfg.PublicURL+"/reset-password?token="+raw))
 			}
 		}
@@ -122,7 +123,7 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 		email = user.Email
 	}
 	s.auditor.Record(s.auditEntry(r, userID, email, audit.PasswordResetDone))
-	go s.mailer.Send(EmailPasswordChanged(email))
+	go s.sendEmail(EmailPasswordChanged(email))
 
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "requiresLogin": true})
 }
@@ -186,10 +187,19 @@ func (s *Server) sendVerificationEmailAsync(user *store.User) {
 			hash, verifyTokenTTL, ""); err != nil {
 			return
 		}
-		s.mailer.Send(EmailVerify(user.Email, s.cfg.PublicURL+"/verify-email?token="+raw))
+		if err := s.mailer.Send(EmailVerify(user.Email, s.cfg.PublicURL+"/verify-email?token="+raw)); err != nil {
+			s.log.Error("verification email delivery failed", "err", err)
+		}
 	}()
 }
 
 func contextWithTimeout(d time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), d)
+}
+
+// sendEmail observes asynchronous delivery failures without leaking message bodies.
+func (s *Server) sendEmail(message email.Message) {
+	if err := s.mailer.Send(message); err != nil {
+		s.log.Error("transactional email delivery failed", "err", err)
+	}
 }

@@ -44,6 +44,7 @@ func routeTemplate(r *http.Request) string {
 // ─── Cookies ────────────────────────────────────────────────────────────────
 
 func setCookie(w http.ResponseWriter, cfg *config.Config, name, value string, maxAge time.Duration, httpOnly bool) {
+	// #nosec G124 -- Secure is required by production config; only the CSRF cookie is intentionally JS-readable.
 	http.SetCookie(w, &http.Cookie{
 		Name:     name,
 		Value:    value,

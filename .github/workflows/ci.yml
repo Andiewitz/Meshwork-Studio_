@@ -90,7 +90,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U user -d test_db"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -102,11 +102,11 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://user:password@localhost:5432/test_db
       AUTH_DATABASE_URL: postgresql://user:password@localhost:5432/test_auth_db
-      WORKSPACE_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
-      TEAM_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
-      AI_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
-      METRICS_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
-      CANVAS_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
+      WORKSPACE_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
+      TEAM_DATABASE_URL: postgresql://user:password@localhost:5432/test_team_db
+      AI_DATABASE_URL: postgresql://user:password@localhost:5432/test_ai_db
+      METRICS_DATABASE_URL: postgresql://user:password@localhost:5432/test_metrics_db
+      CANVAS_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
       DYNAMODB_ENDPOINT: http://localhost:8000
       RUN_DDB_PARITY: "true"
       SESSION_SECRET: ci-test-session-secret-not-used-in-prod
@@ -118,6 +118,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       - run: npm ci
+      - name: Create isolated service databases
+        run: node scripts/ci/create-test-databases.mjs
       - name: Wait for DynamoDB Local
         run: |
           for i in $(seq 1 15); do
@@ -141,8 +143,22 @@ jobs:
   e2e:
     name: Browser Smoke Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [lint, typecheck]
     services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 8000:8000
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
       postgres:
         image: postgres:15
         env:
@@ -152,23 +168,31 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U user -d test_db"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://user:password@localhost:5432/test_db
-      AUTH_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
-      WORKSPACE_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
-      TEAM_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
-      AI_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
-      METRICS_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
-      CANVAS_DATABASE_URL: postgresql://user:password@localhost:5432/test_db
+      AUTH_DATABASE_URL: postgresql://user:password@localhost:5432/test_auth_db
+      WORKSPACE_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
+      TEAM_DATABASE_URL: postgresql://user:password@localhost:5432/test_team_db
+      AI_DATABASE_URL: postgresql://user:password@localhost:5432/test_ai_db
+      METRICS_DATABASE_URL: postgresql://user:password@localhost:5432/test_metrics_db
+      CANVAS_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
       SESSION_SECRET: ci-test-session-secret-not-used-in-prod
       ENCRYPTION_KEY: ci-test-encryption-key-32-bytes00000
+      APP_PUBLIC_URL: http://localhost:5000
+      DYNAMODB_ENDPOINT: http://localhost:8000
+      AUTH_REDIS_URL: redis://localhost:6379
+      REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.8"
+          cache-dependency-path: server/services/auth/go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -181,13 +205,30 @@ jobs:
           restore-keys: |
             playwright-${{ runner.os }}-
       - run: npm ci
+      - name: Create isolated service databases
+        run: node scripts/ci/create-test-databases.mjs
+      - name: Start real auth service
+        run: |
+          (cd server/services/auth && go build -o "$RUNNER_TEMP/identity" ./cmd/server)
+          "$RUNNER_TEMP/identity" > "$RUNNER_TEMP/identity.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8081/readyz; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/identity.log"
+          exit 1
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e -- --grep "@smoke"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            test-results/
+            ${{ runner.temp }}/identity.log
           retention-days: 14
 
   # ── Build & Package (runs after tests) ──────────────────────────────────

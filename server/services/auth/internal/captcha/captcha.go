@@ -73,7 +73,7 @@ func (v *Verifier) Verify(ctx context.Context, token, remoteIP string) error {
 	if err != nil {
 		return fmt.Errorf("captcha service unreachable")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }() // Read-only response cleanup cannot affect verification.
 
 	var result struct {
 		Success bool     `json:"success"`
@@ -110,7 +110,7 @@ func (v *Verifier) seenBefore(ctx context.Context, token string) bool {
 	return false
 }
 
-func (v *Verifier) markUsed(ctx context.Context, token string) {
+func (v *Verifier) markUsed(_ context.Context, token string) {
 	// With Redis, markUsed already happened atomically in seenBefore.
 	if v.rdb != nil {
 		return

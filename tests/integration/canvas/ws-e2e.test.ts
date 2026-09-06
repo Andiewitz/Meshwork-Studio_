@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import express from "express";
+import cookieParser from "cookie-parser";
 import http from "node:http";
 import crypto from "node:crypto";
 import WebSocket from "ws";
@@ -17,11 +18,12 @@ import WebSocket from "ws";
 process.env.AUTH_ASSERTION_PUBLIC_KEY = crypto
   .randomBytes(32)
   .toString("base64");
-process.env.CANVAS_DDB_TABLE = "meshwork-canvas-ws-test";
-process.env.DYNAMODB_ENDPOINT =
-  process.env.DYNAMODB_ENDPOINT || "http://127.0.0.1:8000";
+vi.hoisted(() => {
+  process.env.CANVAS_DDB_TABLE = "meshwork-canvas-ws-test";
+  process.env.DYNAMODB_ENDPOINT ||= "http://127.0.0.1:8000";
+});
 
-const { initAuth, optionalAuth, requireAuth, csrfProtect } =
+const { initAuth, optionalAuth, requireAuth } =
   await import("../../../server/auth");
 const { initializeWebSocket } =
   await import("../../../server/services/team/websocket/presence");
@@ -29,36 +31,6 @@ import { registerCanvasRoutes } from "../../../server/services/canvas/routes/can
 import { teamStorage } from "@services/team/db/storage";
 import { workspaceStorage } from "@services/workspace/db/storage";
 import { canvasStorage as realCanvasStorage } from "@services/canvas/db/storage";
-
-vi.mock("@services/workspace/db/storage", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@services/workspace/db/storage")>()),
-  getWorkspace: async (_id: string) => sharedWorkspace,
-}));
-vi.mock("@services/team/db/storage", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@services/team/db/storage")>()),
-  canAccessWorkspace: async (u: string) => u !== "outsider",
-  getWorkspaceRole: async (u: string, w: string) =>
-    w === "ws-shared" && u === "alice" ? "workspace-owner" : "viewer",
-  getTeamsForWorkspace: async () => [],
-  getTeamMembers: async () => [],
-}));
-
-const sharedWorkspace = {
-  id: "ws-shared",
-  title: "Shared",
-  userId: "alice",
-  type: "system",
-  icon: null,
-  isFavorite: false,
-  collectionId: null,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  description: null,
-  author: null,
-  aiContext: null,
-  groups: [],
-  tags: [],
-};
 
 // Workspace ownership: alice owns ws-shared; outsider knows nothing.
 vi.mock("@services/workspace/db/storage", () => ({
@@ -84,7 +56,7 @@ vi.mock("@services/workspace/db/storage", () => ({
 vi.mock("@services/team/db/storage", () => ({
   teamStorage: {
     canAccessWorkspace: async (u: string, _w: string) => u !== "outsider",
-    getWorkspaceRole: async (u: string, w: string) =>
+    getWorkspaceRole: async (w: string, u: string) =>
       w === "ws-shared" && u === "alice" ? "workspace-owner" : "viewer",
     getTeamsForWorkspace: async () => [],
     getTeamMembers: async () => [],
@@ -121,22 +93,14 @@ function pkcs8(seed: Buffer): Buffer {
   return Buffer.concat([Buffer.from([0x30, body.length]), body]);
 }
 
-const reachable = await dynamoReachable();
+const shouldRun =
+  process.env.CI === "true" || process.env.RUN_DDB_PARITY === "true";
 
-async function dynamoReachable(): Promise<boolean> {
-  const endpoint = process.env.DYNAMODB_ENDPOINT!;
-  try {
-    const res = await fetch(endpoint, { method: "GET" });
-    return res.status < 500;
-  } catch {
-    return false;
-  }
-}
-
-describe.skipIf(!reachable)("canvas + websocket e2e", () => {
+describe.skipIf(!shouldRun)("canvas + websocket e2e", () => {
   let server: http.Server;
   let baseUrl: string;
   let origin: string;
+  const sockets: WebSocket[] = [];
 
   beforeAll(async () => {
     // provision table
@@ -171,6 +135,7 @@ describe.skipIf(!reachable)("canvas + websocket e2e", () => {
 
     const app = express();
     app.use(express.json());
+    app.use(cookieParser());
 
     const ctx = {
       registry: {
@@ -197,6 +162,7 @@ describe.skipIf(!reachable)("canvas + websocket e2e", () => {
   });
 
   afterAll(() => {
+    for (const socket of sockets) socket.terminate();
     server?.close();
   });
 
@@ -208,6 +174,7 @@ describe.skipIf(!reachable)("canvas + websocket e2e", () => {
     const bobWs = new WebSocket(`ws://${new URL(baseUrl).host}/ws`, {
       headers: { Cookie: `meshwork_assertion=${bobAssertion}` },
     });
+    sockets.push(bobWs);
     await open(bobWs);
     bobWs.send(JSON.stringify({ type: "join", workspaceId: "ws-shared" }));
     await nextMessage(bobWs); // presence
@@ -216,6 +183,7 @@ describe.skipIf(!reachable)("canvas + websocket e2e", () => {
     const aliceWs = new WebSocket(`ws://${new URL(baseUrl).host}/ws`, {
       headers: { Cookie: `meshwork_assertion=${aliceAssertion}` },
     });
+    sockets.push(aliceWs);
     await open(aliceWs);
     aliceWs.send(JSON.stringify({ type: "join", workspaceId: "ws-shared" }));
     await nextMessage(aliceWs); // presence
@@ -239,7 +207,7 @@ describe.skipIf(!reachable)("canvas + websocket e2e", () => {
         body: JSON.stringify({ nodes, edges }),
       },
     );
-    expect(syncRes.status).toBe(200);
+    expect(syncRes.status, await syncRes.text()).toBe(200);
 
     // Persistence proof: GET returns exactly what was synced.
     const getRes = await fetch(
@@ -292,10 +260,14 @@ function nextMessage(
       const msg = JSON.parse(raw.toString()) as Record<string, unknown>;
       if (!filter || filter(msg)) {
         ws.off("message", onMsg);
+        clearTimeout(timer);
         resolve(msg);
       }
     };
     ws.on("message", onMsg);
-    setTimeout(() => reject(new Error("timeout waiting for ws message")), 5000);
+    const timer = setTimeout(() => {
+      ws.off("message", onMsg);
+      reject(new Error("timeout waiting for ws message"));
+    }, 5000);
   });
 }

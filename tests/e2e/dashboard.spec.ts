@@ -15,7 +15,7 @@ test.describe("Dashboard Feature Tests", () => {
     await page.goto("/home");
   });
 
-  test("@smoke should render the dashboard without a white screen or React crash", async ({
+  test("should render the dashboard without a white screen or React crash", async ({
     page,
   }) => {
     // The body should be visible

@@ -32,7 +32,7 @@ func TestAllowlistExactMatchOnly(t *testing.T) {
 }
 
 func TestOriginAllowedSelfOrigin(t *testing.T) {
-	req := httptest.NewRequest("POST", "https://api.example.com/api/v1/auth/login", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "POST", "https://api.example.com/api/v1/auth/login", nil)
 	req.Host = "api.example.com"
 	req.Header.Set("Origin", "https://api.example.com")
 	allow := NewAllowlist("", nil)
@@ -42,7 +42,7 @@ func TestOriginAllowedSelfOrigin(t *testing.T) {
 }
 
 func TestOriginAllowedCrossOriginRejected(t *testing.T) {
-	req := httptest.NewRequest("POST", "https://api.example.com/x", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "POST", "https://api.example.com/x", nil)
 	req.Host = "api.example.com"
 	req.Header.Set("Origin", "https://attacker.example.net")
 	allow := NewAllowlist("", nil)
@@ -52,9 +52,9 @@ func TestOriginAllowedCrossOriginRejected(t *testing.T) {
 }
 
 func TestOriginAllowedFailClosedForCookieBearerWithoutOrigin(t *testing.T) {
-	req := httptest.NewRequest("POST", "https://api.example.com/x", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "POST", "https://api.example.com/x", nil)
 	req.Host = "api.example.com"
-	req.AddCookie(&http.Cookie{Name: "meshwork_session", Value: "tokentokentokentokentoken"})
+	req.AddCookie(&http.Cookie{Name: "meshwork_session", Value: "tokentokentokentokentoken", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
 	req.Header.Set("Sec-Fetch-Site", "same-site")
 	allow := NewAllowlist("", nil)
 	if OriginAllowed(req, allow) {
@@ -63,7 +63,7 @@ func TestOriginAllowedFailClosedForCookieBearerWithoutOrigin(t *testing.T) {
 }
 
 func TestOriginAllowedPlainAPIClientWithoutCookies(t *testing.T) {
-	req := httptest.NewRequest("POST", "https://api.example.com/x", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "POST", "https://api.example.com/x", nil)
 	req.Host = "api.example.com"
 	req.Header.Del("Sec-Fetch-Site")
 	allow := NewAllowlist("", nil)

@@ -28,12 +28,21 @@ func main() {
 
 	if *healthcheck {
 		client := &http.Client{Timeout: 3 * time.Second}
-		resp, err := client.Get("http://127.0.0.1:" + envOr("AUTH_PORT", "8081") + "/healthz")
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
+			"http://127.0.0.1:"+envOr("AUTH_PORT", "8081")+"/healthz", nil)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "invalid healthcheck URL")
+			os.Exit(1)
+		}
+		resp, err := client.Do(req)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			fmt.Fprintln(os.Stderr, "healthcheck failed")
 			os.Exit(1)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			fmt.Fprintln(os.Stderr, "healthcheck response close failed")
+			os.Exit(1)
+		}
 		return
 	}
 
@@ -109,11 +118,15 @@ func main() {
 	}
 
 	// Metrics bind to loopback only; scrape via a sidecar or SSH tunnel.
-	metricsLn, err := net.Listen("tcp", "127.0.0.1:9091")
+	metricsLn, err := (&net.ListenConfig{}).Listen(ctx, "tcp", "127.0.0.1:9091")
 	if err == nil {
 		metricsSrv := &http.Server{Handler: httpapi.MetricsHandler(), ReadHeaderTimeout: 5 * time.Second}
 		go func() { _ = metricsSrv.Serve(metricsLn) }()
-		defer metricsSrv.Close()
+		defer func() {
+			if err := metricsSrv.Close(); err != nil {
+				logger.Warn("metrics shutdown failed", "err", err)
+			}
+		}()
 		logger.Info("metrics listening on 127.0.0.1:9091/metrics")
 	} else {
 		logger.Warn("metrics listener unavailable", "err", err)

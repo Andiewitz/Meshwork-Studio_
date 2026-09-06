@@ -126,12 +126,17 @@ func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := s.oauthCfg.Client(ctx, token).Get("https://openidconnect.googleapis.com/v1/userinfo")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://openidconnect.googleapis.com/v1/userinfo", nil)
 	if err != nil {
 		s.redirectOAuthError(w, r, "google")
 		return
 	}
-	defer resp.Body.Close()
+	resp, err := s.oauthCfg.Client(ctx, token).Do(req)
+	if err != nil {
+		s.redirectOAuthError(w, r, "google")
+		return
+	}
+	defer func() { _ = resp.Body.Close() }() // Read-only response cleanup.
 	var info googleUserInfo
 	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil ||
 		info.Sub == "" || info.Email == "" {

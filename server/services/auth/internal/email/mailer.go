@@ -3,6 +3,7 @@
 package email
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log/slog"
@@ -61,41 +62,48 @@ func (m *Mailer) Send(msg Message) error {
 	b.WriteString("\r\n" + msg.Text)
 
 	dialer := &net.Dialer{Timeout: 10 * time.Second}
-	conn, err := tls.DialWithDialer(
-		dialer,
-		"tcp", addr,
-		&tls.Config{ServerName: m.host},
-	)
+	conn, err := (&tls.Dialer{
+		NetDialer: dialer,
+		Config:    &tls.Config{ServerName: m.host, MinVersion: tls.VersionTLS12},
+	}).DialContext(context.Background(), "tcp", addr)
 	if err != nil {
 		// Fall back to plain + STARTTLS for relays without implicit TLS.
-		return m.sendSTARTTLS(addr, b.String())
+		return m.sendSTARTTLS(addr, msg.To, b.String())
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }() // Delivery errors are checked before transport cleanup.
+	if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
+		return err
+	}
 	client, err := smtp.NewClient(conn, m.host)
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 	return m.deliver(client, msg.To, b.String())
 }
 
-func (m *Mailer) sendSTARTTLS(addr, body string) error {
-	conn, err := net.Dial("tcp", addr)
+func (m *Mailer) sendSTARTTLS(addr, to, body string) error {
+	conn, err := (&net.Dialer{Timeout: 10 * time.Second}).DialContext(context.Background(), "tcp", addr)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }() // Delivery errors are checked before transport cleanup.
+	if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
+		return err
+	}
 	client, err := smtp.NewClient(conn, m.host)
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 	if ok, _ := client.Extension("STARTTLS"); ok {
-		if err := client.StartTLS(&tls.Config{ServerName: m.host}); err != nil {
+		if err := client.StartTLS(&tls.Config{ServerName: m.host, MinVersion: tls.VersionTLS12}); err != nil {
 			return fmt.Errorf("starttls: %w", err)
 		}
+	} else {
+		return fmt.Errorf("smtp server does not support required STARTTLS")
 	}
-	return m.deliver(client, "", body)
+	return m.deliver(client, to, body)
 }
 
 func (m *Mailer) deliver(client *smtp.Client, to, body string) error {

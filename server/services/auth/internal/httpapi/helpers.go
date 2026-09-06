@@ -26,5 +26,5 @@ func (s *Server) notifyNewDeviceIfUnseen(r *http.Request, user *store.User) {
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, user.ID, user.Email, audit.NewDeviceLogin))
-	go s.mailer.Send(EmailNewDevice(user.Email))
+	go s.sendEmail(EmailNewDevice(user.Email))
 }

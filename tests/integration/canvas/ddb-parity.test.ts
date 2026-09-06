@@ -1,11 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-import http from "node:http";
 import {
   CreateTableCommand,
   DeleteTableCommand,
   DynamoDBClient,
+  waitUntilTableExists,
 } from "@aws-sdk/client-dynamodb";
 import { DynamoCanvasStorage } from "../../../server/services/canvas/db/dynamo";
+
+// Storage captures its configuration at import time, before beforeAll runs.
+vi.hoisted(() => {
+  process.env.CANVAS_DDB_TABLE = "meshwork-canvas-test";
+  process.env.DYNAMODB_ENDPOINT ||= "http://127.0.0.1:8000";
+});
 
 /**
  * Canvas persistence PARITY suite.
@@ -35,7 +41,7 @@ const shouldRunParity =
 
 describe.skipIf(!shouldRunParity)("canvas dynamodb parity", () => {
   let storage: InstanceType<typeof DynamoCanvasStorage>;
-  let server: http.Server;
+  let tableCreated = false;
 
   beforeAll(async () => {
     const res = await fetch(ENDPOINT.replace(/\/$/, ""), { method: "GET" });
@@ -61,18 +67,20 @@ describe.skipIf(!shouldRunParity)("canvas dynamodb parity", () => {
       if ((err as { name?: string }).name !== "ResourceInUseException")
         throw err;
     }
-    process.env.CANVAS_DDB_TABLE = "meshwork-canvas-test";
-    process.env.DYNAMODB_ENDPOINT = ENDPOINT;
+    tableCreated = true;
+    await waitUntilTableExists(
+      { client: ddb, maxWaitTime: 20, minDelay: 1, maxDelay: 2 },
+      { TableName: "meshwork-canvas-test" },
+    );
     storage = new DynamoCanvasStorage();
-    server = http.createServer();
-    await new Promise<void>((r) => server.listen(0, r));
   });
 
   afterAll(async () => {
-    await ddb.send(
-      new DeleteTableCommand({ TableName: "meshwork-canvas-test" }),
-    );
-    server.close();
+    if (tableCreated)
+      await ddb.send(
+        new DeleteTableCommand({ TableName: "meshwork-canvas-test" }),
+      );
+    ddb.destroy();
   });
 
   const node = (id: string, label: string) => ({

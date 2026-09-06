@@ -122,5 +122,3 @@ func HashBackupCode(code string) string {
 func ConstantTimeEqual(a, b string) bool {
 	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
-
-func timeNow() int64 { return time.Now().Unix() }

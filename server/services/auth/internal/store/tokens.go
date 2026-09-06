@@ -31,7 +31,7 @@ type TokenPurpose string
 
 const (
 	TokenPasswordReset     TokenPurpose = "password_reset"
-	TokenEmailVerification TokenPurpose = "email_verification"
+	TokenEmailVerification TokenPurpose = "email_verification" // #nosec G101 -- Purpose label, not a credential.
 )
 
 // CreateOneTimeToken stores the hash of a fresh token for purpose.

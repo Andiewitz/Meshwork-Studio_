@@ -1,5 +1,6 @@
-# node_modules
-# dist
+node_modules
+**/node_modules
+dist
 .git
 .replit
 .agent
@@ -11,6 +12,10 @@ tests
 *.log
 *.txt
 .env
+.env.*
+*.pem
+*.key
+server/services/auth/test-auth
 build_debug.txt
 build_error.txt
 tsc_output.txt
