@@ -1,8 +1,9 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ["Deploy to Production (AWS EC2)"]
+    types: [completed]
 
 permissions:
   contents: write
@@ -16,25 +17,23 @@ jobs:
   release:
     name: Semantic Release
     runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-      - run: npm ci
-      - run: npm run build
-        env:
-          NODE_ENV: production
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v4
         with:
           extra_plugins: |
-            @semantic-release/changelog@6
-            @semantic-release/git@10
             @semantic-release/github@11
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

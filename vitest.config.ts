@@ -4,11 +4,20 @@ import path from "path";
 export default defineConfig({
   test: {
     env: {
-      WORKSPACE_DATABASE_URL: "postgresql://test@localhost:5434/workspace_db",
-      TEAM_DATABASE_URL: "postgresql://test@localhost:5434/team_db",
-      AI_DATABASE_URL: "postgresql://test@localhost:5434/ai_db",
-      METRICS_DATABASE_URL: "postgresql://test@localhost:5434/metrics_db",
-      CANVAS_DATABASE_URL: "postgresql://test@localhost:5434/workspace_db",
+      WORKSPACE_DATABASE_URL:
+        process.env.WORKSPACE_DATABASE_URL ||
+        "postgresql://test@localhost:5434/workspace_db",
+      TEAM_DATABASE_URL:
+        process.env.TEAM_DATABASE_URL ||
+        "postgresql://test@localhost:5434/team_db",
+      AI_DATABASE_URL:
+        process.env.AI_DATABASE_URL || "postgresql://test@localhost:5434/ai_db",
+      METRICS_DATABASE_URL:
+        process.env.METRICS_DATABASE_URL ||
+        "postgresql://test@localhost:5434/metrics_db",
+      CANVAS_DATABASE_URL:
+        process.env.CANVAS_DATABASE_URL ||
+        "postgresql://test@localhost:5434/workspace_db",
       NODE_ENV: "test",
     },
     globals: true,
@@ -17,7 +26,7 @@ export default defineConfig({
     exclude: ["node_modules", "dist"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "json", "html"],
+      reporter: ["text", "json", "json-summary", "html"],
       exclude: ["node_modules/", "tests/"],
     },
     testTimeout: 10000,

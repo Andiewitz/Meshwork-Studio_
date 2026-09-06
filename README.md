@@ -108,7 +108,7 @@ make -C server/services/auth run  # auth service on :8081 (auth endpoints are Go
 | Technology      | Purpose                                        |
 | --------------- | ---------------------------------------------- |
 | **Express 5**   | Monolith API server                            |
-| **Go 1.24**     | Auth service: sessions, MFA, OAuth, audit      |
+| **Go 1.26**     | Auth service: sessions, MFA, OAuth, audit      |
 | **Argon2id**    | Password hashing (transparent bcrypt upgrade)  |
 | **Drizzle ORM** | Type-safe PostgreSQL queries                   |
 | **Zod**         | Runtime schema validation                      |

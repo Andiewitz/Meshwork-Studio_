@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM golang:1.24-alpine AS build
+FROM golang:1.26.8-alpine AS build
 WORKDIR /src
 RUN apk add --no-cache git ca-certificates
 COPY go.mod go.sum ./
@@ -13,5 +13,5 @@ COPY --from=build /out/identity /app/identity
 EXPOSE 8081
 USER nonroot:nonroot
 HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
-  CMD ["/app/identity", "-healthcheck"] || exit 1
+  CMD ["/app/identity", "-healthcheck"]
 ENTRYPOINT ["/app/identity"]

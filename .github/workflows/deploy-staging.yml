@@ -1,35 +1,36 @@
 name: Deploy to Staging (AWS EC2)
 
 on:
-  push:
-    branches: [develop]
-  workflow_dispatch:
-    inputs:
-      reason:
-        description: "Reason for manual deploy"
-        required: false
-        default: "Manual trigger"
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types: [completed]
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy-staging
   cancel-in-progress: true
-
-env:
-  NODE_VERSION: "22"
 
 jobs:
   deploy:
     name: Build & Deploy to Staging EC2
     runs-on: ubuntu-latest
     environment: staging
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'develop' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: "22"
           cache: "npm"
 
       - name: Install Dependencies
@@ -41,6 +42,18 @@ jobs:
           NODE_ENV: production
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
+      - name: Setup Go for Auth Service
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.8"
+          cache-dependency-path: server/services/auth/go.sum
+
+      - name: Build Auth Service (linux/amd64)
+        working-directory: server/services/auth
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+            go build -ldflags="-s -w" -o meshwork-auth ./cmd/server
+
       - name: Transfer Artifacts to Staging EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -48,7 +61,7 @@ jobs:
           username: ${{ secrets.EC2_STAGING_USER }}
           key: ${{ secrets.EC2_STAGING_SSH_KEY }}
           port: 22
-          source: "dist,package.json,package-lock.json,drizzle.config.ts,deploy,migrations,shared"
+          source: "dist,package.json,package-lock.json,client/package.json,server/services/ai/package.json,server/services/canvas/package.json,server/services/metrics/package.json,server/services/team/package.json,server/services/workspace/package.json,scripts/deploy-remote.sh,deploy/nginx.conf,server/services/auth/meshwork-auth"
           target: "/home/${{ secrets.EC2_STAGING_USER }}/meshwork-studiov2"
           rm: false
 
@@ -65,6 +78,30 @@ jobs:
             chmod +x "$TARGET/scripts/deploy-remote.sh"
             cd "$TARGET"
             ./scripts/deploy-remote.sh
+
+      - name: Install & Restart Auth Service via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_STAGING_HOST }}
+          username: ${{ secrets.EC2_STAGING_USER }}
+          key: ${{ secrets.EC2_STAGING_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            TARGET="/home/${{ secrets.EC2_STAGING_USER }}/meshwork-studiov2"
+            set -a
+            . "$TARGET/.env"
+            set +a
+            chmod +x "$TARGET/server/services/auth/meshwork-auth"
+            mv "$TARGET/server/services/auth/meshwork-auth" "$TARGET/meshwork-auth"
+            if pm2 describe meshwork-auth > /dev/null 2>&1; then
+              pm2 restart meshwork-auth --update-env
+            else
+              pm2 start "$TARGET/meshwork-auth" --name meshwork-auth --cwd "$TARGET"
+            fi
+            pm2 save
+            sleep 2
+            curl -sf http://127.0.0.1:8081/healthz
 
       - name: Staging Health Check
         run: |

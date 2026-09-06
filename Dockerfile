@@ -1,21 +1,34 @@
-FROM node:20-alpine
-
-RUN apk add --no-cache libc6-compat
-
+# syntax=docker/dockerfile:1
+# Build from source so CI never depends on a developer's dist/ or node_modules.
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
 
-# Copy package configurations
-COPY package*.json ./
+COPY package.json package-lock.json ./
+COPY client/package.json ./client/package.json
+COPY server/services/ai/package.json ./server/services/ai/package.json
+COPY server/services/canvas/package.json ./server/services/canvas/package.json
+COPY server/services/metrics/package.json ./server/services/metrics/package.json
+COPY server/services/team/package.json ./server/services/team/package.json
+COPY server/services/workspace/package.json ./server/services/workspace/package.json
+RUN npm ci --ignore-scripts
 
-# Copy pre-installed node_modules and built dist from host
-COPY node_modules ./node_modules
-COPY dist ./dist
-COPY drizzle.config.ts ./
-COPY shared ./shared
+COPY . .
+RUN npm run build
 
-# Set environment variables
+FROM node:22-bookworm-slim AS runtime
+WORKDIR /app
 ENV NODE_ENV=production
 
-# Push schema then start app
-CMD ["sh", "-c", "npx drizzle-kit push && node dist/index.cjs"]
+COPY package.json package-lock.json ./
+COPY client/package.json ./client/package.json
+COPY server/services/ai/package.json ./server/services/ai/package.json
+COPY server/services/canvas/package.json ./server/services/canvas/package.json
+COPY server/services/metrics/package.json ./server/services/metrics/package.json
+COPY server/services/team/package.json ./server/services/team/package.json
+COPY server/services/workspace/package.json ./server/services/workspace/package.json
+RUN npm ci --omit=dev --ignore-scripts
 
+COPY --from=build /app/dist ./dist
+USER node
+EXPOSE 5000
+CMD ["node", "dist/index.cjs"]

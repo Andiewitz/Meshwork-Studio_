@@ -1,20 +1,21 @@
-run:
-  linters:
-    enable:
-      - errcheck
-      - govet
-      - staticcheck
-      - unused
-      - gosimple
-      - ineffassign
-      - gosec
-      - misspell
-      - revive
-      - gofmt
-      - bodyclose
-      - noctx
-      - sqlclosecheck
-      - rowserrcheck
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - gosimple
+    - ineffassign
+    - gosec
+    - misspell
+    - revive
+    - bodyclose
+    - noctx
+    - sqlclosecheck
+    - rowserrcheck
 
 issues:
   exclude-rules:
@@ -23,7 +24,11 @@ issues:
       linters:
         - errcheck
 
-linters-settings:
-  gosec:
-    excludes:
-      - G404 # rand usage reviewed manually where non-crypto
+  settings:
+    gosec:
+      excludes:
+        - G404 # rand usage reviewed manually where non-crypto
+
+formatters:
+  enable:
+    - gofmt

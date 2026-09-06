@@ -1,5 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const baseURL = process.env.BASE_URL || "http://localhost:5000";
+const localServer = process.env.BASE_URL
+  ? undefined
+  : {
+      command: "npm run dev",
+      url: baseURL,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    };
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
@@ -8,7 +18,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:5000",
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [
@@ -17,10 +27,5 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: {
-    command: "E2E_BYPASS_AUTH=true npm run dev",
-    url: "http://localhost:5000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  webServer: localServer,
 });

@@ -3,19 +3,19 @@ import { test, expect } from "@playwright/test";
 /**
  * Dashboard E2E Tests
  *
- * These tests run against the real dev server (started by Playwright's webServer config)
- * with E2E_BYPASS_AUTH=true so authentication middleware auto-sets req.user = mock-id-1.
+ * These tests run against the configured Playwright base URL. Local runs start
+ * the dev server; smoke runs set BASE_URL and target a deployed environment.
  *
  * CSRF tokens are fetched from /api/v1/csrf-token before each mutating request.
  */
 
 test.describe("Dashboard Feature Tests", () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to dashboard — the dev-mode auth bypass on the client returns mock-id-1
+    // Navigate through the normal application/auth flow.
     await page.goto("/home");
   });
 
-  test("should render the dashboard without a white screen or React crash", async ({
+  test("@smoke should render the dashboard without a white screen or React crash", async ({
     page,
   }) => {
     // The body should be visible

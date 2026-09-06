@@ -7,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-APP_DIR="$(dirname "$REPO_DIR")"
+APP_DIR="$REPO_DIR"
 ENV_FILE="$REPO_DIR/.env"
 
 echo "=== Deploy started at $(date) ==="
@@ -31,25 +31,12 @@ set -a
 source "$ENV_FILE"
 set +a
 
-# Auto-generate ENCRYPTION_KEY if not set (required for BYOK AI)
-if [ -z "${ENCRYPTION_KEY:-}" ]; then
-  GENERATED_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
-  echo "" >> "$ENV_FILE"
-  echo "# Auto-generated on $(date)" >> "$ENV_FILE"
-  echo "ENCRYPTION_KEY=$GENERATED_KEY" >> "$ENV_FILE"
-  echo "Generated ENCRYPTION_KEY and appended to .env"
-  export ENCRYPTION_KEY="$GENERATED_KEY"
-fi
-
 cd "$REPO_DIR"
 
-# Install production dependencies
-echo "Installing production dependencies..."
-npm install --omit=dev --legacy-peer-deps
-
-# Push schema to database (idempotent — safe to run every deploy)
-echo "Pushing database schema..."
-npx drizzle-kit push
+# Install the dependency graph locked by package-lock.json. Lifecycle scripts are
+# disabled because Husky and build tooling are development-only dependencies.
+echo "Installing locked production dependencies..."
+npm ci --omit=dev --ignore-scripts
 
 # Copy NGINX config
 echo "Updating NGINX config..."
@@ -65,7 +52,7 @@ cd "$APP_DIR"
 if pm2 describe meshwork > /dev/null 2>&1; then
   pm2 restart meshwork --update-env
 else
-  pm2 start "$REPO_DIR/dist/index.cjs" --name meshwork --cwd "$APP_DIR"
+  pm2 start "$REPO_DIR/dist/index.cjs" --name meshwork --cwd "$REPO_DIR"
 fi
 
 # Save PM2 config for auto-restart on reboot
@@ -74,11 +61,12 @@ pm2 save
 # Quick health check
 echo "Waiting for app to start..."
 sleep 3
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health || echo "000")
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/ready || echo "000")
 if [ "$STATUS" = "200" ]; then
-  echo "✓ Health check passed!"
+  echo "✓ Readiness check passed!"
 else
-  echo "⚠ Health check returned status $STATUS — check pm2 logs meshwork"
+  echo "ERROR: readiness check returned status $STATUS — check pm2 logs meshwork"
+  exit 1
 fi
 
 echo "=== Deploy complete at $(date) ==="

@@ -30,23 +30,18 @@ const ddb = new DynamoDBClient({
   credentials: { accessKeyId: "local", secretAccessKey: "local" },
 });
 
-let reachable = false;
+const shouldRunParity =
+  process.env.CI === "true" || process.env.RUN_DDB_PARITY === "true";
 
-beforeAll(async () => {
-  // probe
-  try {
-    const res = await fetch(ENDPOINT.replace(/\/$/, ""), { method: "GET" });
-    reachable = res.status < 500;
-  } catch {
-    reachable = false;
-  }
-});
-
-describe.skipIf(!reachable)("canvas dynamodb parity", () => {
+describe.skipIf(!shouldRunParity)("canvas dynamodb parity", () => {
   let storage: InstanceType<typeof DynamoCanvasStorage>;
   let server: http.Server;
 
   beforeAll(async () => {
+    const res = await fetch(ENDPOINT.replace(/\/$/, ""), { method: "GET" });
+    if (res.status >= 500) {
+      throw new Error(`DynamoDB Local is unavailable at ${ENDPOINT}`);
+    }
     try {
       await ddb.send(
         new CreateTableCommand({
