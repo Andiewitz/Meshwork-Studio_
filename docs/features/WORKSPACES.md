@@ -291,11 +291,11 @@ All mutation hooks use `secureFetch` (not raw `fetch`) to automatically include 
 
 ## Key Files
 
-| File                                         | Purpose                                            |
-| -------------------------------------------- | -------------------------------------------------- |
-| `server/modules/workspace/routes.ts`         | All workspace + collection route handlers          |
-| `server/modules/workspace/storage.ts`        | Database operations for workspaces + collections   |
-| `server/modules/canvas/storage.ts`           | Canvas duplication logic                           |
-| `client/src/hooks/use-workspaces.ts`         | TanStack Query hooks for all workspace operations  |
-| `shared/schema.ts`                           | Drizzle schema: `workspaces`, `collections` tables |
-| `tests/integration/workspace/routes.test.ts` | IDOR + validation integration tests                |
+| File                                                  | Purpose                                           |
+| ----------------------------------------------------- | ------------------------------------------------- |
+| `server/services/workspace/routes/workspaceRoutes.ts` | Workspace + collection route handlers             |
+| `server/services/workspace/db/storage.ts`             | Database operations for workspaces + collections  |
+| `server/services/canvas/db/dynamo.ts`                 | Canvas duplication logic                          |
+| `client/src/hooks/use-workspaces.ts`                  | TanStack Query hooks for all workspace operations |
+| `server/services/workspace/db/schema.ts`              | Workspace and collection table schema             |
+| `tests/integration/workspace/routes.test.ts`          | IDOR + validation integration tests               |

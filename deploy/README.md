@@ -1,8 +1,8 @@
 # deploy/ — Infrastructure Artifacts Only
 
 Scripts live in [`/scripts`](../scripts). The **deployment runbook** is
-[`important/DEPLOY.md`](../important/DEPLOY.md); the secrets inventory is
-[`important/SECRETS.md`](../important/SECRETS.md).
+[`docs/operations/DEPLOYMENT.md`](../docs/operations/DEPLOYMENT.md); the secrets inventory is
+[`docs/operations/SECRETS.md`](../docs/operations/SECRETS.md).
 
 ## Files in this folder
 

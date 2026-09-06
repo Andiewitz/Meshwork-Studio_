@@ -12,12 +12,8 @@ import {
   StarIcon as Star,
   FolderIcon as FolderKanban,
   PlusIcon as Plus,
-  NewspaperIcon as Newspaper,
   ChevronDownIcon as ChevronDown,
-  SparklesIcon as Sparkles,
   GiftIcon as Gift,
-  CommandLineIcon as Terminal,
-  ShareIcon as Share,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaces } from "@/hooks/use-workspaces";
@@ -31,7 +27,6 @@ import {
 import { MobileGate } from "@/components/ui/mobile-gate";
 import { PageErrorBoundary } from "@/components/ui/page-error-boundary";
 import { ActionSearchBar } from "@/components/ui/action-searchbar";
-import { preloadRoute } from "@/App";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
@@ -39,7 +34,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
 
   const isOverview = location === "/home";
-  const isProjects = location === "/workspaces";
   const isDev = location === "/dev";
   const isTeam = location === "/team";
 

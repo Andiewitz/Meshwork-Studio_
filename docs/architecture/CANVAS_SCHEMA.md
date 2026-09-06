@@ -2,7 +2,9 @@
 
 > Reference documentation for the Meshwork Studio canvas data model. Covers the full JSON shape for nodes, edges, and workspace payloads, including the canonical type registry, coordinate system, nesting rules, style overrides, and AI metadata fields.
 
-The machine-readable JSON Schema is at [`docs/canvas-schema.json`](./canvas-schema.json) (Draft-07). Use it to validate canvas payloads in tooling, tests, or external integrations.
+The runtime contract is defined by the React Flow types, `server/shared/schema`,
+and the canvas validation utilities. There is no checked-in Draft-07 JSON
+Schema; do not depend on the historical `docs/canvas-schema.json` path.
 
 ---
 
@@ -356,7 +358,7 @@ interface EdgeData {
 
 ## Type Aliases (AI Normalisation)
 
-Mosh and external importers may emit common technology names that don't match valid types. The `validateAndRepairCanvas` utility in [`client/src/lib/ai-canvas-utils.ts`](../client/src/lib/ai-canvas-utils.ts) normalises these automatically before applying them to the canvas:
+Jenkos and external importers may emit common technology names that don't match valid types. The `validateAndRepairCanvas` utility in [`client/src/lib/ai-canvas-utils.ts`](../../client/src/lib/ai-canvas-utils.ts) normalises these automatically before applying them to the canvas:
 
 | Input alias(es)                                          | Resolved type  |
 | -------------------------------------------------------- | -------------- |
@@ -556,18 +558,17 @@ if (!valid) {
 }
 ```
 
-At runtime, the [`validateAndRepairCanvas`](../client/src/lib/ai-canvas-utils.ts) function performs a **repair pass** rather than a hard rejection — invalid types are aliased or fall back to `server`, missing positions are auto-placed, and duplicate IDs are de-duplicated. This makes the canvas resilient to imperfect AI output.
+At runtime, the [`validateAndRepairCanvas`](../../client/src/lib/ai-canvas-utils.ts) function performs a **repair pass** rather than a hard rejection — invalid types are aliased or fall back to `server`, missing positions are auto-placed, and duplicate IDs are de-duplicated. This makes the canvas resilient to imperfect AI output.
 
 ---
 
 ## Key Source Files
 
-| File                                                                                                                        | Purpose                                                                                     |
-| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| [`docs/canvas-schema.json`](./canvas-schema.json)                                                                           | Machine-readable JSON Schema (Draft-07) for the full canvas format                          |
-| [`client/src/lib/ai-canvas-utils.ts`](../client/src/lib/ai-canvas-utils.ts)                                                 | `validateAndRepairCanvas` — runtime type normalisation, size enforcement, ID deduplication  |
-| [`shared/schema.ts`](../shared/schema.ts)                                                                                   | Drizzle ORM schema for `nodes`, `edges`, and `workspaces` Postgres tables                   |
-| [`server/modules/canvas/storage.ts`](../server/modules/canvas/storage.ts)                                                   | `syncCanvas()` — persistence layer that writes nodes and edges to the DB                    |
-| [`client/src/features/workspace/components/AiChatDrawer.tsx`](../client/src/features/workspace/components/AiChatDrawer.tsx) | Mosh AI drawer — constructs system prompt using node/edge registry, parses AI JSON response |
-| [`docs/mosh-ai-architecture.md`](./mosh-ai-architecture.md)                                                                 | How Mosh uses the canvas schema in prompts and responses                                    |
-| [`docs/WORKSPACES.md`](./WORKSPACES.md)                                                                                     | Workspace and collection API reference                                                      |
+| File                                                                                                                                           | Purpose                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [`client/src/lib/ai-canvas-utils.ts`](../../client/src/lib/ai-canvas-utils.ts)                                                                 | Runtime type normalisation, size enforcement, and ID deduplication         |
+| [`server/shared/schema/index.ts`](../../server/shared/schema/index.ts)                                                                         | Client/server contract types                                               |
+| [`server/services/canvas/db/dynamo.ts`](../../server/services/canvas/db/dynamo.ts)                                                             | `syncCanvas()` — persistence layer that writes nodes and edges to DynamoDB |
+| [`client/src/features/workspace/components/WorkspaceLeftSidebar.tsx`](../../client/src/features/workspace/components/WorkspaceLeftSidebar.tsx) | Jenkos AI drawer and canvas actions                                        |
+| [`../features/JENKOS_AI.md`](../features/JENKOS_AI.md)                                                                                         | How Jenkos uses canvas context in prompts and responses                    |
+| [`../features/WORKSPACES.md`](../features/WORKSPACES.md)                                                                                       | Workspace and collection API reference                                     |

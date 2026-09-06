@@ -2027,7 +2027,7 @@ function WorkspaceView() {
                 }}
               />
             </ReactFlow>
-            <MoshZoneOverlay />
+            <JenkosZoneOverlay />
           </motion.main>
 
           {/* ── Right properties panel ── */}
@@ -2276,7 +2276,7 @@ export default function Workspace() {
   );
 }
 
-function MoshZoneOverlay() {
+function JenkosZoneOverlay() {
   const [zone, setZone] = useState<{ active: boolean; x: number; y: number }>({
     active: false,
     x: 0,
@@ -2295,8 +2295,9 @@ function MoshZoneOverlay() {
         setZone((prev) => ({ ...prev, active: false }));
       }
     };
-    window.addEventListener("mosh:designing", handleDesigning);
-    return () => window.removeEventListener("mosh:designing", handleDesigning);
+    window.addEventListener("jenkos:designing", handleDesigning);
+    return () =>
+      window.removeEventListener("jenkos:designing", handleDesigning);
   }, []);
 
   if (!zone.active) return null;

@@ -150,7 +150,7 @@ export function WorkspaceLeftSidebar({
           }),
         );
         window.dispatchEvent(
-          new CustomEvent("mosh:designing", {
+          new CustomEvent("jenkos:designing", {
             detail: { active: true, x: centerX, y: centerY },
           }),
         );
@@ -210,7 +210,7 @@ export function WorkspaceLeftSidebar({
           new CustomEvent("jenkos:designing", { detail: { active: false } }),
         );
         window.dispatchEvent(
-          new CustomEvent("mosh:designing", { detail: { active: false } }),
+          new CustomEvent("jenkos:designing", { detail: { active: false } }),
         );
       }
     },

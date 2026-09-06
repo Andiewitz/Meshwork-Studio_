@@ -1,22 +1,6 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
 import { validatePasswordStrength, PASSWORD_POLICY } from "@shared/auth";
 
-// Mock bcrypt for password hashing tests
-vi.mock("bcrypt", () => ({
-  default: {
-    hash: vi
-      .fn()
-      .mockImplementation(
-        async (pwd: string, rounds: number) => `bcrypt:${rounds}:${pwd}`,
-      ),
-    compare: vi
-      .fn()
-      .mockImplementation(
-        async (pwd: string, hash: string) => hash === `bcrypt:12:${pwd}`,
-      ),
-  },
-}));
-
 // Mock redis
 vi.mock("@server/lib/redis", () => ({
   getRedis: vi.fn().mockReturnValue(null),

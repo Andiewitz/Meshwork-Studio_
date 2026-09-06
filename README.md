@@ -166,15 +166,15 @@ Every major system has its own deep-dive guide:
 | **[Auth Architecture](./docs/AUTH_ARCHITECTURE.md)**                              | The Go identity service: sessions, MFA, OAuth, threat model, cutover/rollback                             |
 | **[Canvas Engine](./docs/architecture/ENGINE.md)**                                | How drag-and-drop works, spatial containment logic, the Postgres upsert sync strategy                     |
 | **[Canvas Schema](./docs/architecture/CANVAS_SCHEMA.md)**                         | ReactFlow node/edge structures and canvas data model                                                      |
-| **[Canvas Persistence](./docs/architecture/PERSISTENCE.md)**                      | PostgreSQL + Drizzle storage mechanisms and sync strategy                                                 |
+| **[Canvas Persistence](./docs/architecture/PERSISTENCE.md)**                      | Browser recovery cache plus DynamoDB document persistence                                                 |
 | **[Workspace & Collections API](./docs/features/WORKSPACES.md)**                  | REST API reference for workspaces and collections, IDOR pattern, client hooks                             |
-| **[AI Engine Guide](./docs/features/MOSH_AI.md)**                                 | Bring-your-own-key AI integration, encryption flow, and API endpoints                                     |
+| **[AI Engine Guide](./docs/features/JENKOS_AI.md)**                               | Bring-your-own-key AI integration, encryption flow, and API endpoints                                     |
 | **[Theming & Design System](./docs/features/THEMING.md)**                         | Dark/light/system modes, CSS variables, brand identity                                                    |
 | **[Settings & Privacy](./docs/features/SETTINGS.md)**                             | User profile management, security settings, account controls                                              |
 | **[Testing Strategy](./docs/development/TESTING.md)**                             | The testing pyramid, how to run tests, how to write new ones                                              |
 | **[AWS Infrastructure (ECS/Terraform)](./docs/infrastructure/INFRASTRUCTURE.md)** | ECS/Fargate + ALB + RDS architecture via Terraform (with EC2 single-node path)                            |
-| **[Deployment Runbook](./important/DEPLOY.md)**                                   | Production deploy paths, verification checklist, rollback table                                           |
-| **[Secrets Inventory](./important/SECRETS.md)**                                   | Every secret: generation, consumers, rotation & blast radius                                              |
+| **[Deployment Runbook](./docs/operations/DEPLOYMENT.md)**                         | Production deploy paths, verification checklist, rollback table                                           |
+| **[Secrets Inventory](./docs/operations/SECRETS.md)**                             | Every secret: generation, consumers, rotation & blast radius                                              |
 | **[Post-Mortem Log](./docs/archive/process/post-mortem.md)**                      | Production bugs found and fixed, with root cause analysis                                                 |
 
 Historical documents (tickets, investigations, older audits) live in
@@ -185,7 +185,7 @@ Historical documents (tickets, investigations, older audits) live in
 
 Meshwork Studio deploys to a single EC2 instance:
 
-1. **Deploy paths**: GitHub Actions on push to `main`, or local `./scripts/deploy.sh` (dist-swap + Go auth binary). Full runbook: [`important/DEPLOY.md`](./important/DEPLOY.md).
+1. **Deploy paths**: GitHub Actions on push to `main`, or local `./scripts/deploy.sh` (dist-swap + Go auth binary). Full runbook: [`docs/operations/DEPLOYMENT.md`](./docs/operations/DEPLOYMENT.md).
 2. **Topology**: NGINX (TLS, static frontend) → Go auth service :8081 + Node monolith :5000 → Dockerized Postgres ×2 + Redis.
 3. **Future ECS path**: an archived Terraform stack lives in `docs/archive/terraform/` if horizontal-scale migration ever becomes a priority.
 
@@ -231,7 +231,7 @@ meshwork-studio/
 │   └── types/
 ├── client/src/                  # React frontend
 ├── deploy/                      # Infra artifacts: nginx.conf, user-data, RDS notes
-├── important/                   # DEPLOY.md, SECRETS.md, ops guides
+├── docs/operations/              # deployment, EC2, and secrets runbooks
 ├── scripts/                     # deploy.sh, build.ts, backup-db.ts, guards
 ├── docs/                        # Deep-dive documentation (+ docs/archive/)
 ├── docker-compose.yml           # Full stack local orchestration

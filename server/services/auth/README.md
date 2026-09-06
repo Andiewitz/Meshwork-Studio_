@@ -51,7 +51,7 @@ npm run dev                  # terminal 2 — proxies /api/v1/(auth|user)/* here
 Every variable lives in the `AUTH_*` namespace and is validated at boot —
 the service refuses to start on any problem and reports all of them at once.
 Full inventory (including the monolith-side variables): see
-[`important/SECRETS.md`](../../../important/SECRETS.md).
+[`docs/operations/SECRETS.md`](../../../docs/operations/SECRETS.md).
 
 ## Deployment
 

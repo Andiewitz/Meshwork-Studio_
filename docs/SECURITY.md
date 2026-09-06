@@ -326,7 +326,7 @@ The redaction function recursively traverses nested objects, so even deeply nest
 
 ### Required Variables
 
-Secrets are inventoried centrally in [`../important/SECRETS.md`](../important/SECRETS.md)
+Secrets are inventoried centrally in [`operations/SECRETS.md`](./operations/SECRETS.md)
 — every variable, its consumer code, generation command and rotation story.
 
 Fail-safe defaults:

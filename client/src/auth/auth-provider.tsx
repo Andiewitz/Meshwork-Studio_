@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { authClient } from "./auth-client";
 import {

@@ -3,10 +3,10 @@ import type { Node, Edge } from "@xyflow/react";
 import { executeEditCanvas } from "@/features/workspace/agent/tools/canvasToolExecutor";
 import {
   formatCanvasContext,
-  MOSH_TOOLS,
-} from "@/features/workspace/agent/moshAgent";
+  JENKOS_TOOLS,
+} from "@/features/workspace/agent/jenkosAgent";
 
-describe("Mosh AI Agent Tool Calling & Execution Unit Tests", () => {
+describe("Jenkos AI Agent Tool Calling & Execution Unit Tests", () => {
   const initialNodes: Node[] = [
     {
       id: "api-gw",
@@ -161,17 +161,17 @@ describe("Mosh AI Agent Tool Calling & Execution Unit Tests", () => {
       expect(context).toContain("HTTPS");
     });
 
-    it("should provide valid MOSH_TOOLS declarations", () => {
-      expect(MOSH_TOOLS).toBeDefined();
-      expect(MOSH_TOOLS[0].type).toBe("function");
-      expect(MOSH_TOOLS[0].function.name).toBe("edit_canvas");
-      expect(MOSH_TOOLS[0].function.parameters.properties).toHaveProperty(
+    it("should provide valid JENKOS_TOOLS declarations", () => {
+      expect(JENKOS_TOOLS).toBeDefined();
+      expect(JENKOS_TOOLS[0].type).toBe("function");
+      expect(JENKOS_TOOLS[0].function.name).toBe("edit_canvas");
+      expect(JENKOS_TOOLS[0].function.parameters.properties).toHaveProperty(
         "action",
       );
-      expect(MOSH_TOOLS[0].function.parameters.properties).toHaveProperty(
+      expect(JENKOS_TOOLS[0].function.parameters.properties).toHaveProperty(
         "nodes",
       );
-      expect(MOSH_TOOLS[0].function.parameters.properties).toHaveProperty(
+      expect(JENKOS_TOOLS[0].function.parameters.properties).toHaveProperty(
         "edges",
       );
     });

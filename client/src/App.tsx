@@ -96,7 +96,7 @@ function ProtectedRoute({
   component: React.ComponentType;
 }) {
   const { user, isLoading, isRedirecting, isLoggingOut } = useAuth();
-  const [location, navigate] = useLocation();
+  const [, navigate] = useLocation();
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {

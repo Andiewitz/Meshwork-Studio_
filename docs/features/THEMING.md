@@ -95,7 +95,7 @@ Meshwork Studio uses a **Sharp Glassmorphism** aesthetic: this blends structural
 ### Core Principles
 
 1. **Hard edges** — `border-radius: 0` everywhere (`--radius: 0rem`)
-2. **Glass Overlays** — Use of `backdrop-filter: blur()` and semi-transparent backgrounds for modals, drawers, and headers (e.g., Mosh AI Drawer, node tooltips).
+2. **Glass Overlays** — Use of `backdrop-filter: blur()` and semi-transparent backgrounds for modals, drawers, and headers (e.g., Jenkos AI drawer, node tooltips).
 3. **High contrast** — Deep charcoal and warm off-white, with brand red for accents
 4. **Uppercase typography** — Labels and headings in uppercase with wide letter-spacing
 

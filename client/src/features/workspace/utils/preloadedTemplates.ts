@@ -485,7 +485,7 @@ export const PRELOADED_TEMPLATES: TemplateDefinition[] = [
         type: "microservice",
         position: { x: 120, y: 400 },
         style: { width: 168, height: 72 },
-        data: { label: "Mosh Service" },
+        data: { label: "Jenkos Service" },
       },
       {
         id: "mcp",

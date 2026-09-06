@@ -280,7 +280,9 @@ COMMIT;
 | Add 1 new node                      | 16,000 row ops          | 1 row op            |
 | No changes (idle save)              | 16,000 row ops          | 0 row ops           |
 
-The implementation lives in `server/modules/canvas/storage.ts` in the `CanvasDatabaseStorage.syncCanvas()` method.
+The current implementation lives in `server/services/canvas/db/dynamo.ts` in
+`DynamoCanvasStorage.syncCanvas()`. It preserves the same diffing goal while
+writing changed canvas items to DynamoDB.
 
 ---
 
@@ -330,8 +332,8 @@ User drags node ──► React Flow fires onNodeDragStop
                    ownership (IDOR check)
                             │
                             ▼
-                   Upsert Sync writes
-                   only changed rows to Postgres
+                   Diff sync writes
+                   only changed items to DynamoDB
                             │
                             ▼
                    Response: { success: true }
@@ -349,6 +351,6 @@ User drags node ──► React Flow fires onNodeDragStop
 | `client/src/features/workspace/utils/templates.ts`   | 4 built-in architecture templates                 |
 | `client/src/lib/canvas-cache.ts`                     | localStorage persistence utilities                |
 | `client/src/hooks/use-canvas.ts`                     | React Query hook + debounced sync + normalization |
-| `server/modules/canvas/storage.ts`                   | Upsert sync + database operations                 |
-| `server/modules/canvas/routes.ts`                    | Canvas API endpoints                              |
-| `shared/schema.ts`                                   | Drizzle ORM schema (nodes & edges tables)         |
+| `server/services/canvas/db/dynamo.ts`                | DynamoDB diff sync + database operations          |
+| `server/services/canvas/routes/canvasRoutes.ts`      | Canvas API endpoints                              |
+| `server/shared/schema/index.ts`                      | Client/server canvas contract types               |
