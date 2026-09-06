@@ -41,8 +41,7 @@ jobs:
       - name: gosec
         uses: securego/gosec@v2.22.10
         with:
-          entryPoint: ./server/services/auth
-          args: ./...
+          args: ./server/services/auth/...
       - name: govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.1.4

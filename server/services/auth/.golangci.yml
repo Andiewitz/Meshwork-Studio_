@@ -16,6 +16,10 @@ linters:
     - noctx
     - sqlclosecheck
     - rowserrcheck
+  settings:
+    gosec:
+      excludes:
+        - G404 # rand usage reviewed manually where non-crypto
 
 issues:
   exclude-rules:
@@ -23,11 +27,6 @@ issues:
     - path: _test\.go
       linters:
         - errcheck
-
-  settings:
-    gosec:
-      excludes:
-        - G404 # rand usage reviewed manually where non-crypto
 
 formatters:
   enable:
