@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 // Anonymous smoke is intentionally separate from authenticated dashboard E2E.
 // It must prove boot, real auth routing and rendered UI, not just a visible body.
-test("@smoke ready app redirects a signed-out visitor to a working login", async ({
+test("@smoke ready app protects the dashboard and renders a working login", async ({
   page,
   request,
 }) => {
@@ -18,6 +18,9 @@ test("@smoke ready app redirects a signed-out visitor to a working login", async
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/home");
+  // ProtectedRoute intentionally returns anonymous users to the landing page.
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto("/login");
   await expect(page).toHaveURL(/\/login(?:\?.*)?$/);
   await expect(page.locator('input[type="email"]')).toBeVisible();
   await expect(

@@ -31,8 +31,13 @@ runner logs were retrieved for this repair.
 - Excluded host dependencies, build output, environment files and keys from the
   Docker build context. Existing production/deployment gates are retained.
 
-Validation status will be recorded after the new hosted run. Local verification
-uses a clean auth snapshot so unrelated in-progress auth/UI edits are not included.
+Local verification: 324 Node tests passed with real DynamoDB enabled, 55.59% line
+coverage, TypeScript and ESLint passed (existing warnings remain), production build
+passed, actionlint passed, Go lint reported zero issues, Go tests passed, gosec
+reported zero issues, and govulncheck reported zero reachable vulnerabilities.
+Go verification used a clean auth snapshot so unrelated in-progress auth/UI edits
+were not included. Hosted Linux race, browser and Docker results remain the final
+acceptance gate; consult the CI run for the deployed commit, not this local tally.
 Remaining artifact-promotion, rollback, release provenance, branch protection and
 t3.small rollout work below must not be treated as completed by a green CI run.
 
