@@ -3,7 +3,7 @@
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 COPY client/package.json ./client/package.json
 COPY server/services/ai/package.json ./server/services/ai/package.json
 COPY server/services/canvas/package.json ./server/services/canvas/package.json
@@ -19,7 +19,7 @@ FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 COPY client/package.json ./client/package.json
 COPY server/services/ai/package.json ./server/services/ai/package.json
 COPY server/services/canvas/package.json ./server/services/canvas/package.json

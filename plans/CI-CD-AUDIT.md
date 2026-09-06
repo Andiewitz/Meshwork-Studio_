@@ -30,6 +30,11 @@ runner logs were retrieved for this repair.
   this repair does **not** claim the entire browser suite runs in CI.
 - Excluded host dependencies, build output, environment files and keys from the
   Docker build context. Existing production/deployment gates are retained.
+- The first complete hosted run passed all test/security gates but exposed a
+  Docker install failure: `.npmrc` was missing before `npm ci`. Both Docker stages
+  and EC2 upload manifests now include the existing project config, keeping the
+  lockfile's peer-resolution settings consistent. An artifact-contract regression
+  test protects this boundary.
 
 Local verification: 324 Node tests passed with real DynamoDB enabled, 55.59% line
 coverage, TypeScript and ESLint passed (existing warnings remain), production build
